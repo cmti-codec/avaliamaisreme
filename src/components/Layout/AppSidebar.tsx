@@ -6,7 +6,7 @@ import {
   GraduationCap,
   Calendar,
   FileText,
-  Upload,
+  Download,
   Settings
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -33,7 +33,7 @@ const menuItems = [
 const secondaryItems = [
   { title: "Datas & Prazos", url: "/datas", icon: Calendar },
   { title: "Relatórios", url: "/relatorios", icon: FileText },
-  { title: "Importar Dados", url: "/importar", icon: Upload },
+  { title: "Importar Dados", url: "/admin/importacao", icon: Download },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
