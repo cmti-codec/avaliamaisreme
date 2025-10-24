@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          acao: string
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          entidade: string
+          entidade_id: string | null
+          id: string
+          timestamp: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          entidade: string
+          entidade_id?: string | null
+          id?: string
+          timestamp?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          entidade?: string
+          entidade_id?: string | null
+          id?: string
+          timestamp?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: []
+      }
       componentes_curriculares: {
         Row: {
           ativo: boolean | null
@@ -335,7 +368,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validar_horario: {
+        Args: {
+          p_componente: string
+          p_dia_semana: string
+          p_professor_id: string
+          p_tempo: number
+          p_turma_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
