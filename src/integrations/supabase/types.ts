@@ -51,7 +51,7 @@ export type Database = {
         Row: {
           action: string
           changed_at: string | null
-          changed_by: string
+          changed_by: string | null
           id: string
           metadata: Json | null
           role: Database["public"]["Enums"]["app_role"]
@@ -60,7 +60,7 @@ export type Database = {
         Insert: {
           action: string
           changed_at?: string | null
-          changed_by: string
+          changed_by?: string | null
           id?: string
           metadata?: Json | null
           role: Database["public"]["Enums"]["app_role"]
@@ -69,7 +69,7 @@ export type Database = {
         Update: {
           action?: string
           changed_at?: string | null
-          changed_by?: string
+          changed_by?: string | null
           id?: string
           metadata?: Json | null
           role?: Database["public"]["Enums"]["app_role"]
