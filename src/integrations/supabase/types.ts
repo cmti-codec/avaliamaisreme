@@ -308,6 +308,33 @@ export type Database = {
         }
         Relationships: []
       }
+      permissoes_funcionalidade: {
+        Row: {
+          funcionalidade: string
+          id: string
+          perfil: Database["public"]["Enums"]["perfil_usuario"]
+          pode_aprovar: boolean | null
+          pode_escrever: boolean | null
+          pode_ler: boolean | null
+        }
+        Insert: {
+          funcionalidade: string
+          id?: string
+          perfil: Database["public"]["Enums"]["perfil_usuario"]
+          pode_aprovar?: boolean | null
+          pode_escrever?: boolean | null
+          pode_ler?: boolean | null
+        }
+        Update: {
+          funcionalidade?: string
+          id?: string
+          perfil?: Database["public"]["Enums"]["perfil_usuario"]
+          pode_aprovar?: boolean | null
+          pode_escrever?: boolean | null
+          pode_ler?: boolean | null
+        }
+        Relationships: []
+      }
       professor_eventos: {
         Row: {
           created_at: string | null
@@ -446,7 +473,7 @@ export type Database = {
           escola_id: string | null
           id: string
           nome: string
-          perfil: string | null
+          perfil: Database["public"]["Enums"]["perfil_usuario"]
         }
         Insert: {
           ativo?: boolean | null
@@ -455,7 +482,7 @@ export type Database = {
           escola_id?: string | null
           id: string
           nome: string
-          perfil?: string | null
+          perfil: Database["public"]["Enums"]["perfil_usuario"]
         }
         Update: {
           ativo?: boolean | null
@@ -464,7 +491,7 @@ export type Database = {
           escola_id?: string | null
           id?: string
           nome?: string
-          perfil?: string | null
+          perfil?: Database["public"]["Enums"]["perfil_usuario"]
         }
         Relationships: [
           {
@@ -505,6 +532,12 @@ export type Database = {
       }
     }
     Functions: {
+      get_user_escola_id: { Args: never; Returns: string }
+      get_user_perfil: {
+        Args: never
+        Returns: Database["public"]["Enums"]["perfil_usuario"]
+      }
+      tem_permissao: { Args: { func: string; tipo: string }; Returns: boolean }
       validar_horario: {
         Args: {
           p_componente: string
@@ -517,7 +550,14 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      perfil_usuario:
+        | "ADMIN"
+        | "GESTOR_SEMED"
+        | "TECNICO_SEMED"
+        | "DIRETOR"
+        | "SECRETARIO"
+        | "COORDENADOR"
+        | "PROFESSOR"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -644,6 +684,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      perfil_usuario: [
+        "ADMIN",
+        "GESTOR_SEMED",
+        "TECNICO_SEMED",
+        "DIRETOR",
+        "SECRETARIO",
+        "COORDENADOR",
+        "PROFESSOR",
+      ],
+    },
   },
 } as const

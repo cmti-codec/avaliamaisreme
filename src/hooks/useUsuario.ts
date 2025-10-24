@@ -1,11 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+type PerfilUsuario = 
+  | 'ADMIN' 
+  | 'GESTOR_SEMED' 
+  | 'TECNICO_SEMED' 
+  | 'DIRETOR' 
+  | 'SECRETARIO' 
+  | 'COORDENADOR' 
+  | 'PROFESSOR';
+
 export interface Usuario {
   id: string;
   nome: string;
   email: string;
-  perfil: string | null;
+  perfil: PerfilUsuario;
   escola_id: string | null;
   ativo: boolean;
 }

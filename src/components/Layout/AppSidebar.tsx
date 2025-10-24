@@ -49,6 +49,7 @@ const secondaryItems = [
 ];
 
 const adminItems = [
+  { title: "Gestão de Usuários", url: "/admin/usuarios", icon: Users },
   { title: "Matrizes Curriculares", url: "/admin/matrizes", icon: BookOpen },
   { title: "Escolas ↔ Matrizes", url: "/admin/escolas-matrizes", icon: Link2 },
   { title: "Importar Dados", url: "/admin/importacao", icon: Download },
@@ -58,7 +59,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { data: usuario } = useUsuario();
-  const isAdmin = usuario?.perfil === "admin";
+  const isAdmin = usuario?.perfil === "ADMIN";
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
