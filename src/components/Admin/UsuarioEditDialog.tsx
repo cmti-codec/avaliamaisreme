@@ -82,26 +82,45 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
 
       if (updateError) throw updateError;
 
-      // Remover roles antigas
-      const { error: deleteError } = await supabase
+      // Buscar roles atuais
+      const { data: currentRolesData } = await supabase
         .from('user_roles')
-        .delete()
+        .select('role')
         .eq('user_id', usuario.id);
 
-      if (deleteError) throw deleteError;
+      const currentRoles = currentRolesData?.map((r) => r.role) || [];
+
+      // Identificar roles a adicionar (estão em selectedRoles mas não em currentRoles)
+      const rolesToAdd = selectedRoles.filter((role) => !(currentRoles as string[]).includes(role));
+
+      // Identificar roles a remover (estão em currentRoles mas não em selectedRoles)
+      const rolesToRemove = (currentRoles as string[]).filter((role) => !selectedRoles.includes(role));
+
+      // Remover roles que não estão mais selecionadas
+      if (rolesToRemove.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', usuario.id)
+          .in('role', rolesToRemove as any);
+
+        if (deleteError) throw deleteError;
+      }
 
       // Adicionar novas roles
-      const rolesToInsert = selectedRoles.map((role) => ({
-        user_id: usuario.id,
-        role: role as 'ADMIN' | 'GESTOR_SEMED' | 'TECNICO_SEMED' | 'DIRETOR' | 'SECRETARIO' | 'COORDENADOR' | 'PROFESSOR',
-        escola_id: null,
-      }));
+      if (rolesToAdd.length > 0) {
+        const rolesToInsert = rolesToAdd.map((role) => ({
+          user_id: usuario.id,
+          role: role as 'ADMIN' | 'GESTOR_SEMED' | 'TECNICO_SEMED' | 'DIRETOR' | 'SECRETARIO' | 'COORDENADOR' | 'PROFESSOR',
+          escola_id: null,
+        }));
 
-      const { error: insertError } = await supabase
-        .from('user_roles')
-        .insert(rolesToInsert);
+        const { error: insertError } = await supabase
+          .from('user_roles')
+          .insert(rolesToInsert);
 
-      if (insertError) throw insertError;
+        if (insertError) throw insertError;
+      }
 
       toast.success('Usuário atualizado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
