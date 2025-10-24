@@ -67,7 +67,16 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
     loadRealRoles();
   }, [usuario, open]);
 
-  const handleToggleRole = (role: string) => {
+  const handleToggleRole = async (role: string) => {
+    // Validação em tempo real: impedir desmarcar próprio ADMIN
+    if (role === 'ADMIN' && selectedRoles.includes('ADMIN')) {
+      const { data: { user: sessionUser } } = await supabase.auth.getUser();
+      if (sessionUser?.id === usuario?.id) {
+        toast.error('Você não pode remover seu próprio perfil de Administrador.');
+        return;
+      }
+    }
+    
     setSelectedRoles((prev) =>
       prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
     );

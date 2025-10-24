@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { UsuarioViewDialog } from '@/components/Admin/UsuarioViewDialog';
 import { UsuarioEditDialog } from '@/components/Admin/UsuarioEditDialog';
+import { UsuarioCreateDialog } from '@/components/Admin/UsuarioCreateDialog';
 
 interface Usuario {
   id: string;
@@ -53,6 +54,7 @@ export default function Usuarios() {
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<Usuario | null>(null);
   const [toggleStatusUser, setToggleStatusUser] = useState<Usuario | null>(null);
 
@@ -189,7 +191,7 @@ export default function Usuarios() {
               Gerenciar usuários e permissões do sistema
             </p>
           </div>
-          <Button>
+          <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Novo Usuário
           </Button>
@@ -349,6 +351,11 @@ export default function Usuarios() {
           usuario={selectedUsuario}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
+        />
+
+        <UsuarioCreateDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
         />
 
         {/* Reset Password Dialog */}
