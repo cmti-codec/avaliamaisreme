@@ -7,6 +7,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/Layout/AppSidebar";
 import { AppHeader } from "@/components/Layout/AppHeader";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ImpersonateBanner } from "@/components/ImpersonateBanner";
+import { cn } from "@/lib/utils";
 import Dashboard from "./pages/Dashboard";
 import Professores from "./pages/Professores";
 import Turmas from "./pages/Turmas";
@@ -31,7 +33,7 @@ const queryClient = new QueryClient({
 });
 
 function LayoutWrapper({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isImpersonating } = useAuth();
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
@@ -43,7 +45,11 @@ function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-background">
+      <ImpersonateBanner />
+      <div className={cn(
+        "min-h-screen flex w-full bg-background",
+        isImpersonating && "pt-12"
+      )}>
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           <AppHeader />

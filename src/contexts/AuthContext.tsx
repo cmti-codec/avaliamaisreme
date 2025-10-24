@@ -26,8 +26,12 @@ interface AuthContextType {
   user: Usuario | null;
   session: Session | null;
   loading: boolean;
+  isImpersonating: boolean;
+  originalAdmin: Usuario | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  impersonate: (targetUserId: string) => Promise<void>;
+  stopImpersonating: () => void;
   temPermissao: (funcionalidade: string, tipo: 'ler' | 'escrever' | 'aprovar') => boolean;
 }
 
@@ -37,8 +41,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [originalAdmin, setOriginalAdmin] = useState<Usuario | null>(null);
 
   useEffect(() => {
+    // Restaurar sessão de impersonation se existir
+    const isImp = localStorage.getItem('impersonating') === 'true';
+    const adminData = localStorage.getItem('originalAdmin');
+    
+    if (isImp && adminData) {
+      try {
+        setOriginalAdmin(JSON.parse(adminData));
+        setIsImpersonating(true);
+      } catch (e) {
+        console.error('Erro ao restaurar sessão de impersonation:', e);
+        localStorage.removeItem('impersonating');
+        localStorage.removeItem('originalAdmin');
+      }
+    }
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -141,8 +162,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const impersonate = async (targetUserId: string) => {
+    try {
+      if (!user?.roles.includes('ADMIN')) {
+        toast.error('Apenas administradores podem assumir perfis');
+        return;
+      }
+
+      // 1. Salvar admin atual
+      setOriginalAdmin(user);
+
+      // 2. Buscar dados do usuário-alvo
+      const { data: targetUserData, error: userError } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', targetUserId)
+        .single();
+
+      if (userError) throw userError;
+
+      // 3. Buscar roles do usuário-alvo
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role, escola_id')
+        .eq('user_id', targetUserId);
+
+      if (rolesError) throw rolesError;
+
+      const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
+      const primaryRole = roles[0] || 'PROFESSOR';
+      const escola_id = rolesData?.[0]?.escola_id || null;
+
+      const targetUser = {
+        ...targetUserData,
+        roles,
+        primaryRole,
+        escola_id,
+      } as Usuario;
+
+      // 4. Trocar contexto
+      setUser(targetUser);
+      setIsImpersonating(true);
+
+      // 5. Persistir no localStorage
+      localStorage.setItem('impersonating', 'true');
+      localStorage.setItem('originalAdmin', JSON.stringify(user));
+      localStorage.setItem('impersonatedUserId', targetUserId);
+
+      toast.success(`Agora você está visualizando como: ${targetUser.nome}`);
+    } catch (error: any) {
+      console.error('Erro ao assumir perfil:', error);
+      toast.error('Erro ao assumir perfil: ' + error.message);
+    }
+  };
+
+  const stopImpersonating = () => {
+    if (!originalAdmin) return;
+
+    // Restaurar admin original
+    setUser(originalAdmin);
+    setIsImpersonating(false);
+    setOriginalAdmin(null);
+
+    // Limpar localStorage
+    localStorage.removeItem('impersonating');
+    localStorage.removeItem('originalAdmin');
+    localStorage.removeItem('impersonatedUserId');
+
+    toast.info('Voltou para sua conta admin');
+  };
+
   const temPermissao = (funcionalidade: string, tipo: 'ler' | 'escrever' | 'aprovar'): boolean => {
     if (!user) return false;
+    // Admin sempre tem permissão (mesmo quando impersonando)
+    if (originalAdmin?.roles.includes('ADMIN')) return true;
     if (user.roles.includes('ADMIN')) return true;
 
     // TODO: Implementar verificação real com tabela permissoes_funcionalidade
@@ -151,7 +244,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut, temPermissao }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      isImpersonating, 
+      originalAdmin,
+      signIn, 
+      signOut, 
+      impersonate,
+      stopImpersonating,
+      temPermissao 
+    }}>
       {children}
     </AuthContext.Provider>
   );

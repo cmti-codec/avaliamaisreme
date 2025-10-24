@@ -537,6 +537,7 @@ export type Database = {
           email: string
           escola_id: string | null
           id: string
+          impersonated_by: string | null
           nome: string
         }
         Insert: {
@@ -545,6 +546,7 @@ export type Database = {
           email: string
           escola_id?: string | null
           id: string
+          impersonated_by?: string | null
           nome: string
         }
         Update: {
@@ -553,6 +555,7 @@ export type Database = {
           email?: string
           escola_id?: string | null
           id?: string
+          impersonated_by?: string | null
           nome?: string
         }
         Relationships: [
@@ -561,6 +564,13 @@ export type Database = {
             columns: ["escola_id"]
             isOneToOne: false
             referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_impersonated_by_fkey"
+            columns: ["impersonated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]

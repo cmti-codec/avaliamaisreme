@@ -30,18 +30,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock } from 'lucide-react';
+import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import { UsuarioViewDialog } from '@/components/Admin/UsuarioViewDialog';
 import { UsuarioEditDialog } from '@/components/Admin/UsuarioEditDialog';
 import { UsuarioCreateDialog } from '@/components/Admin/UsuarioCreateDialog';
+import { ImpersonateDialog } from '@/components/Admin/ImpersonateDialog';
 
 interface Usuario {
   id: string;
   nome: string;
   email: string;
   roles: string[];
+  primaryRole: string;
   escola_id: string | null;
   ativo: boolean;
   created_at: string;
@@ -58,8 +61,11 @@ export default function Usuarios() {
   const [resetPasswordUser, setResetPasswordUser] = useState<Usuario | null>(null);
   const [toggleStatusUser, setToggleStatusUser] = useState<Usuario | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [impersonateUser, setImpersonateUser] = useState<Usuario | null>(null);
+  const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
+  const { user: currentUser, impersonate } = useAuth();
 
   // Capturar ID do usuário logado
   useEffect(() => {
@@ -87,11 +93,15 @@ export default function Usuarios() {
             .select('role, escola_id')
             .eq('user_id', u.id);
 
+          const roles = rolesData?.map((r) => r.role) || [];
+          const primaryRole = roles[0] || 'PROFESSOR';
+
           return {
             id: u.id,
             nome: u.nome,
             email: u.email,
-            roles: rolesData?.map((r) => r.role) || [],
+            roles,
+            primaryRole,
             escola_id: u.escola_id,
             ativo: u.ativo,
             created_at: u.created_at,
@@ -216,6 +226,35 @@ export default function Usuarios() {
   const activeAdminCount = usuarios.filter(
     u => u.ativo && u.roles?.includes('ADMIN')
   ).length;
+
+  // Buscar escola do usuário que será impersonado
+  const { data: impersonateEscola } = useQuery({
+    queryKey: ['escola', impersonateUser?.escola_id],
+    queryFn: async () => {
+      if (!impersonateUser?.escola_id) return null;
+      const { data, error } = await supabase
+        .from('escolas')
+        .select('id, nome')
+        .eq('id', impersonateUser.escola_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!impersonateUser?.escola_id,
+  });
+
+  const handleImpersonate = async () => {
+    if (!impersonateUser) return;
+    
+    try {
+      await impersonate(impersonateUser.id);
+      setImpersonateDialogOpen(false);
+      setImpersonateUser(null);
+    } catch (error: any) {
+      console.error('Erro ao assumir perfil:', error);
+      toast.error(error.message || 'Erro ao assumir perfil');
+    }
+  };
 
   const filteredUsuarios = usuarios.filter((usuario) => {
     const matchesSearch =
@@ -369,6 +408,23 @@ export default function Usuarios() {
                         >
                           <RotateCw className="w-4 h-4" />
                         </Button>
+                        
+                        {/* Botão Testar Perfil - apenas para não-admins */}
+                        {!usuario.roles?.includes('ADMIN') && currentUser?.roles?.includes('ADMIN') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setImpersonateUser(usuario);
+                              setImpersonateDialogOpen(true);
+                            }}
+                            title="Testar perfil deste usuário"
+                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                          >
+                            <UserCheck className="w-4 h-4" />
+                          </Button>
+                        )}
+                        
                         <Button
                           variant="ghost"
                           size="icon"
@@ -463,6 +519,15 @@ export default function Usuarios() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Impersonate Dialog */}
+        <ImpersonateDialog
+          open={impersonateDialogOpen}
+          onOpenChange={setImpersonateDialogOpen}
+          usuario={impersonateUser}
+          escola={impersonateEscola}
+          onConfirm={handleImpersonate}
+        />
       </div>
     </ProtectedRoute>
   );
