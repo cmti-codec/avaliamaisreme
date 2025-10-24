@@ -169,7 +169,7 @@ export default function Usuarios() {
     const matchesSearch =
       usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       usuario.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPerfil = perfilFilter === 'all' || usuario.roles.includes(perfilFilter);
+    const matchesPerfil = perfilFilter === 'all' || (usuario.roles && usuario.roles.includes(perfilFilter));
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'ativo' && usuario.ativo) ||
@@ -269,11 +269,15 @@ export default function Usuarios() {
                     <TableCell>{usuario.email}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {usuario.roles.map((role) => (
-                          <Badge key={role} variant={getPerfilVariant(role)}>
-                            {getPerfilLabel(role)}
-                          </Badge>
-                        ))}
+                        {usuario.roles && usuario.roles.length > 0 ? (
+                          usuario.roles.map((role) => (
+                            <Badge key={role} variant={getPerfilVariant(role)}>
+                              {getPerfilLabel(role)}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="outline">Sem perfil</Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
