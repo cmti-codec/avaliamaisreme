@@ -49,12 +49,23 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (usuario) {
-      setNome(usuario.nome);
-      setEmail(usuario.email);
-      setSelectedRoles(usuario.roles);
-    }
-  }, [usuario]);
+    const loadRealRoles = async () => {
+      if (usuario && open) {
+        setNome(usuario.nome);
+        setEmail(usuario.email);
+        
+        // Buscar roles reais do banco para garantir sincronização
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', usuario.id);
+        
+        setSelectedRoles(rolesData?.map(r => r.role) || []);
+      }
+    };
+    
+    loadRealRoles();
+  }, [usuario, open]);
 
   const handleToggleRole = (role: string) => {
     setSelectedRoles((prev) =>
@@ -68,6 +79,13 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
 
     if (selectedRoles.length === 0) {
       toast.error('Selecione pelo menos um perfil');
+      return;
+    }
+
+    // Validação: Impedir que o usuário remova seu próprio perfil ADMIN
+    const { data: { user: sessionUser } } = await supabase.auth.getUser();
+    if (sessionUser?.id === usuario.id && !selectedRoles.includes('ADMIN')) {
+      toast.error('Você não pode remover seu próprio perfil de Administrador.');
       return;
     }
 
@@ -96,18 +114,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
       // Identificar roles a remover (estão em currentRoles mas não em selectedRoles)
       const rolesToRemove = (currentRoles as string[]).filter((role) => !selectedRoles.includes(role));
 
-      // Remover roles que não estão mais selecionadas
-      if (rolesToRemove.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', usuario.id)
-          .in('role', rolesToRemove as any);
-
-        if (deleteError) throw deleteError;
-      }
-
-      // Adicionar novas roles
+      // ✅ ORDEM CORRETA: Adicionar novas roles PRIMEIRO (mantém permissões durante a operação)
       if (rolesToAdd.length > 0) {
         const rolesToInsert = rolesToAdd.map((role) => ({
           user_id: usuario.id,
@@ -120,6 +127,17 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
           .insert(rolesToInsert);
 
         if (insertError) throw insertError;
+      }
+
+      // ✅ ORDEM CORRETA: Remover roles antigas DEPOIS (evita violação de RLS)
+      if (rolesToRemove.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', usuario.id)
+          .in('role', rolesToRemove as any);
+
+        if (deleteError) throw deleteError;
       }
 
       toast.success('Usuário atualizado com sucesso!');
