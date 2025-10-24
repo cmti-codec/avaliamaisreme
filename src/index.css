@@ -23,10 +23,10 @@ All colors MUST be HSL.
     --primary-glow: 225 73% 67%;
     --primary-dark: 225 73% 47%;
 
-    --secondary: 252 85% 35%;
+    --secondary: 220 65% 45%;
     --secondary-foreground: 0 0% 100%;
 
-    --accent: 330 81% 60%;
+    --accent: 200 85% 55%;
     --accent-foreground: 0 0% 100%;
 
     --muted: 220 14% 96%;
@@ -51,8 +51,8 @@ All colors MUST be HSL.
     --sidebar-ring: 225 73% 57%;
 
     /* Custom design tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(225 73% 57%), hsl(252 85% 35%));
-    --gradient-accent: linear-gradient(135deg, hsl(225 73% 57%), hsl(330 81% 60%));
+    --gradient-primary: linear-gradient(135deg, hsl(225 73% 57%), hsl(220 65% 45%));
+    --gradient-accent: linear-gradient(135deg, hsl(225 73% 57%), hsl(200 85% 55%));
     --gradient-subtle: linear-gradient(180deg, hsl(240 33% 99%), hsl(220 14% 96%));
     
     --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -79,10 +79,10 @@ All colors MUST be HSL.
     --primary-glow: 225 73% 67%;
     --primary-dark: 225 73% 47%;
 
-    --secondary: 252 85% 35%;
+    --secondary: 220 65% 45%;
     --secondary-foreground: 0 0% 100%;
 
-    --accent: 330 81% 60%;
+    --accent: 200 85% 55%;
     --accent-foreground: 0 0% 100%;
 
     --muted: 217 33% 17%;
@@ -104,8 +104,8 @@ All colors MUST be HSL.
     --sidebar-border: 217 32% 17%;
     --sidebar-ring: 225 73% 57%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(225 73% 57%), hsl(252 85% 35%));
-    --gradient-accent: linear-gradient(135deg, hsl(225 73% 57%), hsl(330 81% 60%));
+    --gradient-primary: linear-gradient(135deg, hsl(225 73% 57%), hsl(220 65% 45%));
+    --gradient-accent: linear-gradient(135deg, hsl(225 73% 57%), hsl(200 85% 55%));
     --gradient-subtle: linear-gradient(180deg, hsl(217 33% 17%), hsl(222 47% 11%));
     
     --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.2);
