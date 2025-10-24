@@ -9,6 +9,8 @@ import {
   Download,
   Settings,
   Clock,
+  Search,
+  BarChart3,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -29,7 +31,12 @@ const menuItems = [
   { title: "Turmas", url: "/turmas", icon: School },
   { title: "Escolas", url: "/escolas", icon: Building2 },
   { title: "Alunos", url: "/alunos", icon: GraduationCap },
-  { title: "Horários", url: "/horarios/lancamento", icon: Clock },
+];
+
+const pedagogicoItems = [
+  { title: "Lançar Horários", url: "/horarios/lancamento", icon: Clock },
+  { title: "Consultar Horários", url: "/horarios/consulta", icon: Search },
+  { title: "Dashboard", url: "/dashboard-pedagogico", icon: BarChart3 },
 ];
 
 const secondaryItems = [
@@ -67,6 +74,32 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url}
+                      className={({ isActive }) =>
+                        isActive 
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                          : "hover:bg-sidebar-accent/50"
+                      }
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Gestão Pedagógica */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Gestão Pedagógica</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {pedagogicoItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 

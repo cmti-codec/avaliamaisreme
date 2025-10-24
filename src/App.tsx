@@ -12,6 +12,7 @@ import Escolas from "./pages/Escolas";
 import Alunos from "./pages/Alunos";
 import Importacao from "./pages/admin/Importacao";
 import LancamentoHorarios from "./pages/horarios/Lancamento";
+import ConsultaHorarios from "./pages/horarios/Consulta";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -33,6 +34,7 @@ const App = () => (
                 <Route path="/alunos" element={<Alunos />} />
                 <Route path="/admin/importacao" element={<Importacao />} />
                 <Route path="/horarios/lancamento" element={<LancamentoHorarios />} />
+                <Route path="/horarios/consulta" element={<ConsultaHorarios />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
