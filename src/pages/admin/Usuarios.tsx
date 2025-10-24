@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -57,8 +57,16 @@ export default function Usuarios() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<Usuario | null>(null);
   const [toggleStatusUser, setToggleStatusUser] = useState<Usuario | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
+
+  // Capturar ID do usuário logado
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data.user?.id ?? null);
+    });
+  }, []);
 
   const { data: usuarios = [], isLoading } = useQuery({
     queryKey: ['usuarios'],
@@ -133,11 +141,48 @@ export default function Usuarios() {
 
   const toggleStatusMutation = useMutation({
     mutationFn: async (usuario: Usuario) => {
+      // Se for ativar, não há risco de lockout
+      if (!usuario.ativo) {
+        const { error } = await supabase
+          .from('usuarios')
+          .update({ ativo: true })
+          .eq('id', usuario.id);
+        if (error) throw error;
+        return;
+      }
+
+      // 🛑 PROTEÇÃO 1: Impedir desativar a si mesmo
+      const { data: { user: sessionUser } } = await supabase.auth.getUser();
+      if (sessionUser?.id === usuario.id) {
+        throw new Error('Você não pode desativar seu próprio usuário.');
+      }
+
+      // 🛑 PROTEÇÃO 2: Impedir desativar o último ADMIN ativo
+      const { data: adminRows, error: rolesErr } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'ADMIN');
+      if (rolesErr) throw rolesErr;
+
+      const adminIds = (adminRows ?? []).map(r => r.user_id);
+      if (adminIds.includes(usuario.id)) {
+        const { data: activeAdmins, error: actErr } = await supabase
+          .from('usuarios')
+          .select('id')
+          .in('id', adminIds)
+          .eq('ativo', true);
+        if (actErr) throw actErr;
+
+        if ((activeAdmins?.length ?? 0) <= 1) {
+          throw new Error('Você não pode desativar o último Administrador ativo do sistema.');
+        }
+      }
+
+      // Só desativar se passou por todas as validações
       const { error } = await supabase
         .from('usuarios')
-        .update({ ativo: !usuario.ativo })
+        .update({ ativo: false })
         .eq('id', usuario.id);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -146,7 +191,7 @@ export default function Usuarios() {
       setToggleStatusUser(null);
     },
     onError: (error: any) => {
-      toast.error('Erro ao atualizar status: ' + error.message);
+      toast.error(error?.message || 'Erro ao atualizar status');
     },
   });
 
@@ -166,6 +211,11 @@ export default function Usuarios() {
       toast.error('Erro ao enviar email: ' + error.message);
     },
   });
+
+  // Calcular número de admins ativos
+  const activeAdminCount = usuarios.filter(
+    u => u.ativo && u.roles?.includes('ADMIN')
+  ).length;
 
   const filteredUsuarios = usuarios.filter((usuario) => {
     const matchesSearch =
@@ -324,6 +374,10 @@ export default function Usuarios() {
                           size="icon"
                           onClick={() => setToggleStatusUser(usuario)}
                           title={usuario.ativo ? 'Desativar usuário' : 'Ativar usuário'}
+                          disabled={
+                            (usuario.id === currentUserId && usuario.ativo) ||
+                            (usuario.roles?.includes('ADMIN') && usuario.ativo && activeAdminCount === 1)
+                          }
                         >
                           {usuario.ativo ? (
                             <Lock className="w-4 h-4" />
