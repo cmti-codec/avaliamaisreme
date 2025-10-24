@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Save, Trash2, Printer, AlertTriangle, Loader2 } from "lucide-react";
+import { Save, Trash2, Printer, AlertTriangle, Loader2, AlertCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -27,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import GradeHoraria from "@/components/Horarios/GradeHoraria";
 import PainelCargas from "@/components/Horarios/PainelCargas";
 import { GradeHorariaLoading } from "@/components/Horarios/GradeHorariaLoading";
+import { useTurmaComMatriz, type TurmaComMatriz } from "@/hooks/useTurmasComMatriz";
 import {
   detectarConflitos,
   TURNOS_TEMPOS,
@@ -46,6 +48,11 @@ const Lancamento = () => {
   const [loading, setLoading] = useState(false);
   const [loadingGrade, setLoadingGrade] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
+  
+  // Buscar informações da matriz da turma selecionada
+  const { data: turmaComMatriz, isLoading: loadingMatriz } = useTurmaComMatriz(
+    turmaSelecionada?.id || null
+  );
 
   useEffect(() => {
     carregarDados();
@@ -310,7 +317,23 @@ const Lancamento = () => {
 
       {/* Layout Grid */}
       {turmaSelecionada && (
-        <div className="grid grid-cols-1 lg:grid-cols-[70%_30%] gap-6">
+        <>
+          {/* Alerta se sem matriz configurada */}
+          {!loadingMatriz && (!turmaComMatriz || !turmaComMatriz.matriz_id) && (
+            <Alert variant="default" className="border-amber-500 bg-amber-50 dark:bg-amber-950">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-800 dark:text-amber-200">
+                Matriz Curricular Não Configurada
+              </AlertTitle>
+              <AlertDescription className="text-amber-700 dark:text-amber-300">
+                Esta turma ainda não possui uma matriz curricular atribuída pela Secretaria. 
+                Entre em contato com o administrador do sistema para configurar a matriz antes de lançar horários.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!loadingMatriz && turmaComMatriz?.matriz_id && (
+            <div className="grid grid-cols-1 lg:grid-cols-[70%_30%] gap-6">
           {/* Esquerda - Tabs */}
           <div>
             <Tabs defaultValue="turma" className="space-y-4">
@@ -361,9 +384,15 @@ const Lancamento = () => {
 
           {/* Direita - Painel */}
           <div className="lg:sticky lg:top-6 lg:self-start">
-            <PainelCargas turma={turmaSelecionada} horarios={horarios} />
+            <PainelCargas 
+              turma={turmaSelecionada} 
+              turmaComMatriz={turmaComMatriz}
+              horarios={horarios} 
+            />
           </div>
         </div>
+          )}
+        </>
       )}
 
       {!turmaSelecionada && (

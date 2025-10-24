@@ -15,6 +15,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useUsuario } from "@/hooks/useUsuario";
 import {
   Sidebar,
   SidebarContent,
@@ -42,17 +43,22 @@ const pedagogicoItems = [
 ];
 
 const secondaryItems = [
-  { title: "Datas & Prazos", url: "/datas", icon: CalendarIcon },
-  { title: "Relatórios", url: "/relatorios", icon: FileText },
+  { title: "Datas & Prazos", url: "/datas", icon: CalendarIcon, adminOnly: false },
+  { title: "Relatórios", url: "/relatorios", icon: FileText, adminOnly: false },
+  { title: "Configurações", url: "/configuracoes", icon: Settings, adminOnly: false },
+];
+
+const adminItems = [
   { title: "Matrizes Curriculares", url: "/admin/matrizes", icon: BookOpen },
   { title: "Escolas ↔ Matrizes", url: "/admin/escolas-matrizes", icon: Link2 },
   { title: "Importar Dados", url: "/admin/importacao", icon: Download },
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const { data: usuario } = useUsuario();
+  const isAdmin = usuario?.perfil === "admin";
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -149,6 +155,34 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin Navigation - Only visible to admins */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>🔒 Administração</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url}
+                        className={({ isActive }) =>
+                          isActive 
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                            : "hover:bg-sidebar-accent/50"
+                        }
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );
