@@ -1,10 +1,20 @@
-import { useState, useEffect } from "react";
-import { Save, Trash2, Printer, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Save, Trash2, Printer, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -14,10 +24,12 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { GradeHoraria } from "@/components/Horarios/GradeHoraria";
-import { PainelCargas } from "@/components/Horarios/PainelCargas";
+import GradeHoraria from "@/components/Horarios/GradeHoraria";
+import PainelCargas from "@/components/Horarios/PainelCargas";
+import { GradeHorariaLoading } from "@/components/Horarios/GradeHorariaLoading";
 import {
   detectarConflitos,
+  TURNOS_TEMPOS,
   type HorarioSlot,
   type Professor,
   type Turma,
@@ -32,6 +44,8 @@ const Lancamento = () => {
   const [aulasGeminadas, setAulasGeminadas] = useState(false);
   const [conflitos, setConflitos] = useState<{ dia: string; tempo: number }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingGrade, setLoadingGrade] = useState(false);
+  const [showClearDialog, setShowClearDialog] = useState(false);
 
   useEffect(() => {
     carregarDados();
@@ -40,19 +54,17 @@ const Lancamento = () => {
   useEffect(() => {
     if (turmaSelecionada) {
       carregarHorariosTurma();
-      const novosConflitos = detectarConflitos(horarios, turmaSelecionada);
-      setConflitos(novosConflitos);
     }
   }, [turmaSelecionada]);
 
   useEffect(() => {
-    if (turmaSelecionada) {
+    if (turmaSelecionada && Object.keys(horarios).length > 0) {
       const novosConflitos = detectarConflitos(horarios, turmaSelecionada);
       setConflitos(novosConflitos);
     }
   }, [horarios, turmaSelecionada]);
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     try {
       // Buscar turmas da escola do usuário
       const { data: turmasData, error: turmasError } = await supabase
@@ -87,11 +99,12 @@ const Lancamento = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
-  const carregarHorariosTurma = async () => {
+  const carregarHorariosTurma = useCallback(async () => {
     if (!turmaSelecionada) return;
 
+    setLoadingGrade(true);
     try {
       const { data, error } = await supabase
         .from("horarios")
@@ -118,41 +131,47 @@ const Lancamento = () => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setLoadingGrade(false);
     }
-  };
+  }, [turmaSelecionada, toast]);
 
-  const handleTurmaChange = (turmaId: string) => {
+  const handleTurmaChange = useCallback((turmaId: string) => {
     const turma = turmas.find((t) => t.id === turmaId);
     setTurmaSelecionada(turma || null);
     setHorarios({});
-  };
+    setConflitos([]);
+  }, [turmas]);
 
-  const handleHorarioChange = (key: string, slot: HorarioSlot) => {
+  const handleHorarioChange = useCallback((key: string, slot: HorarioSlot) => {
     setHorarios((prev) => ({
       ...prev,
       [key]: slot,
     }));
-  };
+  }, []);
 
-  const handleHorarioRemove = (key: string) => {
+  const handleHorarioRemove = useCallback((key: string) => {
     setHorarios((prev) => {
       const newHorarios = { ...prev };
       delete newHorarios[key];
       return newHorarios;
     });
-  };
+  }, []);
 
-  const handleLimpar = () => {
-    if (confirm("Deseja realmente limpar todos os horários?")) {
-      setHorarios({});
-      toast({
-        title: "Horários limpos",
-        description: "Grade horária foi limpa com sucesso",
-      });
-    }
-  };
+  const handleLimpar = useCallback(() => {
+    setShowClearDialog(true);
+  }, []);
 
-  const handleSalvar = async () => {
+  const confirmarLimpar = useCallback(() => {
+    setHorarios({});
+    setShowClearDialog(false);
+    toast({
+      title: "Horários limpos",
+      description: "Grade horária foi limpa com sucesso",
+    });
+  }, [toast]);
+
+  const handleSalvar = useCallback(async () => {
     if (!turmaSelecionada) {
       toast({
         title: "Selecione uma turma",
@@ -214,15 +233,22 @@ const Lancamento = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [turmaSelecionada, conflitos, horarios, toast]);
 
-  const handleImprimir = () => {
+  const handleImprimir = useCallback(() => {
     window.print();
-  };
+  }, []);
 
-  const formatarTurma = (turma: Turma): string => {
-    return `${turma.segmento} - ${turma.grupo_ano} ${turma.turma} - ${turma.turno}`;
-  };
+  const formatarTurma = useMemo(
+    () => (turma: Turma): string => {
+      return `${turma.segmento} - ${turma.grupo_ano} ${turma.turma} - ${turma.turno}`;
+    },
+    []
+  );
+
+  const temposGrade = useMemo(() => {
+    return turmaSelecionada ? TURNOS_TEMPOS[turmaSelecionada.turno]?.length || 4 : 4;
+  }, [turmaSelecionada]);
 
   return (
     <div className="space-y-6">
@@ -231,17 +257,26 @@ const Lancamento = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Lançar Horário</h1>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleLimpar}>
+            <Button variant="outline" onClick={handleLimpar} disabled={loading || loadingGrade}>
               <Trash2 className="h-4 w-4 mr-2" />
               Limpar
             </Button>
-            <Button variant="outline" onClick={handleImprimir}>
+            <Button variant="outline" onClick={handleImprimir} disabled={loading || loadingGrade}>
               <Printer className="h-4 w-4 mr-2" />
               Imprimir
             </Button>
-            <Button onClick={handleSalvar} disabled={loading}>
-              <Save className="h-4 w-4 mr-2" />
-              {loading ? "Salvando..." : "Salvar"}
+            <Button onClick={handleSalvar} disabled={loading || loadingGrade || !turmaSelecionada}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -279,7 +314,7 @@ const Lancamento = () => {
           {/* Esquerda - Tabs */}
           <div>
             <Tabs defaultValue="turma" className="space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <TabsList>
                   <TabsTrigger value="turma">Horário da Turma</TabsTrigger>
                   <TabsTrigger value="professor">Horário do Professor</TabsTrigger>
@@ -292,6 +327,7 @@ const Lancamento = () => {
                     onCheckedChange={(checked) =>
                       setAulasGeminadas(checked as boolean)
                     }
+                    disabled={loading || loadingGrade}
                   />
                   <Label htmlFor="geminadas" className="text-sm cursor-pointer">
                     🔗 Aulas geminadas
@@ -299,16 +335,20 @@ const Lancamento = () => {
                 </div>
               </div>
 
-              <TabsContent value="turma">
-                <GradeHoraria
-                  turma={turmaSelecionada}
-                  professores={professores}
-                  horarios={horarios}
-                  onHorarioChange={handleHorarioChange}
-                  onHorarioRemove={handleHorarioRemove}
-                  aulasGeminadas={aulasGeminadas}
-                  conflitos={conflitos}
-                />
+              <TabsContent value="turma" className="overflow-x-auto">
+                {loadingGrade ? (
+                  <GradeHorariaLoading tempos={temposGrade} />
+                ) : (
+                  <GradeHoraria
+                    turma={turmaSelecionada}
+                    professores={professores}
+                    horarios={horarios}
+                    onHorarioChange={handleHorarioChange}
+                    onHorarioRemove={handleHorarioRemove}
+                    aulasGeminadas={aulasGeminadas}
+                    conflitos={conflitos}
+                  />
+                )}
               </TabsContent>
 
               <TabsContent value="professor">
@@ -320,7 +360,7 @@ const Lancamento = () => {
           </div>
 
           {/* Direita - Painel */}
-          <div>
+          <div className="lg:sticky lg:top-6 lg:self-start">
             <PainelCargas turma={turmaSelecionada} horarios={horarios} />
           </div>
         </div>
@@ -331,6 +371,25 @@ const Lancamento = () => {
           <p>Selecione uma turma para começar a lançar horários</p>
         </div>
       )}
+
+      {/* Dialog de Confirmação */}
+      <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpar grade horária?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá remover todos os horários lançados. Os dados não serão salvos
+              no banco de dados até que você clique em "Salvar".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarLimpar}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

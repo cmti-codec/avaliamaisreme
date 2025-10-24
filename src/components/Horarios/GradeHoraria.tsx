@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,15 +72,15 @@ export const GradeHoraria = ({
     return conflitos.some((c) => c.dia === dia && c.tempo === tempo);
   };
 
-  const getProfessoresFiltrados = (componente: string): Professor[] => {
+  const getProfessoresFiltrados = useCallback((componente: string): Professor[] => {
     return professores
       .filter((prof) =>
         validarFormacao(prof.formacoes, componente, turma.segmento, turma.grupo_ano)
       )
       .sort((a, b) => a.nome.localeCompare(b.nome));
-  };
+  }, [professores, turma.segmento, turma.grupo_ano]);
 
-  const handleComponenteChange = (dia: string, tempo: number, componente: string) => {
+  const handleComponenteChange = useCallback((dia: string, tempo: number, componente: string) => {
     const key = getSlotKey(dia, tempo);
     const profsFiltrados = getProfessoresFiltrados(componente);
 
@@ -112,9 +112,9 @@ export const GradeHoraria = ({
     ) {
       setProfessorTravado(professorId);
     }
-  };
+  }, [aulasGeminadas, tempos, onHorarioChange, getProfessoresFiltrados, turma]);
 
-  const handleProfessorChange = (dia: string, tempo: number, professorId: string) => {
+  const handleProfessorChange = useCallback((dia: string, tempo: number, professorId: string) => {
     const key = getSlotKey(dia, tempo);
     const currentSlot = horarios[key];
 
@@ -129,9 +129,9 @@ export const GradeHoraria = ({
         setProfessorTravado(professorId);
       }
     }
-  };
+  }, [horarios, onHorarioChange, turma]);
 
-  const handleRemove = (dia: string, tempo: number) => {
+  const handleRemove = useCallback((dia: string, tempo: number) => {
     const key = getSlotKey(dia, tempo);
     onHorarioRemove(key);
 
@@ -145,9 +145,9 @@ export const GradeHoraria = ({
     if (!hasOtherSlots) {
       setProfessorTravado(null);
     }
-  };
+  }, [horarios, professorTravado, onHorarioRemove]);
 
-  const getCellStyle = (componente?: string): React.CSSProperties => {
+  const getCellStyle = useMemo(() => (componente?: string): React.CSSProperties => {
     if (!componente) return {};
 
     const cor = CORES_COMPONENTES[componente] || "#95A5A6";
@@ -155,7 +155,7 @@ export const GradeHoraria = ({
       backgroundColor: `${cor}20`,
       position: "relative",
     };
-  };
+  }, []);
 
   return (
     <div className="overflow-x-auto">
@@ -270,3 +270,5 @@ export const GradeHoraria = ({
     </div>
   );
 };
+
+export default memo(GradeHoraria);

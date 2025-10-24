@@ -1,3 +1,4 @@
+import { useMemo, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,8 +31,9 @@ export const PainelCargas = ({ turma, horarios }: PainelCargasProps) => {
     );
   }
 
-  const componentesMatriz = Object.entries(turma.matriz_curricular || {}).sort(
-    ([a], [b]) => a.localeCompare(b)
+  const componentesMatriz = useMemo(
+    () => Object.entries(turma.matriz_curricular || {}).sort(([a], [b]) => a.localeCompare(b)),
+    [turma]
   );
 
   const getProgressColor = (percentual: number): string => {
@@ -118,3 +120,5 @@ export const PainelCargas = ({ turma, horarios }: PainelCargasProps) => {
     </Card>
   );
 };
+
+export default memo(PainelCargas);
