@@ -4,10 +4,11 @@ import {
   School, 
   Building2, 
   GraduationCap,
-  Calendar,
+  Calendar as CalendarIcon,
   FileText,
   Download,
-  Settings
+  Settings,
+  Clock,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
@@ -28,10 +29,11 @@ const menuItems = [
   { title: "Turmas", url: "/turmas", icon: School },
   { title: "Escolas", url: "/escolas", icon: Building2 },
   { title: "Alunos", url: "/alunos", icon: GraduationCap },
+  { title: "Horários", url: "/horarios/lancamento", icon: Clock },
 ];
 
 const secondaryItems = [
-  { title: "Datas & Prazos", url: "/datas", icon: Calendar },
+  { title: "Datas & Prazos", url: "/datas", icon: CalendarIcon },
   { title: "Relatórios", url: "/relatorios", icon: FileText },
   { title: "Importar Dados", url: "/admin/importacao", icon: Download },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
