@@ -85,6 +85,7 @@ export type Database = {
           email: string | null
           endereco: string | null
           id: string
+          matriz_curricular_id: string | null
           nome: string
           telefone: string | null
         }
@@ -95,6 +96,7 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           id?: string
+          matriz_curricular_id?: string | null
           nome: string
           telefone?: string | null
         }
@@ -105,10 +107,26 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           id?: string
+          matriz_curricular_id?: string | null
           nome?: string
           telefone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "escolas_matriz_curricular_id_fkey"
+            columns: ["matriz_curricular_id"]
+            isOneToOne: false
+            referencedRelation: "matrizes_curriculares"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escolas_matriz_curricular_id_fkey"
+            columns: ["matriz_curricular_id"]
+            isOneToOne: false
+            referencedRelation: "turmas_com_matriz"
+            referencedColumns: ["matriz_id"]
+          },
+        ]
       }
       formacoes: {
         Row: {
@@ -193,7 +211,102 @@ export type Database = {
             referencedRelation: "turmas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "horarios_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas_com_matriz"
+            referencedColumns: ["turma_id"]
+          },
         ]
+      }
+      matriz_componentes: {
+        Row: {
+          carga_horaria_semanal: number
+          componente_nome: string
+          id: string
+          matriz_id: string
+          ordem: number | null
+        }
+        Insert: {
+          carga_horaria_semanal: number
+          componente_nome: string
+          id?: string
+          matriz_id: string
+          ordem?: number | null
+        }
+        Update: {
+          carga_horaria_semanal?: number
+          componente_nome?: string
+          id?: string
+          matriz_id?: string
+          ordem?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matriz_componentes_componente_nome_fkey"
+            columns: ["componente_nome"]
+            isOneToOne: false
+            referencedRelation: "componentes_curriculares"
+            referencedColumns: ["nome"]
+          },
+          {
+            foreignKeyName: "matriz_componentes_matriz_id_fkey"
+            columns: ["matriz_id"]
+            isOneToOne: false
+            referencedRelation: "matrizes_curriculares"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matriz_componentes_matriz_id_fkey"
+            columns: ["matriz_id"]
+            isOneToOne: false
+            referencedRelation: "turmas_com_matriz"
+            referencedColumns: ["matriz_id"]
+          },
+        ]
+      }
+      matrizes_curriculares: {
+        Row: {
+          ativa: boolean | null
+          codigo: string
+          created_at: string | null
+          descricao: string | null
+          etapa_modalidade: string
+          grupo_ano: string
+          id: string
+          nome: string
+          tipo_jornada: string | null
+          total_horas_semanais: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativa?: boolean | null
+          codigo: string
+          created_at?: string | null
+          descricao?: string | null
+          etapa_modalidade: string
+          grupo_ano: string
+          id?: string
+          nome: string
+          tipo_jornada?: string | null
+          total_horas_semanais?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativa?: boolean | null
+          codigo?: string
+          created_at?: string | null
+          descricao?: string | null
+          etapa_modalidade?: string
+          grupo_ano?: string
+          id?: string
+          nome?: string
+          tipo_jornada?: string | null
+          total_horas_semanais?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       professor_eventos: {
         Row: {
@@ -365,7 +478,31 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      turmas_com_matriz: {
+        Row: {
+          componentes: Json | null
+          etapa_modalidade: string | null
+          grupo_ano: string | null
+          matriz_codigo: string | null
+          matriz_id: string | null
+          matriz_nome: string | null
+          nome_escola: string | null
+          saesc: string | null
+          total_horas_semanais: number | null
+          turma: string | null
+          turma_id: string | null
+          turno: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turmas_escola_id_fkey"
+            columns: ["saesc"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       validar_horario: {
