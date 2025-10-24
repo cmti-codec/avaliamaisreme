@@ -59,7 +59,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { data: usuario } = useUsuario();
-  const isAdmin = usuario?.perfil === "ADMIN";
+  const isAdmin = usuario?.roles.includes("ADMIN");
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">

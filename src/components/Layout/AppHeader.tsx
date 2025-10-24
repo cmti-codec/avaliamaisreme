@@ -45,7 +45,7 @@ export function AppHeader() {
         {user && (
           <>
             <Badge variant="outline" className="hidden sm:flex">
-              {getPerfilLabel(user.perfil)}
+              {getPerfilLabel(user.primaryRole)}
             </Badge>
             
             <DropdownMenu>

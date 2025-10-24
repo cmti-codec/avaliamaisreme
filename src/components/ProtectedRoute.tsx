@@ -43,7 +43,7 @@ export function ProtectedRoute({
   }
 
   // Verificar perfil se especificado
-  if (perfisPermitidos && !perfisPermitidos.includes(user.perfil)) {
+  if (perfisPermitidos && !user.roles.some(role => perfisPermitidos.includes(role))) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] p-4">
         <Alert variant="destructive" className="max-w-lg">

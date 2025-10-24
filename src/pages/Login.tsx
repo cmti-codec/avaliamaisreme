@@ -22,7 +22,7 @@ export default function Login() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      redirectBasedOnProfile(user.perfil);
+      redirectBasedOnProfile(user.primaryRole);
     }
   }, [user, navigate]);
 

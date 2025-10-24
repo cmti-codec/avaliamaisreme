@@ -19,7 +19,7 @@ const EscolasMatrizes = () => {
   const [escolaEditId, setEscolaEditId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoading && (!usuario || usuario.perfil !== "ADMIN")) {
+    if (!isLoading && (!usuario || !usuario.roles.includes("ADMIN"))) {
       toast({
         title: "Acesso negado",
         description: "Esta área é restrita a administradores",
@@ -44,7 +44,7 @@ const EscolasMatrizes = () => {
     );
   }
 
-  if (!usuario || usuario.perfil !== "ADMIN") {
+  if (!usuario || !usuario.roles.includes("ADMIN")) {
     return null;
   }
 

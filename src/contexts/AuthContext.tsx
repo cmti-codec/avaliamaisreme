@@ -16,7 +16,8 @@ interface Usuario {
   id: string;
   nome: string;
   email: string;
-  perfil: PerfilUsuario;
+  roles: PerfilUsuario[];
+  primaryRole: PerfilUsuario;
   escola_id: string | null;
   ativo: boolean;
 }
@@ -70,15 +71,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Buscar dados básicos do usuário
+      const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
-      
-      setUser(data as Usuario);
+      if (userError) throw userError;
+
+      // Buscar roles do usuário
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role, escola_id')
+        .eq('user_id', userId);
+
+      if (rolesError) throw rolesError;
+
+      // Determinar role principal (maior privilégio)
+      const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
+      const primaryRole = roles[0] || 'PROFESSOR';
+      const escola_id = rolesData?.[0]?.escola_id || null;
+
+      setUser({
+        ...userData,
+        roles,
+        primaryRole,
+        escola_id,
+      } as Usuario);
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);
       toast.error('Erro ao carregar perfil do usuário');
@@ -123,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const temPermissao = (funcionalidade: string, tipo: 'ler' | 'escrever' | 'aprovar'): boolean => {
     if (!user) return false;
-    if (user.perfil === 'ADMIN') return true;
+    if (user.roles.includes('ADMIN')) return true;
 
     // TODO: Implementar verificação real com tabela permissoes_funcionalidade
     // Por enquanto, retorna true para desenvolvimento

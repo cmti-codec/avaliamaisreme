@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_roles: {
+        Row: {
+          action: string
+          changed_at: string | null
+          changed_by: string
+          id: string
+          metadata: Json | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string | null
+          changed_by: string
+          id?: string
+          metadata?: Json | null
+          role: Database["public"]["Enums"]["app_role"]
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string | null
+          changed_by?: string
+          id?: string
+          metadata?: Json | null
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       componentes_curriculares: {
         Row: {
           ativo: boolean | null
@@ -312,7 +342,7 @@ export type Database = {
         Row: {
           funcionalidade: string
           id: string
-          perfil: Database["public"]["Enums"]["perfil_usuario"]
+          perfil: Database["public"]["Enums"]["app_role"]
           pode_aprovar: boolean | null
           pode_escrever: boolean | null
           pode_ler: boolean | null
@@ -320,7 +350,7 @@ export type Database = {
         Insert: {
           funcionalidade: string
           id?: string
-          perfil: Database["public"]["Enums"]["perfil_usuario"]
+          perfil: Database["public"]["Enums"]["app_role"]
           pode_aprovar?: boolean | null
           pode_escrever?: boolean | null
           pode_ler?: boolean | null
@@ -328,7 +358,7 @@ export type Database = {
         Update: {
           funcionalidade?: string
           id?: string
-          perfil?: Database["public"]["Enums"]["perfil_usuario"]
+          perfil?: Database["public"]["Enums"]["app_role"]
           pode_aprovar?: boolean | null
           pode_escrever?: boolean | null
           pode_ler?: boolean | null
@@ -465,6 +495,41 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          escola_id: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          escola_id?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          escola_id?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usuarios: {
         Row: {
           ativo: boolean | null
@@ -473,7 +538,6 @@ export type Database = {
           escola_id: string | null
           id: string
           nome: string
-          perfil: Database["public"]["Enums"]["perfil_usuario"]
         }
         Insert: {
           ativo?: boolean | null
@@ -482,7 +546,6 @@ export type Database = {
           escola_id?: string | null
           id: string
           nome: string
-          perfil: Database["public"]["Enums"]["perfil_usuario"]
         }
         Update: {
           ativo?: boolean | null
@@ -491,7 +554,6 @@ export type Database = {
           escola_id?: string | null
           id?: string
           nome?: string
-          perfil?: Database["public"]["Enums"]["perfil_usuario"]
         }
         Relationships: [
           {
@@ -532,10 +594,17 @@ export type Database = {
       }
     }
     Functions: {
-      get_user_escola_id: { Args: never; Returns: string }
-      get_user_perfil: {
-        Args: never
-        Returns: Database["public"]["Enums"]["perfil_usuario"]
+      get_user_escola_id: { Args: { _user_id?: string }; Returns: string }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       tem_permissao: { Args: { func: string; tipo: string }; Returns: boolean }
       validar_horario: {
@@ -550,6 +619,14 @@ export type Database = {
       }
     }
     Enums: {
+      app_role:
+        | "ADMIN"
+        | "GESTOR_SEMED"
+        | "TECNICO_SEMED"
+        | "DIRETOR"
+        | "SECRETARIO"
+        | "COORDENADOR"
+        | "PROFESSOR"
       perfil_usuario:
         | "ADMIN"
         | "GESTOR_SEMED"
@@ -685,6 +762,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: [
+        "ADMIN",
+        "GESTOR_SEMED",
+        "TECNICO_SEMED",
+        "DIRETOR",
+        "SECRETARIO",
+        "COORDENADOR",
+        "PROFESSOR",
+      ],
       perfil_usuario: [
         "ADMIN",
         "GESTOR_SEMED",

@@ -14,7 +14,8 @@ export interface Usuario {
   id: string;
   nome: string;
   email: string;
-  perfil: PerfilUsuario;
+  roles: PerfilUsuario[];
+  primaryRole: PerfilUsuario;
   escola_id: string | null;
   ativo: boolean;
 }
@@ -29,18 +30,41 @@ export const useUsuario = () => {
         return null;
       }
 
-      const { data, error } = await supabase
+      // Buscar dados básicos
+      const { data: userData, error: userError } = await supabase
         .from("usuarios")
         .select("*")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (error) {
-        console.error("Erro ao buscar usuário:", error);
-        throw error;
+      if (userError) {
+        console.error("Erro ao buscar usuário:", userError);
+        throw userError;
       }
 
-      return data as Usuario | null;
+      if (!userData) return null;
+
+      // Buscar roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("role, escola_id")
+        .eq("user_id", user.id);
+
+      if (rolesError) {
+        console.error("Erro ao buscar roles:", rolesError);
+        throw rolesError;
+      }
+
+      const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
+      const primaryRole = roles[0] || 'PROFESSOR';
+      const escola_id = rolesData?.[0]?.escola_id || null;
+
+      return {
+        ...userData,
+        roles,
+        primaryRole,
+        escola_id,
+      } as Usuario;
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
