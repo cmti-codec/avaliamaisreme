@@ -36,8 +36,8 @@ interface Usuario {
 
 export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [perfilFilter, setPerfilFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [perfilFilter, setPerfilFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const queryClient = useQueryClient();
 
@@ -94,9 +94,9 @@ export default function Usuarios() {
     const matchesSearch =
       usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       usuario.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPerfil = !perfilFilter || usuario.perfil === perfilFilter;
+    const matchesPerfil = perfilFilter === 'all' || usuario.perfil === perfilFilter;
     const matchesStatus =
-      !statusFilter ||
+      statusFilter === 'all' ||
       (statusFilter === 'ativo' && usuario.ativo) ||
       (statusFilter === 'inativo' && !usuario.ativo);
 
@@ -137,7 +137,7 @@ export default function Usuarios() {
               <SelectValue placeholder="Todos os perfis" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os perfis</SelectItem>
+              <SelectItem value="all">Todos os perfis</SelectItem>
               {perfis.map((perfil) => (
                 <SelectItem key={perfil} value={perfil}>
                   {getPerfilLabel(perfil)}
@@ -151,7 +151,7 @@ export default function Usuarios() {
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="ativo">Ativos</SelectItem>
               <SelectItem value="inativo">Inativos</SelectItem>
             </SelectContent>
