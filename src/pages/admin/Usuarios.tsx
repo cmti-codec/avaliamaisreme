@@ -19,16 +19,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Search, Edit, RotateCw, Lock, Eye } from 'lucide-react';
+import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { UsuarioViewDialog } from '@/components/Admin/UsuarioViewDialog';
+import { UsuarioEditDialog } from '@/components/Admin/UsuarioEditDialog';
 
 interface Usuario {
   id: string;
   nome: string;
   email: string;
-  perfil: string;
+  roles: string[];
   escola_id: string | null;
   ativo: boolean;
   created_at: string;
@@ -38,19 +50,46 @@ export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState('');
   const [perfilFilter, setPerfilFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<Usuario | null>(null);
+  const [toggleStatusUser, setToggleStatusUser] = useState<Usuario | null>(null);
 
   const queryClient = useQueryClient();
 
   const { data: usuarios = [], isLoading } = useQuery({
     queryKey: ['usuarios'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Buscar usuários
+      const { data: usuariosData, error: usuariosError } = await supabase
         .from('usuarios')
         .select('*')
         .order('nome');
 
-      if (error) throw error;
-      return data as Usuario[];
+      if (usuariosError) throw usuariosError;
+
+      // Para cada usuário, buscar suas roles
+      const usuariosComRoles = await Promise.all(
+        usuariosData.map(async (u) => {
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('role, escola_id')
+            .eq('user_id', u.id);
+
+          return {
+            id: u.id,
+            nome: u.nome,
+            email: u.email,
+            roles: rolesData?.map((r) => r.role) || [],
+            escola_id: u.escola_id,
+            ativo: u.ativo,
+            created_at: u.created_at,
+          };
+        })
+      );
+
+      return usuariosComRoles as Usuario[];
     },
   });
 
@@ -90,11 +129,47 @@ export default function Usuarios() {
     return variants[perfil] || 'outline';
   };
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (usuario: Usuario) => {
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ ativo: !usuario.ativo })
+        .eq('id', usuario.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Status do usuário atualizado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      setToggleStatusUser(null);
+    },
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar status: ' + error.message);
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Email de redefinição de senha enviado com sucesso!');
+      setResetPasswordUser(null);
+    },
+    onError: (error: any) => {
+      toast.error('Erro ao enviar email: ' + error.message);
+    },
+  });
+
   const filteredUsuarios = usuarios.filter((usuario) => {
     const matchesSearch =
       usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       usuario.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPerfil = perfilFilter === 'all' || usuario.perfil === perfilFilter;
+    const matchesPerfil = perfilFilter === 'all' || usuario.roles.includes(perfilFilter);
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'ativo' && usuario.ativo) ||
@@ -193,9 +268,13 @@ export default function Usuarios() {
                     <TableCell className="font-medium">{usuario.nome}</TableCell>
                     <TableCell>{usuario.email}</TableCell>
                     <TableCell>
-                      <Badge variant={getPerfilVariant(usuario.perfil)}>
-                        {getPerfilLabel(usuario.perfil)}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {usuario.roles.map((role) => (
+                          <Badge key={role} variant={getPerfilVariant(role)}>
+                            {getPerfilLabel(role)}
+                          </Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={usuario.ativo ? 'default' : 'secondary'}>
@@ -207,30 +286,44 @@ export default function Usuarios() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+                          onClick={() => {
+                            setSelectedUsuario(usuario);
+                            setViewDialogOpen(true);
+                          }}
+                          title="Visualizar detalhes"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+                          onClick={() => {
+                            setSelectedUsuario(usuario);
+                            setEditDialogOpen(true);
+                          }}
+                          title="Editar usuário"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+                          onClick={() => setResetPasswordUser(usuario)}
+                          title="Resetar senha"
                         >
                           <RotateCw className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+                          onClick={() => setToggleStatusUser(usuario)}
+                          title={usuario.ativo ? 'Desativar usuário' : 'Ativar usuário'}
                         >
-                          <Lock className="w-4 h-4" />
+                          {usuario.ativo ? (
+                            <Lock className="w-4 h-4" />
+                          ) : (
+                            <Unlock className="w-4 h-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -240,6 +333,71 @@ export default function Usuarios() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Diálogos */}
+        <UsuarioViewDialog
+          usuario={selectedUsuario}
+          open={viewDialogOpen}
+          onOpenChange={setViewDialogOpen}
+        />
+
+        <UsuarioEditDialog
+          usuario={selectedUsuario}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
+
+        {/* Reset Password Dialog */}
+        <AlertDialog
+          open={!!resetPasswordUser}
+          onOpenChange={(open) => !open && setResetPasswordUser(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Resetar Senha</AlertDialogTitle>
+              <AlertDialogDescription>
+                Será enviado um email para <strong>{resetPasswordUser?.email}</strong> com
+                instruções para redefinição de senha. Deseja continuar?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() =>
+                  resetPasswordUser && resetPasswordMutation.mutate(resetPasswordUser.email)
+                }
+              >
+                Enviar Email
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Toggle Status Dialog */}
+        <AlertDialog
+          open={!!toggleStatusUser}
+          onOpenChange={(open) => !open && setToggleStatusUser(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {toggleStatusUser?.ativo ? 'Desativar' : 'Ativar'} Usuário
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja {toggleStatusUser?.ativo ? 'desativar' : 'ativar'} o
+                usuário <strong>{toggleStatusUser?.nome}</strong>?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => toggleStatusUser && toggleStatusMutation.mutate(toggleStatusUser)}
+              >
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </ProtectedRoute>
   );
