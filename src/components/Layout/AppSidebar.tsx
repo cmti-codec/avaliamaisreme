@@ -9,6 +9,7 @@ import {
   Download,
   Settings,
   BookOpen,
+  Link2,
   Clock,
   Search,
   BarChart3,
@@ -44,6 +45,7 @@ const secondaryItems = [
   { title: "Datas & Prazos", url: "/datas", icon: CalendarIcon },
   { title: "Relatórios", url: "/relatorios", icon: FileText },
   { title: "Matrizes Curriculares", url: "/admin/matrizes", icon: BookOpen },
+  { title: "Escolas ↔ Matrizes", url: "/admin/escolas-matrizes", icon: Link2 },
   { title: "Importar Dados", url: "/admin/importacao", icon: Download },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
