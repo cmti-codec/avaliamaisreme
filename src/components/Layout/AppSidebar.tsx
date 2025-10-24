@@ -8,6 +8,7 @@ import {
   FileText,
   Download,
   Settings,
+  BookOpen,
   Clock,
   Search,
   BarChart3,
@@ -42,6 +43,7 @@ const pedagogicoItems = [
 const secondaryItems = [
   { title: "Datas & Prazos", url: "/datas", icon: CalendarIcon },
   { title: "Relatórios", url: "/relatorios", icon: FileText },
+  { title: "Matrizes Curriculares", url: "/admin/matrizes", icon: BookOpen },
   { title: "Importar Dados", url: "/admin/importacao", icon: Download },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
