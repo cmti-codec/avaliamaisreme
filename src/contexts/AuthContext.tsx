@@ -92,14 +92,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Buscar dados básicos do usuário
+      console.log('🔵 Buscando perfil do usuário:', userId);
+      
+      // Buscar dados básicos do usuário (usar maybeSingle para evitar erro)
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (userError) throw userError;
+      if (userError) {
+        console.error('❌ Erro ao buscar dados do usuário:', userError);
+        throw userError;
+      }
+
+      if (!userData) {
+        console.error('❌ Usuário não encontrado na tabela usuarios:', userId);
+        throw new Error('Usuário não encontrado');
+      }
+
+      console.log('✅ Dados do usuário encontrados:', userData.email);
 
       // Buscar roles do usuário
       const { data: rolesData, error: rolesError } = await supabase
@@ -107,7 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('role, escola_id')
         .eq('user_id', userId);
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.error('❌ Erro ao buscar roles:', rolesError);
+        throw rolesError;
+      }
+
+      console.log('✅ Roles encontradas:', rolesData?.map(r => r.role));
 
       // Determinar role principal (maior privilégio)
       const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
@@ -120,9 +137,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         primaryRole,
         escola_id,
       } as Usuario);
+      
+      console.log('✅ Perfil do usuário carregado com sucesso');
     } catch (error) {
-      console.error('Erro ao buscar perfil do usuário:', error);
+      console.error('❌ Erro fatal ao buscar perfil do usuário:', error);
       toast.error('Erro ao carregar perfil do usuário');
+      // IMPORTANTE: fazer logout se falhar
+      await supabase.auth.signOut();
     } finally {
       setLoading(false);
     }

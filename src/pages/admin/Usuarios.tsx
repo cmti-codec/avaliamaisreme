@@ -77,21 +77,44 @@ export default function Usuarios() {
   const { data: usuarios = [], isLoading } = useQuery({
     queryKey: ['usuarios'],
     queryFn: async () => {
+      console.log('🔵 Iniciando busca de usuários...');
+      
+      // Verificar autenticação
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      console.log('🔵 Usuário autenticado:', authUser?.id, authUser?.email);
+      
       // Buscar usuários
       const { data: usuariosData, error: usuariosError } = await supabase
         .from('usuarios')
         .select('*')
         .order('nome');
 
-      if (usuariosError) throw usuariosError;
+      console.log('🔵 Resultado query usuarios:', { 
+        count: usuariosData?.length, 
+        error: usuariosError?.message 
+      });
+
+      if (usuariosError) {
+        console.error('❌ Erro ao buscar usuários:', usuariosError);
+        throw usuariosError;
+      }
+
+      if (!usuariosData || usuariosData.length === 0) {
+        console.warn('⚠️ Nenhum usuário retornado do banco');
+        return [];
+      }
 
       // Para cada usuário, buscar suas roles
       const usuariosComRoles = await Promise.all(
         usuariosData.map(async (u) => {
-          const { data: rolesData } = await supabase
+          const { data: rolesData, error: rolesError } = await supabase
             .from('user_roles')
             .select('role, escola_id')
             .eq('user_id', u.id);
+
+          if (rolesError) {
+            console.error(`❌ Erro ao buscar roles do usuário ${u.id}:`, rolesError);
+          }
 
           const roles = rolesData?.map((r) => r.role) || [];
           const primaryRole = roles[0] || 'PROFESSOR';
@@ -109,6 +132,7 @@ export default function Usuarios() {
         })
       );
 
+      console.log('✅ Usuários processados:', usuariosComRoles.length);
       return usuariosComRoles as Usuario[];
     },
   });
