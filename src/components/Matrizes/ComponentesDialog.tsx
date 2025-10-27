@@ -6,12 +6,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, BookOpen } from "lucide-react";
-import { useComponentes, useCreateComponente } from "@/hooks/useComponentes";
+import { Plus, BookOpen, Trash2 } from "lucide-react";
+import { useComponentes, useCreateComponente, useDeleteComponente } from "@/hooks/useComponentes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
@@ -32,9 +42,12 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
   const [nome, setNome] = useState("");
   const [sigla, setSigla] = useState("");
   const [etapas, setEtapas] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [componenteToDelete, setComponenteToDelete] = useState<string | null>(null);
 
   const { data: componentes, isLoading } = useComponentes();
   const createComponente = useCreateComponente();
+  const deleteComponente = useDeleteComponente();
 
   const handleToggleEtapa = (etapa: string) => {
     setEtapas((prev) =>
@@ -65,6 +78,19 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
     setSigla("");
     setEtapas([]);
     setShowForm(false);
+  };
+
+  const handleDeleteClick = (componenteNome: string) => {
+    setComponenteToDelete(componenteNome);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (componenteToDelete) {
+      await deleteComponente.mutateAsync(componenteToDelete);
+      setDeleteDialogOpen(false);
+      setComponenteToDelete(null);
+    }
   };
 
   return (
@@ -104,7 +130,7 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
                       key={componente.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                           <BookOpen className="w-5 h-5 text-primary" />
                         </div>
@@ -115,12 +141,23 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-1 flex-wrap justify-end max-w-[300px]">
-                        {componente.segmentos?.map((segmento) => (
-                          <Badge key={segmento} variant="secondary">
-                            {segmento}
-                          </Badge>
-                        ))}
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1 flex-wrap justify-end max-w-[300px]">
+                          {componente.segmentos?.map((segmento) => (
+                            <Badge key={segmento} variant="secondary">
+                              {segmento}
+                            </Badge>
+                          ))}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(componente.nome)}
+                          title="Excluir componente"
+                          className="shrink-0"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -203,6 +240,29 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
           )}
         </div>
       </DialogContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>Atenção!</strong> Ao excluir este componente curricular, ele será removido
+              de <strong>todas as matrizes</strong> que estão vinculadas a ele.
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={deleteComponente.isPending}
+            >
+              {deleteComponente.isPending ? "Excluindo..." : "Excluir Componente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

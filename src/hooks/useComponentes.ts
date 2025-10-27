@@ -68,3 +68,43 @@ export const useCreateComponente = () => {
     },
   });
 };
+
+export const useDeleteComponente = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (componenteNome: string) => {
+      // Primeiro, remove o componente de todas as matrizes
+      const { error: matrizError } = await supabase
+        .from("matriz_componentes")
+        .delete()
+        .eq("componente_nome", componenteNome);
+
+      if (matrizError) throw matrizError;
+
+      // Depois, remove o componente
+      const { error } = await supabase
+        .from("componentes_curriculares")
+        .delete()
+        .eq("nome", componenteNome);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["componentes-curriculares"] });
+      queryClient.invalidateQueries({ queryKey: ["matrizes"] });
+      toast({
+        title: "Componente excluído",
+        description: "O componente foi removido de todas as matrizes.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir componente",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+};
