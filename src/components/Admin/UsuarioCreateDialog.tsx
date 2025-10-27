@@ -70,65 +70,25 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
       console.log('🔵 Iniciando criação de usuário:', email.trim());
       console.log('🔵 Roles selecionadas:', selectedRoles);
 
-      // Criar usuário no auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: senha,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
+      // Criar usuário via função de backend para evitar troca de sessão e respeitar RLS
+      const { data: result, error: fnError } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          nome: nome.trim(),
+          email: email.trim(),
+          senha,
+          roles: selectedRoles,
+          escola_id: null,
         },
       });
 
-      console.log('🟢 Resultado signUp:', { 
-        user_id: authData?.user?.id, 
-        email: authData?.user?.email,
-        confirmed: authData?.user?.confirmed_at,
-        error: authError?.message 
-      });
+      console.log('🟢 Resultado admin-create-user:', result, fnError);
 
-      if (authError) {
-        // Checar se é erro de "usuário já existe"
-        if (authError.message.includes('already registered')) {
-          throw new Error('Este email já está cadastrado no sistema');
-        }
-        throw authError;
+      if (fnError) {
+        throw new Error(fnError.message || 'Falha ao criar usuário');
       }
 
-      if (!authData.user) throw new Error('Erro ao criar usuário no sistema de autenticação');
-
-      // Verificar se o usuário foi confirmado (caso enable_confirmations = true)
-      if (!authData.user.confirmed_at && authData.user.confirmation_sent_at) {
-        throw new Error('Email de confirmação enviado. Peça ao usuário para verificar a caixa de entrada.');
-      }
-
-      // Inserir na tabela usuarios
-      const { error: usuarioError } = await supabase
-        .from('usuarios')
-        .insert({
-          id: authData.user.id,
-          nome: nome.trim(),
-          email: email.trim(),
-          ativo: true,
-        });
-
-      if (usuarioError) throw usuarioError;
-
-      // Inserir roles
-      const rolesToInsert = selectedRoles.map((role) => ({
-        user_id: authData.user!.id,
-        role: role as 'ADMIN' | 'GESTOR_SEMED' | 'TECNICO_SEMED' | 'DIRETOR' | 'SECRETARIO' | 'COORDENADOR' | 'PROFESSOR',
-        escola_id: null,
-      }));
-
-      const { error: rolesError } = await supabase
-        .from('user_roles')
-        .insert(rolesToInsert);
-
-      if (rolesError) {
-        console.error('❌ Erro ao inserir roles:', rolesError);
-        // Tentar deletar o usuário recém-criado para evitar dados órfãos
-        await supabase.from('usuarios').delete().eq('id', authData.user!.id);
-        throw new Error(`Falha ao atribuir perfis: ${rolesError.message}`);
+      if (!result?.ok) {
+        throw new Error(result?.error || 'Falha ao criar usuário');
       }
 
       toast.success('Usuário criado com sucesso!');
