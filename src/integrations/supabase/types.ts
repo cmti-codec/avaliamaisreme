@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      alunos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          datmtr: string | null
+          desoca: string | null
+          dtomtrc: string | null
+          id: string
+          nomalu: string
+          numalu: string
+          nummtr: string | null
+          saesc: string
+          sigeta: string
+          sigla: string | null
+          sigtur: string
+          sioca: string | null
+          trmcla: string
+          turma_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          datmtr?: string | null
+          desoca?: string | null
+          dtomtrc?: string | null
+          id?: string
+          nomalu: string
+          numalu: string
+          nummtr?: string | null
+          saesc: string
+          sigeta: string
+          sigla?: string | null
+          sigtur: string
+          sioca?: string | null
+          trmcla: string
+          turma_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          datmtr?: string | null
+          desoca?: string | null
+          dtomtrc?: string | null
+          id?: string
+          nomalu?: string
+          numalu?: string
+          nummtr?: string | null
+          saesc?: string
+          sigeta?: string
+          sigla?: string | null
+          sigtur?: string
+          sioca?: string | null
+          trmcla?: string
+          turma_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alunos_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas_com_matriz"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           acao: string
@@ -77,6 +152,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cargas_horarias_componentes: {
+        Row: {
+          carga_horaria_semanal: number
+          componente_nome: string
+          created_at: string | null
+          etapa_modalidade: string
+          grupo_ano: string
+          id: string
+        }
+        Insert: {
+          carga_horaria_semanal: number
+          componente_nome: string
+          created_at?: string | null
+          etapa_modalidade: string
+          grupo_ano: string
+          id?: string
+        }
+        Update: {
+          carga_horaria_semanal?: number
+          componente_nome?: string
+          created_at?: string | null
+          etapa_modalidade?: string
+          grupo_ano?: string
+          id?: string
+        }
+        Relationships: []
+      }
       componentes_curriculares: {
         Row: {
           ativo: boolean | null
@@ -115,9 +217,13 @@ export type Database = {
           email: string | null
           endereco: string | null
           id: string
+          localidade: string | null
           matriz_curricular_id: string | null
           nome: string
+          regiao: string | null
+          saesc: string | null
           telefone: string | null
+          tipo: string | null
         }
         Insert: {
           ativa?: boolean | null
@@ -126,9 +232,13 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           id?: string
+          localidade?: string | null
           matriz_curricular_id?: string | null
           nome: string
+          regiao?: string | null
+          saesc?: string | null
           telefone?: string | null
+          tipo?: string | null
         }
         Update: {
           ativa?: boolean | null
@@ -137,9 +247,13 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           id?: string
+          localidade?: string | null
           matriz_curricular_id?: string | null
           nome?: string
+          regiao?: string | null
+          saesc?: string | null
           telefone?: string | null
+          tipo?: string | null
         }
         Relationships: [
           {
@@ -249,6 +363,45 @@ export type Database = {
             referencedColumns: ["turma_id"]
           },
         ]
+      }
+      import_logs: {
+        Row: {
+          created_at: string | null
+          detalhes_erros: Json | null
+          id: string
+          linhas_erro: number
+          linhas_sucesso: number
+          nome_arquivo: string
+          status: string
+          tipo_importacao: string
+          total_linhas: number
+          usuario_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          detalhes_erros?: Json | null
+          id?: string
+          linhas_erro: number
+          linhas_sucesso: number
+          nome_arquivo: string
+          status: string
+          tipo_importacao: string
+          total_linhas: number
+          usuario_id: string
+        }
+        Update: {
+          created_at?: string | null
+          detalhes_erros?: Json | null
+          id?: string
+          linhas_erro?: number
+          linhas_sucesso?: number
+          nome_arquivo?: string
+          status?: string
+          tipo_importacao?: string
+          total_linhas?: number
+          usuario_id?: string
+        }
+        Relationships: []
       }
       matriz_componentes: {
         Row: {
@@ -404,34 +557,49 @@ export type Database = {
         Row: {
           ativo: boolean | null
           carga_horaria_contratual: number | null
+          cargo: string | null
+          cpf: string | null
           created_at: string | null
+          email: string | null
           escola_id: string
           formacoes: Json | null
           horas_pl: number | null
           id: string
+          matricula: string | null
           nome: string
+          telefone: string | null
           usuario_id: string | null
         }
         Insert: {
           ativo?: boolean | null
           carga_horaria_contratual?: number | null
+          cargo?: string | null
+          cpf?: string | null
           created_at?: string | null
+          email?: string | null
           escola_id: string
           formacoes?: Json | null
           horas_pl?: number | null
           id?: string
+          matricula?: string | null
           nome: string
+          telefone?: string | null
           usuario_id?: string | null
         }
         Update: {
           ativo?: boolean | null
           carga_horaria_contratual?: number | null
+          cargo?: string | null
+          cpf?: string | null
           created_at?: string | null
+          email?: string | null
           escola_id?: string
           formacoes?: Json | null
           horas_pl?: number | null
           id?: string
+          matricula?: string | null
           nome?: string
+          telefone?: string | null
           usuario_id?: string | null
         }
         Relationships: [
