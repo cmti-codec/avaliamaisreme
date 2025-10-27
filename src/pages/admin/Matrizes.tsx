@@ -12,6 +12,7 @@ import { MatrizCard } from "@/components/Matrizes/MatrizCard";
 import { MatrizModal } from "@/components/Matrizes/MatrizModal";
 import { MatrizDeleteDialog } from "@/components/Matrizes/MatrizDeleteDialog";
 import { MatrizViewDialog } from "@/components/Matrizes/MatrizViewDialog";
+import { ComponentesDialog } from "@/components/Matrizes/ComponentesDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -35,6 +36,7 @@ const Matrizes = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [etapaFilter, setEtapaFilter] = useState<string>("all");
+  const [componentesDialogOpen, setComponentesDialogOpen] = useState(false);
 
   const isLoading = isLoadingUser || isLoadingMatrizes;
 
@@ -152,14 +154,25 @@ const Matrizes = () => {
             para toda a rede. Apenas administradores podem gerenciar matrizes.
           </p>
         </div>
-        <Button 
-          onClick={() => setModalOpen(true)} 
-          className="gap-2 shrink-0"
-          size="lg"
-        >
-          <Plus className="w-4 h-4" />
-          Nova Matriz
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button 
+            onClick={() => setComponentesDialogOpen(true)} 
+            variant="outline"
+            className="gap-2"
+            size="lg"
+          >
+            <Plus className="w-4 h-4" />
+            Componentes
+          </Button>
+          <Button 
+            onClick={() => setModalOpen(true)} 
+            className="gap-2"
+            size="lg"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Matriz
+          </Button>
+        </div>
       </div>
 
       {/* Cards de Estatísticas */}
@@ -295,6 +308,11 @@ const Matrizes = () => {
           setSelectedMatrizId(null);
         }}
         matrizId={selectedMatrizId}
+      />
+
+      <ComponentesDialog
+        open={componentesDialogOpen}
+        onClose={() => setComponentesDialogOpen(false)}
       />
     </div>
   );
