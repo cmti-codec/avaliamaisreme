@@ -30,11 +30,24 @@ export default function Importacao() {
 
   // 1. COMPONENTES CURRICULARES
   const handleImportComponentes = async (data: any[], fileName: string) => {
+    // Validar unicidade como aviso (não crítico)
+    const uniquenessErrors = await validateUniqueness(
+      data, 
+      'nome', 
+      'componentes_curriculares', 
+      'Componente',
+      true // treatAsWarning = true
+    );
+    
+    // Filtrar apenas registros NOVOS (não duplicados)
+    const existingNames = new Set(uniquenessErrors.map(e => e.valor));
+    const newData = data.filter(row => !existingNames.has(row.nome));
+    
     const errors: ValidationError[] = [];
     let sucessos = 0;
 
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
+    for (let i = 0; i < newData.length; i++) {
+      const row = newData[i];
       try {
         const segmentos = row.segmentos ? row.segmentos.split(',').map((s: string) => s.trim()) : [];
         
@@ -51,7 +64,7 @@ export default function Importacao() {
         sucessos++;
       } catch (error: any) {
         errors.push({
-          linha: i + 2,
+          linha: data.indexOf(row) + 2,
           campo: 'geral',
           valor: row.nome,
           erro: error.message || 'Erro ao inserir',
@@ -60,25 +73,34 @@ export default function Importacao() {
       }
     }
 
+    const allErrors = [...uniquenessErrors, ...errors];
+    const skipped = data.length - newData.length;
+
     await logImportacao({
       tipo: 'Componentes Curriculares',
       nomeArquivo: fileName,
       totalLinhas: data.length,
       linhasSucesso: sucessos,
       linhasErro: errors.length,
-      detalhesErros: errors
+      detalhesErros: allErrors
     });
+
+    const successMsg = sucessos > 0 ? `${sucessos} componentes importados` : '';
+    const skippedMsg = skipped > 0 ? `${skipped} pulados (já existem)` : '';
+    const errorMsg = errors.length > 0 ? `${errors.length} erros` : '';
+    
+    const parts = [successMsg, skippedMsg, errorMsg].filter(Boolean);
 
     toast({
-      title: errors.length === 0 ? "Sucesso!" : "Importação parcial",
-      description: `${sucessos} componentes importados, ${errors.length} erros`,
+      title: errors.length === 0 && sucessos > 0 ? "Sucesso!" : skipped > 0 && sucessos === 0 ? "Nenhum registro novo" : "Importação parcial",
+      description: parts.join(', '),
     });
 
-    return { success: sucessos, errors };
+    return { success: sucessos, errors: allErrors };
   };
 
   const validateComponentes = async (data: any[]) => {
-    return await validateUniqueness(data, 'nome', 'componentes_curriculares', 'Nome do componente');
+    return await validateUniqueness(data, 'nome', 'componentes_curriculares', 'Componente', true);
   };
 
   // 2. FORMAÇÕES

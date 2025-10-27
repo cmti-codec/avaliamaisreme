@@ -51,7 +51,8 @@ export async function validateUniqueness(
   data: any[],
   field: string,
   table: string,
-  fieldLabel?: string
+  fieldLabel?: string,
+  treatAsWarning = false
 ): Promise<ValidationError[]> {
   const valores = data.map(d => d[field]).filter(Boolean);
   
@@ -77,7 +78,7 @@ export async function validateUniqueness(
           campo: field,
           valor: row[field],
           erro: `${fieldLabel || field} "${row[field]}" já existe no sistema`,
-          tipo: 'critico' as const
+          tipo: treatAsWarning ? 'aviso' as const : 'critico' as const
         };
       }
       return null;
