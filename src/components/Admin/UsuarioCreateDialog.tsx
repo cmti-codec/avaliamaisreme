@@ -67,6 +67,9 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
     setLoading(true);
 
     try {
+      console.log('🔵 Iniciando criação de usuário:', email.trim());
+      console.log('🔵 Roles selecionadas:', selectedRoles);
+
       // Criar usuário no auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
@@ -76,8 +79,27 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Erro ao criar usuário');
+      console.log('🟢 Resultado signUp:', { 
+        user_id: authData?.user?.id, 
+        email: authData?.user?.email,
+        confirmed: authData?.user?.confirmed_at,
+        error: authError?.message 
+      });
+
+      if (authError) {
+        // Checar se é erro de "usuário já existe"
+        if (authError.message.includes('already registered')) {
+          throw new Error('Este email já está cadastrado no sistema');
+        }
+        throw authError;
+      }
+
+      if (!authData.user) throw new Error('Erro ao criar usuário no sistema de autenticação');
+
+      // Verificar se o usuário foi confirmado (caso enable_confirmations = true)
+      if (!authData.user.confirmed_at && authData.user.confirmation_sent_at) {
+        throw new Error('Email de confirmação enviado. Peça ao usuário para verificar a caixa de entrada.');
+      }
 
       // Inserir na tabela usuarios
       const { error: usuarioError } = await supabase
@@ -102,7 +124,12 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
         .from('user_roles')
         .insert(rolesToInsert);
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.error('❌ Erro ao inserir roles:', rolesError);
+        // Tentar deletar o usuário recém-criado para evitar dados órfãos
+        await supabase.from('usuarios').delete().eq('id', authData.user!.id);
+        throw new Error(`Falha ao atribuir perfis: ${rolesError.message}`);
+      }
 
       toast.success('Usuário criado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
