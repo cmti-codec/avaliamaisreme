@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, ChevronDown, Edit3 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -12,8 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, AlertTriangle, ChevronDown } from "lucide-react";
 import {
   useMatriz,
   useCreateMatriz,
@@ -74,6 +76,7 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
   const [tipoJornada, setTipoJornada] = useState<"PARCIAL" | "INTEGRAL">("PARCIAL");
   const [descricao, setDescricao] = useState("");
   const [anos, setAnos] = useState<AnoForm[]>([]);
+  const [modoEdicao, setModoEdicao] = useState(true);
 
   useEffect(() => {
     if (matriz) {
@@ -116,6 +119,7 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
     setTipoJornada("PARCIAL");
     setDescricao("");
     setAnos([]);
+    setModoEdicao(true);
   };
 
   const totalHoras = anos.reduce((sum, ano) => {
@@ -153,14 +157,23 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
     );
   };
 
-  const handleAddComponente = (anoIndex: number) => {
+  const handleToggleComponente = (anoIndex: number, componenteNome: string) => {
     const updatedAnos = [...anos];
-    updatedAnos[anoIndex].componentes.push({
-      temp_id: `temp_${Date.now()}`,
-      componente_nome: "",
-      carga_horaria_semanal: 1,
-      ordem: updatedAnos[anoIndex].componentes.length,
-    });
+    const ano = updatedAnos[anoIndex];
+    const existe = ano.componentes.find(c => c.componente_nome === componenteNome);
+
+    if (existe) {
+      // Remover
+      ano.componentes = ano.componentes.filter(c => c.componente_nome !== componenteNome);
+    } else {
+      // Adicionar com carga horária padrão (1h)
+      ano.componentes.push({
+        temp_id: `temp_${Date.now()}`,
+        componente_nome: componenteNome,
+        carga_horaria_semanal: 1,
+        ordem: ano.componentes.length,
+      });
+    }
     setAnos(updatedAnos);
   };
 
@@ -395,40 +408,47 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
               )}
             </div>
 
-            {/* Seção 2: Componentes da Matriz */}
+              {/* Seção 2: Componentes da Matriz */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-semibold text-lg">Componentes da Matriz</h3>
                   <p className="text-sm text-muted-foreground">
-                    Visualização dos componentes configurados
+                    {modoEdicao ? "Selecione os componentes para cada ano" : "Visualização dos componentes configurados"}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Badge variant="secondary" className="text-sm">
-                    {totalComponentes} componente(s) no total
+                    {totalComponentes} componente(s)
                   </Badge>
                   <Badge className="text-sm">
                     {anos.length} ano(s)
                   </Badge>
+                  <div className="flex items-center gap-2 ml-2 pl-2 border-l">
+                    <Label htmlFor="modo-edicao" className="text-sm font-medium cursor-pointer">
+                      {modoEdicao ? "Modo Edição" : "Modo Visualização"}
+                    </Label>
+                    <Switch
+                      id="modo-edicao"
+                      checked={modoEdicao}
+                      onCheckedChange={setModoEdicao}
+                    />
+                    <Edit3 className="w-4 h-4 text-muted-foreground" />
+                  </div>
                 </div>
               </div>
 
-              <Alert className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-                <AlertDescription className="text-sm">
-                  💡 <strong>Dica:</strong> As cargas horárias são preenchidas automaticamente com base em configurações já cadastradas em "Cargas Horárias". Você pode ajustá-las conforme necessário.
-                </AlertDescription>
-              </Alert>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddAno}
-                className="w-full gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Adicionar Ano
-              </Button>
+              {modoEdicao && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddAno}
+                  className="w-full gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar Ano
+                </Button>
+              )}
 
               {/* Lista de Anos */}
               <div className="space-y-3">
@@ -447,16 +467,20 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
                                 ano.isOpen ? "" : "-rotate-90"
                               }`}
                             />
-                            <Input
-                              value={ano.nome}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                handleAnoNameChange(anoIndex, e.target.value);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-48 h-8"
-                              placeholder="Nome do ano"
-                            />
+                            {modoEdicao ? (
+                              <Input
+                                value={ano.nome}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleAnoNameChange(anoIndex, e.target.value);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-48 h-8"
+                                placeholder="Nome do ano"
+                              />
+                            ) : (
+                              <span className="font-semibold">{ano.nome}</span>
+                            )}
                             <Badge variant="secondary">
                               {ano.componentes.length} componentes
                             </Badge>
@@ -464,105 +488,129 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
                               {ano.componentes.reduce((sum, c) => sum + c.carga_horaria_semanal, 0)}h total
                             </Badge>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveAno(anoIndex);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {modoEdicao && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveAno(anoIndex);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </CollapsibleTrigger>
 
                       <CollapsibleContent>
                         <div className="p-4 border-t space-y-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAddComponente(anoIndex)}
-                            className="gap-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Adicionar Componente
-                          </Button>
-
-                          {ano.componentes.length > 0 && (
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="w-12">Ordem</TableHead>
-                                  <TableHead>Componente Curricular</TableHead>
-                                  <TableHead className="w-40">h/semana</TableHead>
-                                  <TableHead className="w-16"></TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {ano.componentes.map((comp, compIndex) => (
-                                  <TableRow key={comp.temp_id}>
-                                    <TableCell className="text-center font-medium">
-                                      {compIndex + 1}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Select
-                                        value={comp.componente_nome}
-                                        onValueChange={(v) =>
-                                          handleComponenteChange(
-                                            anoIndex,
-                                            comp.temp_id,
-                                            "componente_nome",
-                                            v
-                                          )
-                                        }
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Selecione..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {componentesDisponiveis?.map((c) => (
-                                            <SelectItem key={c.nome} value={c.nome}>
-                                              {c.nome}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Input
-                                        type="number"
-                                        min={1}
-                                        max={20}
-                                        value={comp.carga_horaria_semanal}
-                                        onChange={(e) =>
-                                          handleComponenteChange(
-                                            anoIndex,
-                                            comp.temp_id,
-                                            "carga_horaria_semanal",
-                                            parseInt(e.target.value) || 1
-                                          )
-                                        }
+                          {modoEdicao ? (
+                            <>
+                              {/* Lista de checkboxes para selecionar componentes */}
+                              <div className="grid grid-cols-2 gap-3 p-4 bg-muted/30 rounded-lg">
+                                {componentesDisponiveis?.map((componente) => {
+                                  const selecionado = ano.componentes.some(
+                                    c => c.componente_nome === componente.nome
+                                  );
+                                  return (
+                                    <div key={componente.nome} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`${anoIndex}-${componente.nome}`}
+                                        checked={selecionado}
+                                        onCheckedChange={() => handleToggleComponente(anoIndex, componente.nome)}
                                       />
-                                    </TableCell>
-                                    <TableCell>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() =>
-                                          handleRemoveComponente(anoIndex, comp.temp_id)
-                                        }
+                                      <label
+                                        htmlFor={`${anoIndex}-${componente.nome}`}
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                                       >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                    </TableCell>
+                                        {componente.nome}
+                                      </label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Tabela de componentes selecionados com h/semana editável */}
+                              {ano.componentes.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold">
+                                    Componentes Selecionados ({ano.componentes.length})
+                                  </Label>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="w-12">#</TableHead>
+                                        <TableHead>Componente</TableHead>
+                                        <TableHead className="w-32">h/semana</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {ano.componentes
+                                        .sort((a, b) => a.componente_nome.localeCompare(b.componente_nome))
+                                        .map((comp, compIndex) => (
+                                          <TableRow key={comp.temp_id}>
+                                            <TableCell className="text-center font-medium text-muted-foreground">
+                                              {compIndex + 1}
+                                            </TableCell>
+                                            <TableCell className="font-medium">
+                                              {comp.componente_nome}
+                                            </TableCell>
+                                            <TableCell>
+                                              <Input
+                                                type="number"
+                                                min={1}
+                                                max={20}
+                                                value={comp.carga_horaria_semanal}
+                                                onChange={(e) =>
+                                                  handleComponenteChange(
+                                                    anoIndex,
+                                                    comp.temp_id,
+                                                    "carga_horaria_semanal",
+                                                    parseInt(e.target.value) || 1
+                                                  )
+                                                }
+                                                className="w-20"
+                                              />
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            /* Modo visualização */
+                            ano.componentes.length > 0 && (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-12">#</TableHead>
+                                    <TableHead>Componente</TableHead>
+                                    <TableHead className="w-32 text-center">h/semana</TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
+                                </TableHeader>
+                                <TableBody>
+                                  {ano.componentes
+                                    .sort((a, b) => a.componente_nome.localeCompare(b.componente_nome))
+                                    .map((comp, compIndex) => (
+                                      <TableRow key={comp.temp_id}>
+                                        <TableCell className="text-center font-medium text-muted-foreground">
+                                          {compIndex + 1}
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                          {comp.componente_nome}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                          <Badge variant="outline">{comp.carga_horaria_semanal}h</Badge>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                </TableBody>
+                              </Table>
+                            )
                           )}
                         </div>
                       </CollapsibleContent>
