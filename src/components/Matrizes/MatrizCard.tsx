@@ -55,9 +55,11 @@ export const MatrizCard = ({
             </p>
 
             <div className="flex flex-wrap gap-2 mb-4">
-              <Badge variant="outline" className="gap-1">
-                {matriz.grupo_ano}
-              </Badge>
+              {matriz.grupo_ano.split(',').map((ano, idx) => (
+                <Badge key={idx} variant="outline" className="gap-1">
+                  {ano.trim()}
+                </Badge>
+              ))}
               {matriz.tipo_jornada && (
                 <Badge variant="outline">
                   {matriz.tipo_jornada}
