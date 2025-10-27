@@ -28,10 +28,14 @@ interface AuthContextType {
   loading: boolean;
   isImpersonating: boolean;
   originalAdmin: Usuario | null;
+  testSchoolId: string | null;
+  testProfile: PerfilUsuario | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   impersonate: (targetUserId: string) => Promise<void>;
   stopImpersonating: () => void;
+  startTestMode: (schoolId: string, profile: PerfilUsuario, schoolName: string) => void;
+  stopTestMode: () => void;
   temPermissao: (funcionalidade: string, tipo: 'ler' | 'escrever' | 'aprovar') => boolean;
 }
 
@@ -43,20 +47,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [originalAdmin, setOriginalAdmin] = useState<Usuario | null>(null);
+  const [testSchoolId, setTestSchoolId] = useState<string | null>(null);
+  const [testProfile, setTestProfile] = useState<PerfilUsuario | null>(null);
 
   useEffect(() => {
     // Restaurar sessão de impersonation se existir
     const isImp = localStorage.getItem('impersonating') === 'true';
     const adminData = localStorage.getItem('originalAdmin');
+    const testSchool = localStorage.getItem('testSchoolId');
+    const testProf = localStorage.getItem('testProfile');
     
     if (isImp && adminData) {
       try {
         setOriginalAdmin(JSON.parse(adminData));
         setIsImpersonating(true);
+        
+        // Restaurar modo teste se existir
+        if (testSchool && testProf) {
+          setTestSchoolId(testSchool);
+          setTestProfile(testProf as PerfilUsuario);
+        }
       } catch (e) {
         console.error('Erro ao restaurar sessão de impersonation:', e);
         localStorage.removeItem('impersonating');
         localStorage.removeItem('originalAdmin');
+        localStorage.removeItem('testSchoolId');
+        localStorage.removeItem('testProfile');
+        localStorage.removeItem('testSchoolName');
       }
     }
 
@@ -244,13 +261,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(originalAdmin);
     setIsImpersonating(false);
     setOriginalAdmin(null);
+    setTestSchoolId(null);
+    setTestProfile(null);
 
     // Limpar localStorage
     localStorage.removeItem('impersonating');
     localStorage.removeItem('originalAdmin');
     localStorage.removeItem('impersonatedUserId');
+    localStorage.removeItem('testSchoolId');
+    localStorage.removeItem('testProfile');
+    localStorage.removeItem('testSchoolName');
 
     toast.info('Voltou para sua conta admin');
+  };
+
+  const startTestMode = (schoolId: string, profile: PerfilUsuario, schoolName: string) => {
+    if (!user?.roles.includes('ADMIN')) {
+      toast.error('Apenas administradores podem usar o modo teste');
+      return;
+    }
+
+    // Salvar admin atual se ainda não estiver impersonando
+    if (!isImpersonating) {
+      setOriginalAdmin(user);
+    }
+
+    // Criar usuário teste
+    const testUser: Usuario = {
+      id: user.id, // Mantém o ID do admin
+      nome: `Teste - ${profile} (${schoolName})`,
+      email: user.email,
+      roles: [profile],
+      primaryRole: profile,
+      escola_id: schoolId,
+      ativo: true,
+    };
+
+    setUser(testUser);
+    setIsImpersonating(true);
+    setTestSchoolId(schoolId);
+    setTestProfile(profile);
+
+    // Persistir no localStorage
+    localStorage.setItem('impersonating', 'true');
+    localStorage.setItem('originalAdmin', JSON.stringify(originalAdmin || user));
+    localStorage.setItem('testSchoolId', schoolId);
+    localStorage.setItem('testProfile', profile);
+    localStorage.setItem('testSchoolName', schoolName);
+
+    toast.success(`Modo Teste: ${profile} em ${schoolName}`);
+  };
+
+  const stopTestMode = () => {
+    if (!originalAdmin) return;
+
+    // Restaurar admin original
+    setUser(originalAdmin);
+    setIsImpersonating(false);
+    setOriginalAdmin(null);
+    setTestSchoolId(null);
+    setTestProfile(null);
+
+    // Limpar localStorage
+    localStorage.removeItem('impersonating');
+    localStorage.removeItem('originalAdmin');
+    localStorage.removeItem('testSchoolId');
+    localStorage.removeItem('testProfile');
+    localStorage.removeItem('testSchoolName');
+
+    toast.info('Saiu do modo teste');
   };
 
   const temPermissao = (funcionalidade: string, tipo: 'ler' | 'escrever' | 'aprovar'): boolean => {
@@ -271,10 +350,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading, 
       isImpersonating, 
       originalAdmin,
+      testSchoolId,
+      testProfile,
       signIn, 
       signOut, 
       impersonate,
       stopImpersonating,
+      startTestMode,
+      stopTestMode,
       temPermissao 
     }}>
       {children}
