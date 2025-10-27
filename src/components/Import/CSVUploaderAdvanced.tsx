@@ -23,6 +23,25 @@ interface CSVUploaderAdvancedProps {
   warningMessage?: string;
 }
 
+// Função para detectar automaticamente o delimitador do CSV
+const detectDelimiter = (text: string): string => {
+  const firstLine = text.split('\n')[0];
+  const delimiters = [',', ';', '\t', '|'];
+  
+  let maxColumns = 0;
+  let bestDelimiter = ',';
+  
+  for (const delimiter of delimiters) {
+    const columns = firstLine.split(delimiter).length;
+    if (columns > maxColumns) {
+      maxColumns = columns;
+      bestDelimiter = delimiter;
+    }
+  }
+  
+  return bestDelimiter;
+};
+
 export function CSVUploaderAdvanced({
   title,
   description,
@@ -39,6 +58,7 @@ export function CSVUploaderAdvanced({
   const [isDragging, setIsDragging] = useState(false);
   const [progress, setProgress] = useState(0);
   const [success, setSuccess] = useState(false);
+  const [detectedDelimiter, setDetectedDelimiter] = useState<string>('');
 
   const handleDrag = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -105,7 +125,15 @@ export function CSVUploaderAdvanced({
       return;
     }
 
-    const headers = lines[0].split(',').map(h => h.trim());
+    // Detectar delimitador automaticamente
+    const delimiter = detectDelimiter(text);
+    const delimiterName = delimiter === ',' ? 'vírgula' : 
+                          delimiter === ';' ? 'ponto e vírgula' : 
+                          delimiter === '\t' ? 'tabulação' : 'pipe';
+    setDetectedDelimiter(delimiterName);
+    console.log('Delimitador detectado:', delimiterName);
+
+    const headers = lines[0].split(delimiter).map(h => h.trim());
     const expectedHeaderNames = expectedHeaders.map(h => h.name);
     
     // Validar cabeçalhos
@@ -123,7 +151,7 @@ export function CSVUploaderAdvanced({
 
     // Parse dos dados
     const data = lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.trim());
+      const values = line.split(delimiter).map(v => v.trim());
       const row: any = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
@@ -174,10 +202,11 @@ export function CSVUploaderAdvanced({
       reader.onload = async (event) => {
         const text = event.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim());
-        const headers = lines[0].split(',').map(h => h.trim());
+        const delimiter = detectDelimiter(text);
+        const headers = lines[0].split(delimiter).map(h => h.trim());
         
         const data = lines.slice(1).map(line => {
-          const values = line.split(',').map(v => v.trim());
+          const values = line.split(delimiter).map(v => v.trim());
           const row: any = {};
           headers.forEach((header, index) => {
             row[header] = values[index] || '';
@@ -297,7 +326,14 @@ export function CSVUploaderAdvanced({
 
         {preview.length > 0 && (
           <div>
-            <h4 className="font-semibold mb-2">Preview (10 primeiras linhas)</h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold">Preview (10 primeiras linhas)</h4>
+              {detectedDelimiter && (
+                <span className="text-sm text-muted-foreground">
+                  Delimitador: <strong>{detectedDelimiter}</strong>
+                </span>
+              )}
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border">
                 <thead>
