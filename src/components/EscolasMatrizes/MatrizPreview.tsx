@@ -8,48 +8,65 @@ interface MatrizPreviewProps {
 }
 
 export const MatrizPreview = ({ matriz }: MatrizPreviewProps) => {
-  const totalHoras = matriz.componentes.reduce(
-    (sum, c) => sum + c.carga_horaria_semanal,
-    0
-  );
+  // Agrupar componentes por ano
+  const componentesPorAno = matriz.componentes.reduce((acc, comp) => {
+    if (!acc[comp.grupo_ano]) {
+      acc[comp.grupo_ano] = [];
+    }
+    acc[comp.grupo_ano].push(comp);
+    return acc;
+  }, {} as Record<string, typeof matriz.componentes>);
+
+  const anos = Object.keys(componentesPorAno).sort();
 
   return (
     <Card className="border-2">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
           <span>📚 Componentes da Matriz Selecionada</span>
-          <Badge variant="secondary">
-            {matriz.componentes.length}{" "}
-            {matriz.componentes.length === 1 ? "componente" : "componentes"}
-          </Badge>
+          <div className="flex gap-2">
+            <Badge variant="secondary">
+              {anos.length} {anos.length === 1 ? "ano" : "anos"}
+            </Badge>
+            <Badge variant="secondary">
+              {matriz.componentes.length} componentes
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {/* Lista de Componentes */}
-        <div className="space-y-2">
-          {matriz.componentes
-            .sort((a, b) => a.ordem - b.ordem)
-            .map((comp) => (
-              <div
-                key={comp.id}
-                className="flex items-center justify-between py-2 px-3 rounded bg-muted/30"
-              >
-                <span className="font-medium text-sm">{comp.componente_nome}</span>
-                <span className="text-sm text-muted-foreground">
-                  {comp.carga_horaria_semanal}h/semana
-                </span>
-              </div>
-            ))}
-        </div>
+      <CardContent className="space-y-4">
+        {anos.map((ano) => {
+          const componentesDoAno = componentesPorAno[ano].sort((a, b) => a.ordem - b.ordem);
+          const totalHorasAno = componentesDoAno.reduce(
+            (sum, c) => sum + c.carga_horaria_semanal,
+            0
+          );
 
-        {/* Total */}
-        <Separator />
-        <div className="flex items-center justify-between py-2 px-3 bg-primary/5 rounded">
-          <span className="font-bold">TOTAL:</span>
-          <Badge className="text-base px-3 py-1">
-            {totalHoras}h/semana
-          </Badge>
-        </div>
+          return (
+            <div key={ano} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold text-sm">{ano}</h4>
+                <Badge variant="outline" className="text-xs">
+                  {componentesDoAno.length} componentes • {totalHorasAno}h/semana
+                </Badge>
+              </div>
+              
+              <div className="space-y-1 pl-3 border-l-2">
+                {componentesDoAno.map((comp) => (
+                  <div
+                    key={comp.id}
+                    className="flex items-center justify-between py-1.5 px-2 rounded bg-muted/30 text-sm"
+                  >
+                    <span className="font-medium">{comp.componente_nome}</span>
+                    <span className="text-muted-foreground">
+                      {comp.carga_horaria_semanal}h
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );

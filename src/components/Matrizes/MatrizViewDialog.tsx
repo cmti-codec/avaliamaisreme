@@ -110,55 +110,70 @@ export const MatrizViewDialog = ({ open, onClose, matrizId }: MatrizViewDialogPr
                 </Badge>
               </div>
 
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-16">Ordem</TableHead>
-                      <TableHead>Componente</TableHead>
-                      <TableHead className="text-right">Carga Horária</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {matriz.componentes.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                          Nenhum componente cadastrado
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      matriz.componentes
-                        .sort((a, b) => a.ordem - b.ordem)
-                        .map((comp, index) => (
-                          <TableRow key={comp.id}>
-                            <TableCell className="text-center font-medium">
-                              {index + 1}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {comp.componente_nome}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {comp.carga_horaria_semanal}h/semana
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              {(() => {
+                // Agrupar componentes por ano
+                const componentesPorAno = matriz.componentes.reduce((acc, comp) => {
+                  if (!acc[comp.grupo_ano]) {
+                    acc[comp.grupo_ano] = [];
+                  }
+                  acc[comp.grupo_ano].push(comp);
+                  return acc;
+                }, {} as Record<string, typeof matriz.componentes>);
 
-              <div className="bg-muted/30 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">Total de Carga Horária:</span>
-                  <Badge className="text-base px-3 py-1">
-                    {matriz.componentes.reduce(
-                      (sum, c) => sum + c.carga_horaria_semanal,
-                      0
-                    )}
-                    h/semana
-                  </Badge>
-                </div>
-              </div>
+                const anos = Object.keys(componentesPorAno).sort();
+
+                return (
+                  <div className="space-y-4">
+                    {anos.map((ano) => {
+                      const componentesDoAno = componentesPorAno[ano].sort(
+                        (a, b) => a.ordem - b.ordem
+                      );
+                      const totalHorasAno = componentesDoAno.reduce(
+                        (sum, c) => sum + c.carga_horaria_semanal,
+                        0
+                      );
+
+                      return (
+                        <div key={ano} className="space-y-2">
+                          <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
+                            <h5 className="font-semibold">{ano}</h5>
+                            <Badge variant="outline">
+                              {componentesDoAno.length} componentes • {totalHorasAno}h/semana
+                            </Badge>
+                          </div>
+
+                          <div className="rounded-md border">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-16">Ordem</TableHead>
+                                  <TableHead>Componente</TableHead>
+                                  <TableHead className="text-right">Carga Horária</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {componentesDoAno.map((comp, index) => (
+                                  <TableRow key={comp.id}>
+                                    <TableCell className="text-center font-medium">
+                                      {index + 1}
+                                    </TableCell>
+                                    <TableCell className="font-medium">
+                                      {comp.componente_nome}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      {comp.carga_horaria_semanal}h/semana
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         ) : (

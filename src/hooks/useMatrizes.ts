@@ -22,6 +22,7 @@ export interface MatrizComponente {
   componente_nome: string;
   carga_horaria_semanal: number;
   ordem: number;
+  grupo_ano: string; // Ano específico dentro da matriz (ex: "1º ANO", "2º ANO")
 }
 
 export interface MatrizComComponentes extends MatrizCurricular {
@@ -85,7 +86,7 @@ export const useCreateMatriz = () => {
   return useMutation({
     mutationFn: async (dados: {
       matriz: Omit<MatrizCurricular, "id" | "created_at" | "updated_at">;
-      componentes: Array<{ componente_nome: string; carga_horaria_semanal: number; ordem: number }>;
+      componentes: Array<{ componente_nome: string; carga_horaria_semanal: number; ordem: number; grupo_ano: string }>;
     }) => {
       // Verificar se código já existe
       const { data: existe } = await supabase
@@ -148,7 +149,7 @@ export const useUpdateMatriz = () => {
     mutationFn: async (dados: {
       id: string;
       matriz: Partial<MatrizCurricular>;
-      componentes?: Array<{ id?: string; componente_nome: string; carga_horaria_semanal: number; ordem: number }>;
+      componentes?: Array<{ id?: string; componente_nome: string; carga_horaria_semanal: number; ordem: number; grupo_ano: string }>;
     }) => {
       // Atualizar matriz
       const { error: matrizError } = await supabase
@@ -172,6 +173,7 @@ export const useUpdateMatriz = () => {
             componente_nome: c.componente_nome,
             carga_horaria_semanal: c.carga_horaria_semanal,
             ordem: c.ordem,
+            grupo_ano: c.grupo_ano,
             matriz_id: dados.id,
           }));
 

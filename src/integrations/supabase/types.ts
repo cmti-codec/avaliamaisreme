@@ -407,6 +407,7 @@ export type Database = {
         Row: {
           carga_horaria_semanal: number
           componente_nome: string
+          grupo_ano: string
           id: string
           matriz_id: string
           ordem: number | null
@@ -414,6 +415,7 @@ export type Database = {
         Insert: {
           carga_horaria_semanal: number
           componente_nome: string
+          grupo_ano: string
           id?: string
           matriz_id: string
           ordem?: number | null
@@ -421,6 +423,7 @@ export type Database = {
         Update: {
           carga_horaria_semanal?: number
           componente_nome?: string
+          grupo_ano?: string
           id?: string
           matriz_id?: string
           ordem?: number | null
