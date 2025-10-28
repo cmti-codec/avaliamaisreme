@@ -186,10 +186,9 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Turma</TableHead>
-                <TableHead>Segmento</TableHead>
-                <TableHead>Grupo/Ano</TableHead>
                 <TableHead>Escola</TableHead>
+                <TableHead>Grupo/Ano</TableHead>
+                <TableHead>Turma</TableHead>
                 <TableHead>Turno</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -198,7 +197,7 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
             <TableBody>
               {filteredTurmas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Nenhuma turma encontrada
                   </TableCell>
                 </TableRow>
@@ -208,10 +207,9 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
                   
                   return (
                     <TableRow key={turma.id}>
-                      <TableCell className="font-medium">{turma.turma}</TableCell>
-                      <TableCell>{turma.segmento}</TableCell>
-                      <TableCell>{turma.grupo_ano}</TableCell>
                       <TableCell>{turma.escola?.nome || "-"}</TableCell>
+                      <TableCell>{turma.grupo_ano}</TableCell>
+                      <TableCell className="font-medium">{turma.turma}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={turnoBadge.className}>
                           {turnoBadge.label}
