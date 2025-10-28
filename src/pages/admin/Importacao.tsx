@@ -4,7 +4,7 @@ import { ImportLogsList } from "@/components/Import/ImportLogsList";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logImportacao } from "@/lib/import-logger";
-import { validateForeignKey, validateUniqueness, ValidationError, validateDataTypes, convertBrazilianDateToISO } from "@/lib/import-validators";
+import { validateForeignKey, validateUniqueness, ValidationError, validateDataTypes, convertBrazilianDateToISO, validateRequired } from "@/lib/import-validators";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
