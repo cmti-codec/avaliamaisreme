@@ -9,13 +9,34 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, School } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useUsuario } from "@/hooks/useUsuario";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { data: usuario } = useUsuario();
+  
+  const { data: escola } = useQuery({
+    queryKey: ["escola", usuario?.escola_id],
+    queryFn: async () => {
+      if (!usuario?.escola_id) return null;
+      
+      const { data, error } = await supabase
+        .from("escolas")
+        .select("nome")
+        .eq("id", usuario.escola_id)
+        .maybeSingle();
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!usuario?.escola_id,
+  });
 
   const getPerfilLabel = (perfil: string) => {
     const labels: Record<string, string> = {
@@ -39,6 +60,13 @@ export function AppHeader() {
     <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 sticky top-0 z-40">
       <div className="flex items-center gap-4">
         <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+        
+        {escola && (
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10">
+            <School className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">{escola.nome}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4">

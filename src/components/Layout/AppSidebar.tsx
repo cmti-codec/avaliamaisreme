@@ -32,7 +32,6 @@ const menuItems = [
   { title: "Painel", url: "/", icon: LayoutDashboard },
   { title: "Professores", url: "/professores", icon: Users },
   { title: "Turmas", url: "/turmas", icon: School },
-  { title: "Escolas", url: "/escolas", icon: Building2 },
   { title: "Alunos", url: "/alunos", icon: GraduationCap },
 ];
 
