@@ -4,7 +4,7 @@ import { ImportLogsList } from "@/components/Import/ImportLogsList";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logImportacao } from "@/lib/import-logger";
-import { validateForeignKey, validateUniqueness, ValidationError } from "@/lib/import-validators";
+import { validateForeignKey, validateUniqueness, ValidationError, validateDataTypes, convertBrazilianDateToISO } from "@/lib/import-validators";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -400,14 +400,14 @@ export default function Importacao() {
             numalu: row.numalu,
             nomalu: row.nomalu,
             nummtr: row.nummtr,
-            datmtr: row.datmtr ? new Date(row.datmtr.split('/').reverse().join('-')).toISOString().split('T')[0] : null,
+            datmtr: convertBrazilianDateToISO(row.datmtr),
             sigeta: row.sigeta,
             trmcla: row.trmcla,
             sigtur: row.sigtur,
             sigla: row.sigla,
             desoca: row.desoca,
             sioca: row.sioca,
-            dtomtrc: row.dtomtrc ? new Date(row.dtomtrc.split('/').reverse().join('-')).toISOString().split('T')[0] : null,
+            dtomtrc: convertBrazilianDateToISO(row.dtomtrc),
             turma_id: turmaId,
             ativo: true
           });
@@ -468,6 +468,13 @@ export default function Importacao() {
         });
       }
     }
+    
+    // Validar datas
+    const dateErrors = validateDataTypes(data, { 
+      datmtr: 'date',
+      dtomtrc: 'date'
+    });
+    errors.push(...dateErrors);
     
     return errors;
   };
