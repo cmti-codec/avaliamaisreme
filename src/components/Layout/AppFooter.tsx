@@ -1,31 +1,36 @@
 import { School } from "lucide-react";
 import { useUsuario } from "@/hooks/useUsuario";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export function AppFooter() {
   const { data: usuario } = useUsuario();
+  const { testSchoolId } = useAuth();
+  
+  // Priorizar testSchoolId (modo teste) sobre usuario.escola_id
+  const escolaIdToUse = testSchoolId || usuario?.escola_id;
   
   const { data: escola } = useQuery({
-    queryKey: ["escola-footer", usuario?.escola_id],
+    queryKey: ["escola-footer", escolaIdToUse],
     queryFn: async () => {
-      if (!usuario?.escola_id) return null;
+      if (!escolaIdToUse) return null;
       
       const { data, error } = await supabase
         .from("escolas")
         .select("nome, codigo_inep")
-        .eq("id", usuario.escola_id)
+        .eq("id", escolaIdToUse)
         .maybeSingle();
         
       if (error) throw error;
       return data;
     },
-    enabled: !!usuario?.escola_id,
+    enabled: !!escolaIdToUse,
   });
 
   // Admin sem escola: mostrar "Administrador do Sistema"
   const isAdmin = usuario?.roles.includes('ADMIN');
-  const showAdminLabel = isAdmin && !escola;
+  const showAdminLabel = isAdmin && !escola && !testSchoolId;
 
   if (!showAdminLabel && !escola) return null;
 
