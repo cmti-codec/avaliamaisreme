@@ -205,54 +205,68 @@ export function CSVUploaderAdvanced({
     setProgress(0);
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const text = event.target?.result as string;
-        const lines = text.split('\n').filter(line => line.trim());
-        const delimiter = detectDelimiter(text);
-        const headers = lines[0].split(delimiter).map(h => h.trim());
+      await new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
         
-        const data = lines.slice(1).map(line => {
-          const values = line.split(delimiter).map(v => v.trim());
-          const row: any = {};
-          // Preencher com valores do CSV
-          headers.forEach((header, index) => {
-            row[header] = values[index] || '';
-          });
-          // Adicionar campos esperados que não estão no CSV
-          expectedHeaders.forEach(h => {
-            if (!(h.name in row)) {
-              row[h.name] = '';
-            }
-          });
-          return row;
-        });
+        reader.onload = async (event) => {
+          try {
+            const text = event.target?.result as string;
+            const lines = text.split('\n').filter(line => line.trim());
+            const delimiter = detectDelimiter(text);
+            const headers = lines[0].split(delimiter).map(h => h.trim());
+            
+            const data = lines.slice(1).map(line => {
+              const values = line.split(delimiter).map(v => v.trim());
+              const row: any = {};
+              // Preencher com valores do CSV
+              headers.forEach((header, index) => {
+                row[header] = values[index] || '';
+              });
+              // Adicionar campos esperados que não estão no CSV
+              expectedHeaders.forEach(h => {
+                if (!(h.name in row)) {
+                  row[h.name] = '';
+                }
+              });
+              return row;
+            });
 
-        setProgress(50);
-        const result = await onImport(data, file.name, (importProgress) => {
-          // Mapear progresso de importação (0-100) para 50-100 na barra total
-          const mappedProgress = 50 + (importProgress * 0.5);
-          setProgress(mappedProgress);
-        });
-        setProgress(100);
+            setProgress(50);
+            const result = await onImport(data, file.name, (importProgress) => {
+              // Mapear progresso de importação (0-100) para 50-100 na barra total
+              const mappedProgress = 50 + (importProgress * 0.5);
+              setProgress(mappedProgress);
+            });
+            setProgress(100);
+            
+            if (result.errors.length === 0) {
+              setSuccess(true);
+              setTimeout(() => {
+                clearFile();
+              }, 3000);
+            } else {
+              setErrors(result.errors);
+            }
+            
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        };
         
-        if (result.errors.length === 0) {
-          setSuccess(true);
-          setTimeout(() => {
-            clearFile();
-          }, 3000);
-        } else {
-          setErrors(result.errors);
-        }
-      };
-      reader.readAsText(file);
+        reader.onerror = () => {
+          reject(new Error('Erro ao ler o arquivo'));
+        };
+        
+        reader.readAsText(file);
+      });
     } catch (error) {
       console.error('Erro na importação:', error);
       setErrors([{
         linha: 0,
         campo: 'sistema',
         valor: '',
-        erro: 'Erro ao processar importação',
+        erro: error instanceof Error ? error.message : 'Erro ao processar importação',
         tipo: 'critico'
       }]);
     } finally {
