@@ -18,7 +18,7 @@ import { gerarSigla, DIAS_SEMANA } from "@/lib/horarios-utils";
 
 interface TurmaConsolidada {
   id: string;
-  segmento: string;
+  etapa_modalidade: string;
   grupo_ano: string;
   turma: string;
   turno: string;
@@ -97,7 +97,7 @@ const Consulta = () => {
 
       return {
         id: turma.id,
-        segmento: turma.segmento,
+        etapa_modalidade: turma.etapa_modalidade,
         grupo_ano: turma.grupo_ano,
         turma: turma.turma,
         turno: turma.turno,
@@ -125,7 +125,7 @@ const Consulta = () => {
       .from("horarios")
       .select(`
         *,
-        turmas (segmento, grupo_ano, turma, turno)
+        turmas (etapa_modalidade, grupo_ano, turma, turno)
       `);
 
     if (horariosError) throw horariosError;
@@ -202,7 +202,7 @@ const Consulta = () => {
 
         return {
           id: t.id,
-          identificacao: `${t.segmento} - ${t.grupo_ano} ${t.turma}`,
+          identificacao: `${t.etapa_modalidade} - ${t.grupo_ano} ${t.turma}`,
           turno: t.turno,
           professores: t.professores,
           componentes: t.componentes,
@@ -243,7 +243,7 @@ const Consulta = () => {
     const termo = busca.toLowerCase();
     return turmasConsolidadas.filter(
       (t) =>
-        t.segmento.toLowerCase().includes(termo) ||
+        t.etapa_modalidade.toLowerCase().includes(termo) ||
         t.grupo_ano.toLowerCase().includes(termo) ||
         t.turma.toLowerCase().includes(termo) ||
         t.turno.toLowerCase().includes(termo) ||
@@ -321,7 +321,7 @@ const Consulta = () => {
                 {turmasFiltradas.map((turma) => (
                   <TableRow key={turma.id}>
                     <TableCell className="font-medium">
-                      {turma.segmento} - {turma.grupo_ano} {turma.turma}
+                      {turma.etapa_modalidade} - {turma.grupo_ano} {turma.turma}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{turma.turno}</Badge>

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface Turma {
   id: string;
   turma: string;
-  segmento: string;
+  etapa_modalidade: string;
   grupo_ano: string;
   turno: string | null;
   escola_id: string;

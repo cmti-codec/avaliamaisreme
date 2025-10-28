@@ -501,12 +501,12 @@ export default function Importacao() {
         const turmaKey = `${row.saesc}_${row.sigeta}_${row.trmcla}_${turno}`;
         let turmaId = turmasCache.get(turmaKey);
         if (!turmaId) {
-          console.log(`🔍 Processando turma - Escola: ${row.saesc}, Segmento: ${row.sigeta}, Turma: ${row.trmcla}, Turno: ${turno}`);
+          console.log(`🔍 Processando turma - Escola: ${row.saesc}, Etapa: ${row.sigeta}, Turma: ${row.trmcla}, Turno: ${turno}`);
           
           // RPC já verifica se turma existe e cria se necessário
           const { data: rpcId, error: turmaError } = await supabase.rpc('admin_upsert_turma', {
             p_escola_id: escola.id,
-            p_segmento: row.sigeta,
+            p_etapa_modalidade: row.sigeta,
             p_grupo_ano: row.sigeta,
             p_turma: row.trmcla,
             p_turno: turno

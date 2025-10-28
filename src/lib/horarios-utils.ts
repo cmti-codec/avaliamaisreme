@@ -31,7 +31,7 @@ export interface Professor {
 
 export interface Turma {
   id: string;
-  segmento: string;
+  etapa_modalidade: string;
   grupo_ano: string;
   turma: string;
   turno: string;
@@ -63,18 +63,18 @@ export function normalizarTempo(turno: string, tempo: number): { turno: string; 
 export function validarFormacao(
   professorFormacoes: string[],
   componente: string,
-  segmento: string,
+  etapa_modalidade: string,
   grupoAno: string
 ): boolean {
-  // Ed. Infantil G1-3 com ATIVIDADES requer "Pedagogia - Ed. Infantil"
-  if (segmento === "Ed. Infantil" && ["Grupo 1", "Grupo 2", "Grupo 3"].includes(grupoAno)) {
+  // Educação Infantil com ATIVIDADES requer "Pedagogia - Ed. Infantil"
+  if (etapa_modalidade === "Educação Infantil" && ["Grupo 1", "Grupo 2", "Grupo 3"].includes(grupoAno)) {
     if (componente === "ATIVIDADES") {
       return professorFormacoes.includes("Pedagogia - Ed. Infantil");
     }
   }
 
   // EF I - Anos Iniciais
-  if (segmento === "1º ao 5º - EF I") {
+  if (etapa_modalidade === "Ensino Fundamental I - Anos Iniciais") {
     const componentesCamposMat = ["MATEMÁTICA", "LÍNGUA PORTUGUESA", "HISTÓRIA", "GEOGRAFIA"];
     if (componentesCamposMat.includes(componente)) {
       return professorFormacoes.includes("Pedagogia - Anos Iniciais");
@@ -91,7 +91,7 @@ export function validarFormacao(
   }
 
   // EF II e EJA: match direto
-  if (["6º ao 9º - EF II", "EJA"].includes(segmento)) {
+  if (["Ensino Fundamental II - Anos Finais", "EJA"].includes(etapa_modalidade)) {
     return professorFormacoes.some((f) => f.includes(componente));
   }
 
@@ -162,12 +162,12 @@ export function gerarSigla(nomeComponente: string): string {
 
 // Validar se professor está travado (unidocência)
 export function isProfessorTravado(
-  segmento: string,
+  etapa_modalidade: string,
   grupoAno: string,
   componente: string
 ): boolean {
   return (
-    segmento === "Ed. Infantil" &&
+    etapa_modalidade === "Educação Infantil" &&
     ["Grupo 1", "Grupo 2", "Grupo 3"].includes(grupoAno) &&
     componente === "ATIVIDADES"
   );

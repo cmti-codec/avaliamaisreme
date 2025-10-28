@@ -74,8 +74,8 @@ export const TurmaViewDialog = ({
                     </div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Segmento:</span>
-                    <p className="font-medium">{turma.segmento}</p>
+                    <span className="text-sm text-muted-foreground">Etapa/Modalidade:</span>
+                    <p className="font-medium">{turma.etapa_modalidade}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Grupo/Ano:</span>

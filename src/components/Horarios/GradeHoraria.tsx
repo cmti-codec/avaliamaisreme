@@ -57,7 +57,7 @@ export const GradeHoraria = ({
     Object.values(horarios).forEach((slot) => {
       if (
         slot.professor_id &&
-        isProfessorTravado(turma.segmento, turma.grupo_ano, slot.componente)
+        isProfessorTravado(turma.etapa_modalidade, turma.grupo_ano, slot.componente)
       ) {
         setProfessorTravado(slot.professor_id);
       }
@@ -75,10 +75,10 @@ export const GradeHoraria = ({
   const getProfessoresFiltrados = useCallback((componente: string): Professor[] => {
     return professores
       .filter((prof) =>
-        validarFormacao(prof.formacoes, componente, turma.segmento, turma.grupo_ano)
+        validarFormacao(prof.formacoes, componente, turma.etapa_modalidade, turma.grupo_ano)
       )
       .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [professores, turma.segmento, turma.grupo_ano]);
+  }, [professores, turma.etapa_modalidade, turma.grupo_ano]);
 
   const handleComponenteChange = useCallback((dia: string, tempo: number, componente: string) => {
     const key = getSlotKey(dia, tempo);
@@ -108,7 +108,7 @@ export const GradeHoraria = ({
     // Travar professor se necessário
     if (
       professorId &&
-      isProfessorTravado(turma.segmento, turma.grupo_ano, componente)
+      isProfessorTravado(turma.etapa_modalidade, turma.grupo_ano, componente)
     ) {
       setProfessorTravado(professorId);
     }
@@ -125,7 +125,7 @@ export const GradeHoraria = ({
       });
 
       // Verificar travamento
-      if (isProfessorTravado(turma.segmento, turma.grupo_ano, currentSlot.componente)) {
+      if (isProfessorTravado(turma.etapa_modalidade, turma.grupo_ano, currentSlot.componente)) {
         setProfessorTravado(professorId);
       }
     }

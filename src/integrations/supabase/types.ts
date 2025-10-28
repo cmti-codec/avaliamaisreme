@@ -630,10 +630,10 @@ export type Database = {
           ativa: boolean | null
           created_at: string | null
           escola_id: string
+          etapa_modalidade: string
           grupo_ano: string
           id: string
           matriz_curricular: Json | null
-          segmento: string
           turma: string
           turno: string | null
         }
@@ -641,10 +641,10 @@ export type Database = {
           ativa?: boolean | null
           created_at?: string | null
           escola_id: string
+          etapa_modalidade: string
           grupo_ano: string
           id?: string
           matriz_curricular?: Json | null
-          segmento: string
           turma: string
           turno?: string | null
         }
@@ -652,10 +652,10 @@ export type Database = {
           ativa?: boolean | null
           created_at?: string | null
           escola_id?: string
+          etapa_modalidade?: string
           grupo_ano?: string
           id?: string
           matriz_curricular?: Json | null
-          segmento?: string
           turma?: string
           turno?: string | null
         }
@@ -781,8 +781,8 @@ export type Database = {
       admin_upsert_turma: {
         Args: {
           p_escola_id: string
+          p_etapa_modalidade: string
           p_grupo_ano: string
-          p_segmento: string
           p_turma: string
           p_turno: string
         }

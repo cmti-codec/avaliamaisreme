@@ -78,7 +78,7 @@ const Lancamento = () => {
         .from("turmas")
         .select("*")
         .eq("ativa", true)
-        .order("segmento", { ascending: true })
+        .order("etapa_modalidade", { ascending: true })
         .order("grupo_ano", { ascending: true });
 
       if (turmasError) throw turmasError;
@@ -248,7 +248,7 @@ const Lancamento = () => {
 
   const formatarTurma = useMemo(
     () => (turma: Turma): string => {
-      return `${turma.segmento} - ${turma.grupo_ano} ${turma.turma} - ${turma.turno}`;
+      return `${turma.etapa_modalidade} - ${turma.grupo_ano} ${turma.turma} - ${turma.turno}`;
     },
     []
   );

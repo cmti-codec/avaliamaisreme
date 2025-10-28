@@ -62,7 +62,7 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
     return turmas.filter((turma) => {
       const matchesSearch = 
         turma.turma.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        turma.segmento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        turma.etapa_modalidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
         turma.escola?.nome.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesTurno = turnoFilter === "all" || turma.turno === turnoFilter;
@@ -133,7 +133,7 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Buscar por turma, segmento ou escola..."
+              placeholder="Buscar por turma, etapa/modalidade ou escola..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
