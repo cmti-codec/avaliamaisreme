@@ -213,6 +213,7 @@ export type Database = {
         Row: {
           ativa: boolean | null
           codigo_inep: string | null
+          codigo_saesc: string | null
           created_at: string | null
           email: string | null
           endereco: string | null
@@ -228,6 +229,7 @@ export type Database = {
         Insert: {
           ativa?: boolean | null
           codigo_inep?: string | null
+          codigo_saesc?: string | null
           created_at?: string | null
           email?: string | null
           endereco?: string | null
@@ -243,6 +245,7 @@ export type Database = {
         Update: {
           ativa?: boolean | null
           codigo_inep?: string | null
+          codigo_saesc?: string | null
           created_at?: string | null
           email?: string | null
           endereco?: string | null

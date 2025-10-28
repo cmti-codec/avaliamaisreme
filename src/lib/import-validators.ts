@@ -99,6 +99,10 @@ export function validateCPF(cpf: string): boolean {
 export function validateDate(dateStr: string): boolean {
   if (!dateStr) return true; // Campos opcionais
   
+  // Tratar sentinelas de data como vazias
+  const sentinels = ['00/00/0000', '0000-00-00', '-', '—', 'N/A', 'NA', 'NULL', '0'];
+  if (sentinels.includes(dateStr.trim())) return true;
+  
   // Regex para DD/MM/YYYY ou YYYY-MM-DD
   const brFormat = /^(\d{2})\/(\d{2})\/(\d{4})$/;
   const isoFormat = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -137,6 +141,10 @@ export function validateDate(dateStr: string): boolean {
 
 export function convertBrazilianDateToISO(dateStr: string): string | null {
   if (!dateStr || dateStr.trim() === '') return null;
+  
+  // Tratar sentinelas de data como null
+  const sentinels = ['00/00/0000', '0000-00-00', '-', '—', 'N/A', 'NA', 'NULL', '0'];
+  if (sentinels.includes(dateStr.trim())) return null;
   
   if (!validateDate(dateStr)) {
     throw new Error(`Data inválida: "${dateStr}"`);

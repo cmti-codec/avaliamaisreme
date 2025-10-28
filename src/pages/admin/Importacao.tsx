@@ -291,6 +291,7 @@ export default function Importacao() {
             nome: row.escola,
             codigo_inep: row.codigo_inep,
             saesc: saescUuid,
+            codigo_saesc: row.saesc,
             tipo: row.tipo,
             localidade: row.localidade,
             regiao: row.regiao,
@@ -346,7 +347,7 @@ export default function Importacao() {
         const { data: escola } = await supabase
           .from('escolas')
           .select('id')
-          .eq('saesc', row.saesc)
+          .eq('codigo_saesc', row.saesc)
           .maybeSingle();
         
         if (!escola) {
