@@ -32,8 +32,8 @@ interface ComponentesDialogProps {
 
 const ETAPAS_MODALIDADES = [
   "Educação Infantil",
-  "Anos Iniciais",
-  "Anos Finais",
+  "Ensino Fundamental I - Anos Iniciais",
+  "Ensino Fundamental II - Anos Finais",
   "EJA",
 ];
 
