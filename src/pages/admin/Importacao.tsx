@@ -277,60 +277,165 @@ export default function Importacao() {
   // 4. ESCOLAS
   const handleImportEscolas = async (data: any[], fileName: string) => {
     const errors: ValidationError[] = [];
-    let sucessos = 0;
+    let novasEscolas = 0;
+    let escolasAtualizadas = 0;
 
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      try {
-        // Gerar UUID consistente para saesc
-        const saescUuid = crypto.randomUUID();
-        
-        const { error } = await supabase
+    // Buscar escolas existentes para contagem
+    const { data: existingSchools } = await supabase
+      .from('escolas')
+      .select('codigo_inep, codigo_saesc');
+    
+    const existingIneps = new Set(existingSchools?.map(e => e.codigo_inep).filter(Boolean) || []);
+    const existingSaescs = new Set(existingSchools?.map(e => e.codigo_saesc).filter(Boolean) || []);
+
+    // Preparar dados para upsert
+    const escolasParaUpsert = data.map(row => {
+      const isUpdate = existingIneps.has(row.codigo_inep) || existingSaescs.has(row.saesc);
+      if (isUpdate) {
+        escolasAtualizadas++;
+      } else {
+        novasEscolas++;
+      }
+
+      return {
+        nome: row.escola,
+        codigo_inep: row.codigo_inep || null,
+        saesc: crypto.randomUUID(), // UUID gerado automaticamente
+        codigo_saesc: row.saesc,
+        tipo: row.tipo,
+        localidade: row.localidade,
+        regiao: row.regiao,
+        ativa: true
+      };
+    });
+
+    // Separar escolas com e sem INEP
+    const escolasComINEP = escolasParaUpsert.filter(e => e.codigo_inep);
+    const escolasSemINEP = escolasParaUpsert.filter(e => !e.codigo_inep);
+
+    try {
+      // UPSERT escolas com INEP (usa codigo_inep como chave de conflito)
+      if (escolasComINEP.length > 0) {
+        const { error: inepError } = await supabase
           .from('escolas')
-          .insert({
-            nome: row.escola,
-            codigo_inep: row.codigo_inep,
-            saesc: saescUuid,
-            codigo_saesc: row.saesc,
-            tipo: row.tipo,
-            localidade: row.localidade,
-            regiao: row.regiao,
-            ativa: true
+          .upsert(escolasComINEP, { 
+            onConflict: 'codigo_inep',
+            ignoreDuplicates: false 
           });
 
-        if (error) throw error;
-        sucessos++;
-      } catch (error: any) {
-        errors.push({
-          linha: i + 2,
-          campo: 'geral',
-          valor: row.escola,
-          erro: error.message || 'Erro ao inserir',
-          tipo: 'critico'
-        });
+        if (inepError) throw inepError;
       }
+
+      // UPSERT escolas sem INEP (usa codigo_saesc como chave de conflito)
+      if (escolasSemINEP.length > 0) {
+        const { error: saescError } = await supabase
+          .from('escolas')
+          .upsert(escolasSemINEP, { 
+            onConflict: 'codigo_saesc',
+            ignoreDuplicates: false 
+          });
+
+        if (saescError) throw saescError;
+      }
+
+      await logImportacao({
+        tipo: 'Escolas',
+        nomeArquivo: fileName,
+        totalLinhas: data.length,
+        linhasSucesso: data.length,
+        linhasErro: 0,
+        detalhesErros: []
+      });
+
+      const parts = [];
+      if (novasEscolas > 0) parts.push(`${novasEscolas} novas`);
+      if (escolasAtualizadas > 0) parts.push(`${escolasAtualizadas} atualizadas`);
+
+      toast({
+        title: "✅ Importação concluída!",
+        description: parts.join(' | '),
+      });
+
+      return { success: data.length, errors: [] };
+    } catch (error: any) {
+      errors.push({
+        linha: 0,
+        campo: 'geral',
+        valor: '-',
+        erro: error.message || 'Erro ao processar upsert',
+        tipo: 'critico'
+      });
+
+      await logImportacao({
+        tipo: 'Escolas',
+        nomeArquivo: fileName,
+        totalLinhas: data.length,
+        linhasSucesso: 0,
+        linhasErro: data.length,
+        detalhesErros: errors
+      });
+
+      toast({
+        title: "Erro na importação",
+        description: error.message,
+        variant: "destructive"
+      });
+
+      return { success: 0, errors };
     }
-
-    await logImportacao({
-      tipo: 'Escolas',
-      nomeArquivo: fileName,
-      totalLinhas: data.length,
-      linhasSucesso: sucessos,
-      linhasErro: errors.length,
-      detalhesErros: errors
-    });
-
-    toast({
-      title: errors.length === 0 ? "Sucesso!" : "Importação parcial",
-      description: `${sucessos} escolas importadas, ${errors.length} erros`,
-    });
-
-    return { success: sucessos, errors };
   };
 
   const validateEscolas = async (data: any[]) => {
-    const inepErrors = await validateUniqueness(data, 'codigo_inep', 'escolas', 'Código INEP', true);
-    return inepErrors;
+    const errors: ValidationError[] = [];
+    
+    // Validar duplicatas de INEP dentro do próprio CSV
+    const inepCounts = new Map<string, number[]>();
+    data.forEach((row, index) => {
+      if (row.codigo_inep) {
+        if (!inepCounts.has(row.codigo_inep)) {
+          inepCounts.set(row.codigo_inep, []);
+        }
+        inepCounts.get(row.codigo_inep)!.push(index + 2);
+      }
+    });
+
+    // Avisar sobre INEPs duplicados no CSV
+    inepCounts.forEach((linhas, inep) => {
+      if (linhas.length > 1) {
+        errors.push({
+          linha: linhas[0],
+          campo: 'codigo_inep',
+          valor: inep,
+          erro: `Código INEP aparece ${linhas.length}x no CSV (linhas ${linhas.join(', ')}) - última ocorrência será mantida`,
+          tipo: 'aviso'
+        });
+      }
+    });
+
+    // Validar duplicatas de codigo_saesc dentro do CSV
+    const saescCounts = new Map<string, number[]>();
+    data.forEach((row, index) => {
+      if (row.saesc) {
+        if (!saescCounts.has(row.saesc)) {
+          saescCounts.set(row.saesc, []);
+        }
+        saescCounts.get(row.saesc)!.push(index + 2);
+      }
+    });
+
+    saescCounts.forEach((linhas, saesc) => {
+      if (linhas.length > 1) {
+        errors.push({
+          linha: linhas[0],
+          campo: 'saesc',
+          valor: saesc,
+          erro: `Código SAESC aparece ${linhas.length}x no CSV (linhas ${linhas.join(', ')}) - última ocorrência será mantida`,
+          tipo: 'aviso'
+        });
+      }
+    });
+    
+    return errors;
   };
 
   // 5. ALUNOS (com criação automática de turmas)
@@ -446,13 +551,13 @@ export default function Importacao() {
   const validateAlunos = async (data: any[]) => {
     const errors: ValidationError[] = [];
     
-    // Validar saesc existe
+    // Validar codigo_saesc existe
     const saescs = [...new Set(data.map(d => d.saesc))];
     for (const saesc of saescs) {
       const { data: escola } = await supabase
         .from('escolas')
         .select('id')
-        .eq('saesc', saesc)
+        .eq('codigo_saesc', saesc)
         .maybeSingle();
       
       if (!escola) {
