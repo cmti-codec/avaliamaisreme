@@ -448,19 +448,27 @@ export default function Importacao() {
     // Função para mapear siglas de turno para valores válidos
     const mapTurnoSigla = (sigla: string | null | undefined): string | null => {
       if (!sigla) return null;
-      
-      const turnoMap: Record<string, string> = {
-        'M': 'MATUTINO',
-        'V': 'VESPERTINO',
-        'N': 'NOTURNO',
-        'I': 'INTEGRAL',
-        'MATUTINO': 'MATUTINO',
-        'VESPERTINO': 'VESPERTINO',
-        'NOTURNO': 'NOTURNO',
-        'INTEGRAL': 'INTEGRAL'
-      };
-      
-      return turnoMap[sigla.toUpperCase()] || null;
+
+      const normalize = (s: string) =>
+        s
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+          .toUpperCase()
+          .trim()
+          .replace(/[^A-Z]/g, '');
+
+      const s = normalize(sigla);
+
+      if (s.startsWith('M') || s.startsWith('MAT') || s.startsWith('MATU') || s.startsWith('MATUTINO'))
+        return 'MATUTINO';
+      if (s.startsWith('V') || s.startsWith('VES') || s.startsWith('VESP') || s.startsWith('VESPER') || s.startsWith('VESPERTINO'))
+        return 'VESPERTINO';
+      if (s.startsWith('N') || s.startsWith('NOT') || s.startsWith('NOTU') || s.startsWith('NOTURNO'))
+        return 'NOTURNO';
+      if (s.startsWith('I') || s.startsWith('INT') || s.startsWith('INTG') || s.startsWith('INTEG') || s.startsWith('INTEGRAL'))
+        return 'INTEGRAL';
+
+      return null;
     };
 
     for (let i = 0; i < data.length; i++) {
@@ -483,11 +491,15 @@ export default function Importacao() {
         if (!escola) {
           throw new Error(`Escola com saesc ${row.saesc} não encontrada`);
         }
+        // Normalizar turno e validar antes de criar turma
+        const turno = mapTurnoSigla(row.sigtur);
+        if (!turno) {
+          throw new Error(`Turno inválido "${row.sigtur}" - use M/V/N/I ou MATUTINO/VESPERTINO/NOTURNO/INTEGRAL`);
+        }
 
         // Verificar/criar turma usando RPC (bypass RLS)
-        const turmaKey = `${row.saesc}_${row.sigeta}_${row.trmcla}_${row.sigtur}`;
+        const turmaKey = `${row.saesc}_${row.sigeta}_${row.trmcla}_${turno}`;
         let turmaId = turmasCache.get(turmaKey);
-
         if (!turmaId) {
           // RPC já verifica se turma existe e cria se necessário
           const { data: rpcId, error: turmaError } = await supabase.rpc('admin_upsert_turma', {
@@ -495,7 +507,7 @@ export default function Importacao() {
             p_segmento: row.sigeta,
             p_grupo_ano: row.sigeta,
             p_turma: row.trmcla,
-            p_turno: mapTurnoSigla(row.sigtur)
+            p_turno: turno
           });
 
           if (turmaError) throw turmaError;
@@ -505,27 +517,47 @@ export default function Importacao() {
           turmasCache.set(turmaKey, turmaId);
         }
 
-        // Inserir aluno
-        const { error } = await supabase
-          .from('alunos')
-          .insert({
-            saesc: escola.id,
-            numalu: row.numalu,
-            nomalu: row.nomalu,
-            nummtr: row.nummtr,
-            datmtr: convertBrazilianDateToISO(row.datmtr),
-            sigeta: row.sigeta,
-            trmcla: row.trmcla,
-            sigtur: mapTurnoSigla(row.sigtur),
-            sigla: row.sigla,
-            desoca: row.desoca,
-            sioca: row.sioca,
-            dtomtrc: convertBrazilianDateToISO(row.dtomtrc),
-            turma_id: turmaId,
-            ativo: true
-          });
+        // Upsert aluno (idempotente por saesc+numalu)
+        const alunoPayload = {
+          saesc: escola.id,
+          numalu: row.numalu,
+          nomalu: row.nomalu,
+          nummtr: row.nummtr,
+          datmtr: convertBrazilianDateToISO(row.datmtr),
+          sigeta: row.sigeta,
+          trmcla: row.trmcla,
+          sigtur: turno,
+          sigla: row.sigla,
+          desoca: row.desoca,
+          sioca: row.sioca,
+          dtomtrc: convertBrazilianDateToISO(row.dtomtrc),
+          turma_id: turmaId,
+          ativo: true
+        };
 
-        if (error) throw error;
+        const { data: existente } = await supabase
+          .from('alunos')
+          .select('id')
+          .eq('saesc', escola.id)
+          .eq('numalu', row.numalu)
+          .maybeSingle();
+
+        let upsertError: any = null;
+        if (existente) {
+          const { error: updErr } = await supabase
+            .from('alunos')
+            .update(alunoPayload)
+            .eq('id', existente.id);
+          upsertError = updErr;
+        } else {
+          const { error: insErr } = await supabase
+            .from('alunos')
+            .insert(alunoPayload);
+          upsertError = insErr;
+        }
+
+        if (upsertError) throw upsertError;
+
         sucessos++;
       } catch (error: any) {
         errors.push({
@@ -557,8 +589,20 @@ export default function Importacao() {
 
   const validateAlunos = async (data: any[]) => {
     const errors: ValidationError[] = [];
-    
-    // Validar codigo_saesc existe
+
+    // 1) Regras básicas de obrigatoriedade
+    const requiredErrors = validateRequired(data, [
+      'saesc',
+      'numalu',
+      'nomalu',
+      'nummtr',
+      'sigeta',
+      'trmcla',
+      'sigtur',
+    ]);
+    errors.push(...requiredErrors);
+
+    // 2) Validar existencia de escola (saesc)
     const saescs = [...new Set(data.map(d => d.saesc))];
     for (const saesc of saescs) {
       const { data: escola } = await supabase
@@ -566,12 +610,12 @@ export default function Importacao() {
         .select('id')
         .eq('codigo_saesc', saesc)
         .maybeSingle();
-      
+
       if (!escola) {
         const linhas = data
           .map((row, idx) => row.saesc === saesc ? idx + 2 : null)
           .filter(Boolean);
-        
+
         errors.push({
           linha: linhas[0] as number,
           campo: 'saesc',
@@ -581,17 +625,46 @@ export default function Importacao() {
         });
       }
     }
-    
-    // Validar datas
+
+    // 3) Validar turno (mapa robusto)
+    const mapTurnoSiglaValid = (sigla: string | null | undefined): string | null => {
+      if (!sigla) return null;
+      const normalize = (s: string) => s
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .toUpperCase()
+        .trim()
+        .replace(/[^A-Z]/g, '');
+      const s = normalize(sigla);
+      if (s.startsWith('M')) return 'MATUTINO';
+      if (s.startsWith('V')) return 'VESPERTINO';
+      if (s.startsWith('N')) return 'NOTURNO';
+      if (s.startsWith('I') || s.startsWith('INT') || s.startsWith('INTEG')) return 'INTEGRAL';
+      return null;
+    };
+
+    data.forEach((row, idx) => {
+      const turno = mapTurnoSiglaValid(row.sigtur);
+      if (!turno) {
+        errors.push({
+          linha: idx + 2,
+          campo: 'sigtur',
+          valor: row.sigtur,
+          erro: 'Turno inválido - use M/V/N/I ou MATUTINO/VESPERTINO/NOTURNO/INTEGRAL',
+          tipo: 'critico'
+        });
+      }
+    });
+
+    // 4) Validar datas
     const dateErrors = validateDataTypes(data, { 
       datmtr: 'date',
       dtomtrc: 'date'
     });
     errors.push(...dateErrors);
-    
+
     return errors;
   };
-
   // 6. CARGAS HORÁRIAS
   const handleImportCargas = async (data: any[], fileName: string) => {
     const errors: ValidationError[] = [];
