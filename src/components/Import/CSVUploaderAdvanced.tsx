@@ -134,10 +134,10 @@ export function CSVUploaderAdvanced({
     console.log('Delimitador detectado:', delimiterName);
 
     const headers = lines[0].split(delimiter).map(h => h.trim());
-    const expectedHeaderNames = expectedHeaders.map(h => h.name);
     
-    // Validar cabeçalhos
-    const missingHeaders = expectedHeaderNames.filter(h => !headers.includes(h));
+    // Validar apenas cabeçalhos obrigatórios
+    const requiredHeaderNames = expectedHeaders.filter(h => h.required).map(h => h.name);
+    const missingHeaders = requiredHeaderNames.filter(h => !headers.includes(h));
     if (missingHeaders.length > 0) {
       setErrors([{
         linha: 1,
@@ -153,8 +153,15 @@ export function CSVUploaderAdvanced({
     const data = lines.slice(1).map(line => {
       const values = line.split(delimiter).map(v => v.trim());
       const row: any = {};
+      // Preencher com valores do CSV
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
+      });
+      // Adicionar campos esperados que não estão no CSV
+      expectedHeaders.forEach(h => {
+        if (!(h.name in row)) {
+          row[h.name] = '';
+        }
       });
       return row;
     });
@@ -208,8 +215,15 @@ export function CSVUploaderAdvanced({
         const data = lines.slice(1).map(line => {
           const values = line.split(delimiter).map(v => v.trim());
           const row: any = {};
+          // Preencher com valores do CSV
           headers.forEach((header, index) => {
             row[header] = values[index] || '';
+          });
+          // Adicionar campos esperados que não estão no CSV
+          expectedHeaders.forEach(h => {
+            if (!(h.name in row)) {
+              row[h.name] = '';
+            }
           });
           return row;
         });
