@@ -445,6 +445,24 @@ export default function Importacao() {
     let turmasCriadas = 0;
     const turmasCache = new Map();
 
+    // Função para mapear siglas de turno para valores válidos
+    const mapTurnoSigla = (sigla: string | null | undefined): string | null => {
+      if (!sigla) return null;
+      
+      const turnoMap: Record<string, string> = {
+        'M': 'MATUTINO',
+        'V': 'VESPERTINO',
+        'N': 'NOTURNO',
+        'I': 'INTEGRAL',
+        'MATUTINO': 'MATUTINO',
+        'VESPERTINO': 'VESPERTINO',
+        'NOTURNO': 'NOTURNO',
+        'INTEGRAL': 'INTEGRAL'
+      };
+      
+      return turnoMap[sigla.toUpperCase()] || null;
+    };
+
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       
@@ -477,7 +495,7 @@ export default function Importacao() {
             p_segmento: row.sigeta,
             p_grupo_ano: row.sigeta,
             p_turma: row.trmcla,
-            p_turno: row.sigtur
+            p_turno: mapTurnoSigla(row.sigtur)
           });
 
           if (turmaError) throw turmaError;
@@ -498,7 +516,7 @@ export default function Importacao() {
             datmtr: convertBrazilianDateToISO(row.datmtr),
             sigeta: row.sigeta,
             trmcla: row.trmcla,
-            sigtur: row.sigtur,
+            sigtur: mapTurnoSigla(row.sigtur),
             sigla: row.sigla,
             desoca: row.desoca,
             sioca: row.sioca,
