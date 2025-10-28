@@ -466,41 +466,23 @@ export default function Importacao() {
           throw new Error(`Escola com saesc ${row.saesc} não encontrada`);
         }
 
-        // Verificar/criar turma
+        // Verificar/criar turma usando RPC (bypass RLS)
         const turmaKey = `${row.saesc}_${row.sigeta}_${row.trmcla}_${row.sigtur}`;
         let turmaId = turmasCache.get(turmaKey);
 
         if (!turmaId) {
-          const { data: turmaExistente } = await supabase
-            .from('turmas')
-            .select('id')
-            .eq('escola_id', escola.id)
-            .eq('segmento', row.sigeta)
-            .eq('turma', row.trmcla)
-            .eq('turno', row.sigtur)
-            .maybeSingle();
+          // RPC já verifica se turma existe e cria se necessário
+          const { data: rpcId, error: turmaError } = await supabase.rpc('admin_upsert_turma', {
+            p_escola_id: escola.id,
+            p_segmento: row.sigeta,
+            p_grupo_ano: row.sigeta,
+            p_turma: row.trmcla,
+            p_turno: row.sigtur
+          });
 
-          if (turmaExistente) {
-            turmaId = turmaExistente.id;
-          } else {
-            // Criar turma automaticamente
-            const { data: novaTurma, error: turmaError } = await supabase
-              .from('turmas')
-              .insert({
-                escola_id: escola.id,
-                segmento: row.sigeta,
-                grupo_ano: row.sigeta,
-                turma: row.trmcla,
-                turno: row.sigtur,
-                ativa: true
-              })
-              .select('id')
-              .single();
-
-            if (turmaError) throw turmaError;
-            turmaId = novaTurma.id;
-            turmasCriadas++;
-          }
+          if (turmaError) throw turmaError;
+          turmaId = rpcId as string;
+          turmasCriadas++;
 
           turmasCache.set(turmaKey, turmaId);
         }
