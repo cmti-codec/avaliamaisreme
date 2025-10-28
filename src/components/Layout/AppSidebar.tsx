@@ -50,6 +50,7 @@ const secondaryItems = [
 
 const adminItems = [
   { title: "Gestão de Usuários", url: "/admin/usuarios", icon: Users },
+  { title: "Gestão de Escolas", url: "/admin/escolas", icon: Building2 },
   { title: "Matrizes Curriculares", url: "/admin/matrizes", icon: BookOpen },
   { title: "Escolas ↔ Matrizes", url: "/admin/escolas-matrizes", icon: Link2 },
   { title: "Importar Dados", url: "/admin/importacao", icon: Download },

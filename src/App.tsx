@@ -18,6 +18,7 @@ import Login from "./pages/Login";
 import Importacao from "./pages/admin/Importacao";
 import Matrizes from "./pages/admin/Matrizes";
 import EscolasMatrizes from "./pages/admin/EscolasMatrizes";
+import EscolasAdmin from "./pages/admin/EscolasAdmin";
 import Usuarios from "./pages/admin/Usuarios";
 import ConsultaHorarios from "./pages/horarios/Consulta";
 import LancamentoHorarios from "./pages/horarios/Lancamento";
@@ -82,6 +83,7 @@ const App = () => (
             
             {/* Admin Routes */}
             <Route path="/admin/usuarios" element={<LayoutWrapper><Usuarios /></LayoutWrapper>} />
+            <Route path="/admin/escolas" element={<LayoutWrapper><EscolasAdmin /></LayoutWrapper>} />
             <Route path="/admin/importacao" element={<LayoutWrapper><Importacao /></LayoutWrapper>} />
             <Route path="/admin/matrizes" element={<LayoutWrapper><Matrizes /></LayoutWrapper>} />
             <Route path="/admin/escolas-matrizes" element={<LayoutWrapper><EscolasMatrizes /></LayoutWrapper>} />

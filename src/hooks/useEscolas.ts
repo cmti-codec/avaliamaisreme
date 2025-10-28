@@ -6,6 +6,11 @@ export interface Escola {
   id: string;
   nome: string;
   codigo_inep: string | null;
+  codigo_saesc: string | null;
+  saesc: string | null;
+  tipo: string | null;
+  localidade: string | null;
+  regiao: string | null;
   endereco: string | null;
   telefone: string | null;
   email: string | null;

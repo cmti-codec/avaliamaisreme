@@ -329,7 +329,7 @@ export default function Importacao() {
   };
 
   const validateEscolas = async (data: any[]) => {
-    const inepErrors = await validateUniqueness(data, 'codigo_inep', 'escolas', 'Código INEP');
+    const inepErrors = await validateUniqueness(data, 'codigo_inep', 'escolas', 'Código INEP', true);
     return inepErrors;
   };
 
