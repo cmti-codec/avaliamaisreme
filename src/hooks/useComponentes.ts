@@ -69,6 +69,48 @@ export const useCreateComponente = () => {
   });
 };
 
+export const useUpdateComponente = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (componente: {
+      id: string;
+      nome: string;
+      sigla: string;
+      segmentos: string[];
+    }) => {
+      const { data, error } = await supabase
+        .from("componentes_curriculares")
+        .update({
+          nome: componente.nome,
+          sigla: componente.sigla,
+          segmentos: componente.segmentos,
+        })
+        .eq("id", componente.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["componentes-curriculares"] });
+      toast({
+        title: "Componente atualizado",
+        description: "O componente curricular foi atualizado com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar componente",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 export const useDeleteComponente = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();

@@ -20,8 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, BookOpen, Trash2 } from "lucide-react";
-import { useComponentes, useCreateComponente, useDeleteComponente } from "@/hooks/useComponentes";
+import { Plus, BookOpen, Trash2, Pencil } from "lucide-react";
+import { useComponentes, useCreateComponente, useUpdateComponente, useDeleteComponente } from "@/hooks/useComponentes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
@@ -39,6 +39,7 @@ const ETAPAS_MODALIDADES = [
 
 export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
   const [showForm, setShowForm] = useState(false);
+  const [editingComponente, setEditingComponente] = useState<string | null>(null);
   const [nome, setNome] = useState("");
   const [sigla, setSigla] = useState("");
   const [etapas, setEtapas] = useState<string[]>([]);
@@ -47,6 +48,7 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
 
   const { data: componentes, isLoading } = useComponentes();
   const createComponente = useCreateComponente();
+  const updateComponente = useUpdateComponente();
   const deleteComponente = useDeleteComponente();
 
   const handleToggleEtapa = (etapa: string) => {
@@ -60,17 +62,27 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
   const handleSubmit = async () => {
     if (!nome.trim()) return;
 
-    await createComponente.mutateAsync({
-      nome: nome.trim(),
-      sigla: sigla.trim() || nome.trim().substring(0, 3).toUpperCase(),
-      segmentos: etapas,
-    });
+    if (editingComponente) {
+      await updateComponente.mutateAsync({
+        id: editingComponente,
+        nome: nome.trim(),
+        sigla: sigla.trim() || nome.trim().substring(0, 3).toUpperCase(),
+        segmentos: etapas,
+      });
+    } else {
+      await createComponente.mutateAsync({
+        nome: nome.trim(),
+        sigla: sigla.trim() || nome.trim().substring(0, 3).toUpperCase(),
+        segmentos: etapas,
+      });
+    }
 
     // Reset form
     setNome("");
     setSigla("");
     setEtapas([]);
     setShowForm(false);
+    setEditingComponente(null);
   };
 
   const handleCancel = () => {
@@ -78,6 +90,15 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
     setSigla("");
     setEtapas([]);
     setShowForm(false);
+    setEditingComponente(null);
+  };
+
+  const handleEditClick = (componente: any) => {
+    setEditingComponente(componente.id);
+    setNome(componente.nome);
+    setSigla(componente.sigla || "");
+    setEtapas(componente.segmentos || []);
+    setShowForm(true);
   };
 
   const handleDeleteClick = (componenteNome: string) => {
@@ -152,6 +173,15 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleEditClick(componente)}
+                          title="Editar componente"
+                          className="shrink-0"
+                        >
+                          <Pencil className="h-4 w-4 text-primary" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDeleteClick(componente.nome)}
                           title="Excluir componente"
                           className="shrink-0"
@@ -175,7 +205,9 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
           {showForm && (
             <div className="space-y-4 border rounded-lg p-4 bg-accent/20">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Novo Componente</h3>
+                <h3 className="text-sm font-medium">
+                  {editingComponente ? "Editar Componente" : "Novo Componente"}
+                </h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -230,10 +262,14 @@ export function ComponentesDialog({ open, onClose }: ComponentesDialogProps) {
 
                 <Button
                   onClick={handleSubmit}
-                  disabled={!nome.trim() || etapas.length === 0 || createComponente.isPending}
+                  disabled={!nome.trim() || etapas.length === 0 || createComponente.isPending || updateComponente.isPending}
                   className="w-full"
                 >
-                  {createComponente.isPending ? "Salvando..." : "Salvar Componente"}
+                  {(createComponente.isPending || updateComponente.isPending) 
+                    ? "Salvando..." 
+                    : editingComponente 
+                      ? "Atualizar Componente" 
+                      : "Salvar Componente"}
                 </Button>
               </div>
             </div>
