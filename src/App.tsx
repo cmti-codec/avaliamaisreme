@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/Layout/AppSidebar";
 import { AppHeader } from "@/components/Layout/AppHeader";
+import { AppFooter } from "@/components/Layout/AppFooter";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ImpersonateBanner } from "@/components/ImpersonateBanner";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ function LayoutWrapper({ children }: { children: React.ReactNode }) {
           <main className="flex-1 p-6 md:p-8">
             {children}
           </main>
+          <AppFooter />
         </div>
       </div>
     </SidebarProvider>

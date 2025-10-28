@@ -1,9 +1,7 @@
 import { LayoutDashboard, Users, School, Building2, GraduationCap, Calendar as CalendarIcon, FileText, Download, Settings, BookOpen, Link2, Clock, Search, BarChart3 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useUsuario } from "@/hooks/useUsuario";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 const menuItems = [{
   title: "Painel",
   url: "/",
@@ -80,21 +78,6 @@ export function AppSidebar() {
     data: usuario
   } = useUsuario();
   const isAdmin = usuario?.roles.includes("ADMIN");
-  const {
-    data: escola
-  } = useQuery({
-    queryKey: ["escola", usuario?.escola_id],
-    queryFn: async () => {
-      if (!usuario?.escola_id) return null;
-      const {
-        data,
-        error
-      } = await supabase.from("escolas").select("nome, codigo_inep").eq("id", usuario.escola_id).maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!usuario?.escola_id
-  });
   return <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarContent>
         {/* Logo Section */}
@@ -186,29 +169,5 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>}
       </SidebarContent>
-
-      {/* Rodapé com informações da escola ou status admin */}
-      <SidebarFooter>
-        {escola ? <div className="p-4 border-t border-border bg-muted/30">
-            <div className="flex items-start gap-2">
-              <School className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground line-clamp-2" title={escola.nome}>
-                  {escola.nome}
-                </p>
-                {escola.codigo_inep && <p className="text-[10px] text-muted-foreground mt-1">
-                    INEP: {escola.codigo_inep}
-                  </p>}
-              </div>
-            </div>
-          </div> : isAdmin && usuario ? <div className="p-4 border-t border-border bg-primary/5">
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-primary flex-shrink-0" />
-              <p className="text-xs font-medium text-sky-200">
-                Administrador do Sistema
-              </p>
-            </div>
-          </div> : null}
-      </SidebarFooter>
     </Sidebar>;
 }
