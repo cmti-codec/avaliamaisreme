@@ -17,7 +17,7 @@ interface CSVUploaderAdvancedProps {
   title: string;
   description: string;
   expectedHeaders: ExpectedHeader[];
-  onImport: (data: any[], fileName: string) => Promise<{ success: number; errors: ValidationError[] }>;
+  onImport: (data: any[], fileName: string, onProgress?: (progress: number) => void) => Promise<{ success: number; errors: ValidationError[] }>;
   templateData: any[];
   onValidate?: (data: any[]) => Promise<ValidationError[]>;
   warningMessage?: string;
@@ -229,7 +229,11 @@ export function CSVUploaderAdvanced({
         });
 
         setProgress(50);
-        const result = await onImport(data, file.name);
+        const result = await onImport(data, file.name, (importProgress) => {
+          // Mapear progresso de importação (0-100) para 50-100 na barra total
+          const mappedProgress = 50 + (importProgress * 0.5);
+          setProgress(mappedProgress);
+        });
         setProgress(100);
         
         if (result.errors.length === 0) {

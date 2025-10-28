@@ -439,7 +439,7 @@ export default function Importacao() {
   };
 
   // 5. ALUNOS (com criação automática de turmas)
-  const handleImportAlunos = async (data: any[], fileName: string) => {
+  const handleImportAlunos = async (data: any[], fileName: string, onProgress?: (progress: number) => void) => {
     const errors: ValidationError[] = [];
     let sucessos = 0;
     let turmasCriadas = 0;
@@ -447,6 +447,13 @@ export default function Importacao() {
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
+      
+      // Atualizar progresso
+      if (onProgress) {
+        const progress = Math.round(((i + 1) / data.length) * 100);
+        onProgress(progress);
+      }
+      
       try {
         // Buscar escola por código saesc
         const { data: escola } = await supabase

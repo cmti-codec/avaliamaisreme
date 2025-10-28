@@ -147,7 +147,8 @@ export function convertBrazilianDateToISO(dateStr: string): string | null {
   if (sentinels.includes(dateStr.trim())) return null;
   
   if (!validateDate(dateStr)) {
-    throw new Error(`Data inválida: "${dateStr}"`);
+    console.warn(`Data inválida: "${dateStr}"`);
+    return null;
   }
   
   // Se já está em formato ISO, retorna
