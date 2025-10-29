@@ -438,6 +438,58 @@ export default function Importacao() {
     return errors;
   };
 
+  // Função para mapear sigeta para etapa/modalidade padronizada
+  const mapSigetaToEtapaModalidade = (sigeta: string): string => {
+    const normalized = sigeta
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toUpperCase()
+      .trim();
+
+    // Educação Infantil: GRUPO 1-5, CRECHE, BERÇÁRIO, PRÉ-ESCOLA
+    if (
+      normalized.includes('GRUPO') ||
+      normalized.includes('CRECHE') ||
+      normalized.includes('BERCARIO') ||
+      normalized.includes('PRE-ESCOLA') ||
+      normalized.includes('INFANTIL')
+    ) {
+      return 'Educação Infantil';
+    }
+
+    // Ensino Fundamental I: 1º ao 5º ano
+    if (
+      /[1-5].*ANO/.test(normalized) &&
+      !normalized.includes('EJA')
+    ) {
+      return 'Ensino Fundamental I - Anos Iniciais';
+    }
+
+    // Ensino Fundamental II: 6º ao 9º ano
+    if (
+      /[6-9].*ANO/.test(normalized) &&
+      !normalized.includes('EJA')
+    ) {
+      return 'Ensino Fundamental II - Anos Finais';
+    }
+
+    // EJA: qualquer coisa com EJA
+    if (normalized.includes('EJA')) {
+      return 'EJA';
+    }
+
+    // Fallback: tentar inferir pelo número
+    const match = normalized.match(/(\d+)/);
+    if (match) {
+      const num = parseInt(match[1]);
+      if (num >= 1 && num <= 5) return 'Ensino Fundamental I - Anos Iniciais';
+      if (num >= 6 && num <= 9) return 'Ensino Fundamental II - Anos Finais';
+    }
+
+    // Se não conseguir mapear, lançar erro descritivo
+    throw new Error(`Não foi possível mapear "${sigeta}" para uma etapa/modalidade válida`);
+  };
+
   // 5. ALUNOS (com criação automática de turmas)
   const handleImportAlunos = async (data: any[], fileName: string, onProgress?: (progress: number) => void) => {
     const errors: ValidationError[] = [];
@@ -506,7 +558,7 @@ export default function Importacao() {
           // RPC já verifica se turma existe e cria se necessário
           const { data: rpcId, error: turmaError } = await supabase.rpc('admin_upsert_turma', {
             p_escola_id: escola.id,
-            p_etapa_modalidade: row.sigeta,
+            p_etapa_modalidade: mapSigetaToEtapaModalidade(row.sigeta),
             p_grupo_ano: row.sigeta,
             p_turma: row.trmcla,
             p_turno: turno
@@ -533,7 +585,7 @@ export default function Importacao() {
           nomalu: row.nomalu,
           nummtr: row.nummtr,
           datmtr: convertBrazilianDateToISO(row.datmtr),
-          sigeta: row.sigeta,
+          sigeta: mapSigetaToEtapaModalidade(row.sigeta),
           trmcla: row.trmcla,
           sigtur: turno,
           sigla: row.sigla,
@@ -671,6 +723,21 @@ export default function Importacao() {
       dtomtrc: 'date'
     });
     errors.push(...dateErrors);
+
+    // 5) Validar mapeamento de etapa_modalidade
+    data.forEach((row, idx) => {
+      try {
+        mapSigetaToEtapaModalidade(row.sigeta);
+      } catch (error: any) {
+        errors.push({
+          linha: idx + 2,
+          campo: 'sigeta',
+          valor: row.sigeta,
+          erro: error.message,
+          tipo: 'critico'
+        });
+      }
+    });
 
     return errors;
   };
