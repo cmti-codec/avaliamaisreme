@@ -13,6 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, School, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface AlunosTableProps {
   alunos: Aluno[];
@@ -33,6 +42,9 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
   const [selectedEscola, setSelectedEscola] = useState<string>("all");
   const [selectedTurma, setSelectedTurma] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const itemsPerPage = 50;
 
   // Estatísticas
   const stats = useMemo(() => {
@@ -86,11 +98,24 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
     });
   }, [alunos, search, selectedEscola, selectedTurma, selectedStatus]);
 
+  // Paginação
+  const totalPages = Math.ceil(filteredAlunos.length / itemsPerPage);
+  const paginatedAlunos = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredAlunos.slice(startIndex, endIndex);
+  }, [filteredAlunos, currentPage, itemsPerPage]);
+
+  // Reset para página 1 quando filtros mudarem
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [search, selectedEscola, selectedTurma, selectedStatus]);
+
   // Agrupamento por escola
   const alunosPorEscola = useMemo(() => {
     const groups = new Map<string, { escola: NonNullable<Aluno["escola"]>; alunos: Aluno[] }>();
 
-    filteredAlunos.forEach((aluno) => {
+    paginatedAlunos.forEach((aluno) => {
       if (!aluno.escola) return;
       const escolaId = aluno.saesc;
       if (!groups.has(escolaId)) {
@@ -100,7 +125,7 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
     });
 
     return Array.from(groups.values()).sort((a, b) => a.escola.nome.localeCompare(b.escola.nome));
-  }, [filteredAlunos]);
+  }, [paginatedAlunos]);
 
   if (isLoading) {
     return (
@@ -168,6 +193,13 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
       {/* Filtros */}
       <Card>
         <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {filteredAlunos.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} -{" "}
+              {Math.min(currentPage * itemsPerPage, filteredAlunos.length)} de{" "}
+              {filteredAlunos.length} alunos
+            </p>
+          </div>
           <div className="grid gap-4 md:grid-cols-4">
             <Input
               placeholder="Buscar aluno..."
@@ -284,6 +316,60 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
           ))
         )}
       </div>
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(pageNum)}
+                      isActive={currentPage === pageNum}
+                      className="cursor-pointer"
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+
+              {totalPages > 5 && currentPage < totalPages - 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 };

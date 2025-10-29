@@ -42,6 +42,7 @@ export const useAlunos = () => {
           escola:escolas!alunos_saesc_fkey(id, nome, codigo_inep),
           turma:turmas!alunos_turma_id_fkey(id, turma, grupo_ano, turno, etapa_modalidade)
         `)
+        .range(0, 4999)
         .order("nomalu", { ascending: true });
 
       if (error) throw error;
@@ -65,6 +66,7 @@ export const useAlunosPorEscola = (escolaId: string | null) => {
           turma:turmas!alunos_turma_id_fkey(id, turma, grupo_ano, turno, etapa_modalidade)
         `)
         .eq("saesc", escolaId)
+        .range(0, 4999)
         .order("nomalu", { ascending: true });
 
       if (error) throw error;
