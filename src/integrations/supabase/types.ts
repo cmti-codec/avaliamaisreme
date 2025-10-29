@@ -74,6 +74,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "alunos_saesc_fkey"
+            columns: ["saesc"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "alunos_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
