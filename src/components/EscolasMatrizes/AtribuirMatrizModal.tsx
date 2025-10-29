@@ -29,13 +29,13 @@ export const AtribuirMatrizModal = ({ open, onClose, escolaId }: AtribuirMatrizM
   const { data: escola, isLoading: loadingEscola } = useEscola(escolaId);
   const { data: matrizes } = useMatrizes();
   const atribuirMutation = useAtribuirMatriz();
-  const [matrizSelecionada, setMatrizSelecionada] = useState<string>("");
+  const [matrizSelecionada, setMatrizSelecionada] = useState<string>("none");
 
   useEffect(() => {
     if (escola?.matriz_curricular_id) {
       setMatrizSelecionada(escola.matriz_curricular_id);
     } else {
-      setMatrizSelecionada("");
+      setMatrizSelecionada("none");
     }
   }, [escola]);
 
@@ -61,7 +61,7 @@ export const AtribuirMatrizModal = ({ open, onClose, escolaId }: AtribuirMatrizM
     try {
       await atribuirMutation.mutateAsync({
         escolaId,
-        matrizId: matrizSelecionada || null,
+        matrizId: matrizSelecionada === "none" ? null : matrizSelecionada,
       });
       onClose();
     } catch (error) {
@@ -108,7 +108,7 @@ export const AtribuirMatrizModal = ({ open, onClose, escolaId }: AtribuirMatrizM
                   <SelectValue placeholder="Selecione uma matriz..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">
+                  <SelectItem value="none">
                     <span className="text-muted-foreground">Remover matriz</span>
                   </SelectItem>
                   {matrizesAgrupadas &&
@@ -141,7 +141,7 @@ export const AtribuirMatrizModal = ({ open, onClose, escolaId }: AtribuirMatrizM
               </Button>
               <Button
                 onClick={handleSalvar}
-                disabled={atribuirMutation.isPending || !matrizSelecionada}
+                disabled={atribuirMutation.isPending}
               >
                 {atribuirMutation.isPending ? "Salvando..." : "Confirmar Atribuição"}
               </Button>
