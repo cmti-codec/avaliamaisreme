@@ -751,11 +751,14 @@ export default function Importacao() {
       try {
         const { error } = await supabase
           .from('cargas_horarias_componentes')
-          .insert({
+          .upsert({
             componente_nome: row.componente_nome,
             etapa_modalidade: row.etapa_modalidade,
             grupo_ano: row.grupo_ano,
             carga_horaria_semanal: parseInt(row.carga_horaria_semanal)
+          }, {
+            onConflict: 'componente_nome,etapa_modalidade,grupo_ano',
+            ignoreDuplicates: false
           });
 
         if (error) throw error;
@@ -782,20 +785,42 @@ export default function Importacao() {
 
     toast({
       title: errors.length === 0 ? "Sucesso!" : "Importação parcial",
-      description: `${sucessos} cargas horárias importadas, ${errors.length} erros`,
+      description: `${sucessos} cargas horárias processadas (inseridas ou atualizadas), ${errors.length} erros`,
     });
 
     return { success: sucessos, errors };
   };
 
   const validateCargas = async (data: any[]) => {
-    return await validateForeignKey(
+    const errors: ValidationError[] = [];
+    
+    // Validar se componente existe
+    const componenteErrors = await validateForeignKey(
       data,
       'componente_nome',
       'componentes_curriculares',
       'nome',
       'Componente não cadastrado'
     );
+    errors.push(...componenteErrors);
+    
+    // Verificar duplicatas no CSV
+    const chaves = new Set<string>();
+    data.forEach((row, idx) => {
+      const chave = `${row.componente_nome}|${row.etapa_modalidade}|${row.grupo_ano}`;
+      if (chaves.has(chave)) {
+        errors.push({
+          linha: idx + 2,
+          campo: 'geral',
+          valor: chave,
+          erro: `Duplicata no CSV: ${row.componente_nome} já foi definido para ${row.etapa_modalidade} - ${row.grupo_ano}`,
+          tipo: 'aviso'
+        });
+      }
+      chaves.add(chave);
+    });
+    
+    return errors;
   };
 
   return (
@@ -957,7 +982,7 @@ export default function Importacao() {
         <TabsContent value="cargas">
           <CSVUploaderAdvanced
             title="Importar Cargas Horárias dos Componentes"
-            description="Importe as cargas horárias dos componentes por etapa e ano"
+            description="Importe ou atualize cargas horárias. Registros existentes serão atualizados automaticamente."
             expectedHeaders={[
               { name: 'componente_nome', required: true, type: 'text' },
               { name: 'etapa_modalidade', required: true, type: 'text' },
