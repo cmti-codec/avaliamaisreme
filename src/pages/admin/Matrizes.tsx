@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, ShieldAlert, Search, FileText, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, ShieldAlert, Search, FileText, CheckCircle2, XCircle, Clock, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUsuario } from "@/hooks/useUsuario";
 import { useMatrizes } from "@/hooks/useMatrizes";
@@ -13,7 +13,15 @@ import { MatrizModal } from "@/components/Matrizes/MatrizModal";
 import { MatrizDeleteDialog } from "@/components/Matrizes/MatrizDeleteDialog";
 import { MatrizViewDialog } from "@/components/Matrizes/MatrizViewDialog";
 import { ComponentesDialog } from "@/components/Matrizes/ComponentesDialog";
+import { CargasHorariasDialog } from "@/components/Matrizes/CargasHorariasDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -37,7 +45,9 @@ const Matrizes = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [etapaFilter, setEtapaFilter] = useState<string>("all");
   const [componentesDialogOpen, setComponentesDialogOpen] = useState(false);
+  const [cargasDialogOpen, setCargasDialogOpen] = useState(false);
 
+  const isMobile = useIsMobile();
   const isLoading = isLoadingUser || isLoadingMatrizes;
 
   // Estatísticas
@@ -155,23 +165,61 @@ const Matrizes = () => {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button 
-            onClick={() => setComponentesDialogOpen(true)} 
-            variant="outline"
-            className="gap-2"
-            size="lg"
-          >
-            <Plus className="w-4 h-4" />
-            Componentes
-          </Button>
-          <Button 
-            onClick={() => setModalOpen(true)} 
-            className="gap-2"
-            size="lg"
-          >
-            <Plus className="w-4 h-4" />
-            Nova Matriz
-          </Button>
+          {isMobile ? (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="lg" className="gap-2">
+                    <Settings className="w-4 h-4" />
+                    Configurar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setComponentesDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Componentes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCargasDialogOpen(true)}>
+                    <Clock className="w-4 h-4 mr-2" />
+                    Cargas Horárias
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={() => setModalOpen(true)} className="gap-2" size="lg">
+                <Plus className="w-4 h-4" />
+                Nova Matriz
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button 
+                onClick={() => setComponentesDialogOpen(true)} 
+                variant="outline"
+                className="gap-2"
+                size="lg"
+              >
+                <Plus className="w-4 h-4" />
+                Componentes
+              </Button>
+              <Button 
+                onClick={() => setCargasDialogOpen(true)} 
+                variant="outline"
+                className="gap-2"
+                size="lg"
+              >
+                <Clock className="w-4 h-4" />
+                Cargas Horárias
+              </Button>
+              <Button 
+                onClick={() => setModalOpen(true)} 
+                className="gap-2"
+                size="lg"
+              >
+                <Plus className="w-4 h-4" />
+                Nova Matriz
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -313,6 +361,11 @@ const Matrizes = () => {
       <ComponentesDialog
         open={componentesDialogOpen}
         onClose={() => setComponentesDialogOpen(false)}
+      />
+
+      <CargasHorariasDialog
+        open={cargasDialogOpen}
+        onClose={() => setCargasDialogOpen(false)}
       />
     </div>
   );
