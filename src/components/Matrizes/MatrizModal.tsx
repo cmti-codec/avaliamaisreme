@@ -22,6 +22,7 @@ import {
   useUpdateMatriz,
   useComponentesCurriculares,
 } from "@/hooks/useMatrizes";
+import { useCargasHorarias, getCargaHoraria } from "@/hooks/useCargasHorarias";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -67,6 +68,7 @@ const ETAPAS_MODALIDADES = [
 export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
   const { data: matriz, isLoading } = useMatriz(matrizId);
   const { data: componentesDisponiveis } = useComponentesCurriculares();
+  const { data: cargasHorarias } = useCargasHorarias();
   const createMutation = useCreateMatriz();
   const updateMutation = useUpdateMatriz();
 
@@ -166,11 +168,19 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
       // Remover
       ano.componentes = ano.componentes.filter(c => c.componente_nome !== componenteNome);
     } else {
-      // Adicionar com carga horária padrão (1h)
+      // Buscar carga horária correspondente da tabela
+      const cargaImportada = getCargaHoraria(
+        cargasHorarias,
+        componenteNome,
+        etapaModalidade,
+        ano.nome
+      );
+      
+      // Adicionar com carga horária importada ou padrão (1h)
       ano.componentes.push({
         temp_id: `temp_${Date.now()}`,
         componente_nome: componenteNome,
-        carga_horaria_semanal: 1,
+        carga_horaria_semanal: cargaImportada || 1,
         ordem: ano.componentes.length,
       });
     }
