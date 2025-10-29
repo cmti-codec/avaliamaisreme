@@ -56,7 +56,7 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
   
   const itemsPerPage = 50;
 
-  // Estatísticas baseadas em escola, turma e busca (não status)
+  // Estatísticas baseadas em TODOS os filtros (escola, turma, busca E status)
   const stats = useMemo(() => {
     const baseFilteredAlunos = alunos.filter((aluno) => {
       const searchLower = search.toLowerCase();
@@ -69,14 +69,25 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
       const matchesEscola = selectedEscola === "all" || aluno.saesc === selectedEscola;
       const matchesTurma = selectedTurma === "all" || aluno.turma_id === selectedTurma;
 
-      return matchesSearch && matchesEscola && matchesTurma;
+      // Incluir filtro de status
+      const matchesStatus = 
+        selectedStatuses.length === 0 || 
+        selectedStatuses.some(status => {
+          const option = statusOptions.find(opt => opt.value === status);
+          if (!option) return false;
+          return option.desoca.some(desocaValue => 
+            desocaValue === null ? !aluno.desoca : aluno.desoca === desocaValue
+          );
+        });
+
+      return matchesSearch && matchesEscola && matchesTurma && matchesStatus;
     });
 
     const total = baseFilteredAlunos.length;
     const ensalados = baseFilteredAlunos.filter((a) => a.turma_id).length;
     const semTurma = total - ensalados;
     return { total, ensalados, semTurma };
-  }, [alunos, search, selectedEscola, selectedTurma]);
+  }, [alunos, search, selectedEscola, selectedTurma, selectedStatuses]);
 
   // Lista de escolas únicas (se admin)
   const escolas = useMemo(() => {
