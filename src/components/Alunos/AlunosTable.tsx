@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Aluno } from "@/hooks/useAlunos";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, School, Eye } from "lucide-react";
+import { GraduationCap, School, Eye, Filter, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Pagination,
   PaginationContent,
@@ -37,22 +39,44 @@ const turnoMap: Record<string, { label: string; color: string }> = {
   INTEGRAL: { label: "Integral", color: "bg-green-500" },
 };
 
+const statusOptions = [
+  { value: "frequentes", label: "Frequentes", desoca: ["FREQUENTE", null] as (string | null)[] },
+  { value: "transferidos", label: "Transferidos", desoca: ["TRANSFERIDO"] as (string | null)[] },
+  { value: "cancelados", label: "Cancelados", desoca: ["CANCELADO"] as (string | null)[] },
+  { value: "remanejados", label: "Remanejados", desoca: ["REMANEJADO"] as (string | null)[] },
+  { value: "lancamento_indevido", label: "Lançamento Indevido", desoca: ["LANÇAMENTO INDEVIDO"] as (string | null)[] },
+];
+
 export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosTableProps) => {
   const [search, setSearch] = useState("");
   const [selectedEscola, setSelectedEscola] = useState<string>("all");
   const [selectedTurma, setSelectedTurma] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   
   const itemsPerPage = 50;
 
-  // Estatísticas
+  // Estatísticas baseadas em escola, turma e busca (não status)
   const stats = useMemo(() => {
-    const total = alunos.length;
-    const ensalados = alunos.filter((a) => a.turma_id).length;
+    const baseFilteredAlunos = alunos.filter((aluno) => {
+      const searchLower = search.toLowerCase();
+      const matchesSearch =
+        !search ||
+        aluno.nomalu.toLowerCase().includes(searchLower) ||
+        aluno.numalu.toLowerCase().includes(searchLower) ||
+        (aluno.nummtr && aluno.nummtr.toLowerCase().includes(searchLower));
+
+      const matchesEscola = selectedEscola === "all" || aluno.saesc === selectedEscola;
+      const matchesTurma = selectedTurma === "all" || aluno.turma_id === selectedTurma;
+
+      return matchesSearch && matchesEscola && matchesTurma;
+    });
+
+    const total = baseFilteredAlunos.length;
+    const ensalados = baseFilteredAlunos.filter((a) => a.turma_id).length;
     const semTurma = total - ensalados;
     return { total, ensalados, semTurma };
-  }, [alunos]);
+  }, [alunos, search, selectedEscola, selectedTurma]);
 
   // Lista de escolas únicas (se admin)
   const escolas = useMemo(() => {
@@ -89,14 +113,19 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
       const matchesTurma = selectedTurma === "all" || aluno.turma_id === selectedTurma;
 
       // Filtro de status
-      let matchesStatus = true;
-      if (selectedStatus === "frequentes") matchesStatus = aluno.desoca === "FREQUENTE" || !aluno.desoca;
-      else if (selectedStatus === "cancelados") matchesStatus = aluno.desoca === "CANCELADO";
-      else if (selectedStatus === "inativos") matchesStatus = !aluno.ativo;
+      const matchesStatus = 
+        selectedStatuses.length === 0 || 
+        selectedStatuses.some(status => {
+          const option = statusOptions.find(opt => opt.value === status);
+          if (!option) return false;
+          return option.desoca.some(desocaValue => 
+            desocaValue === null ? !aluno.desoca : aluno.desoca === desocaValue
+          );
+        });
 
       return matchesSearch && matchesEscola && matchesTurma && matchesStatus;
     });
-  }, [alunos, search, selectedEscola, selectedTurma, selectedStatus]);
+  }, [alunos, search, selectedEscola, selectedTurma, selectedStatuses]);
 
   // Paginação
   const totalPages = Math.ceil(filteredAlunos.length / itemsPerPage);
@@ -107,9 +136,26 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
   }, [filteredAlunos, currentPage, itemsPerPage]);
 
   // Reset para página 1 quando filtros mudarem
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedEscola, selectedTurma, selectedStatus]);
+  }, [search, selectedEscola, selectedTurma, selectedStatuses]);
+
+  const toggleStatus = (status: string) => {
+    setSelectedStatuses(prev => 
+      prev.includes(status) 
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedEscola("all");
+    setSelectedTurma("all");
+    setSelectedStatuses([]);
+  };
+
+  const hasActiveFilters = search || selectedEscola !== "all" || selectedTurma !== "all" || selectedStatuses.length > 0;
 
   // Agrupamento por escola
   const alunosPorEscola = useMemo(() => {
@@ -237,18 +283,70 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
               </SelectContent>
             </Select>
 
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="frequentes">Frequentes</SelectItem>
-                <SelectItem value="cancelados">Cancelados</SelectItem>
-                <SelectItem value="inativos">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="justify-start">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Situação
+                  {selectedStatuses.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedStatuses.length}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="start">
+                <div className="space-y-4">
+                  <div className="font-medium text-sm">Filtrar por situação</div>
+                  <div className="space-y-2">
+                    {statusOptions.map((option) => (
+                      <div key={option.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={option.value}
+                          checked={selectedStatuses.includes(option.value)}
+                          onCheckedChange={() => toggleStatus(option.value)}
+                        />
+                        <label
+                          htmlFor={option.value}
+                          className="text-sm font-normal cursor-pointer flex-1"
+                        >
+                          {option.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
+
+          {/* Badges dos filtros ativos */}
+          {(selectedStatuses.length > 0 || hasActiveFilters) && (
+            <div className="flex flex-wrap gap-2 items-center mt-4">
+              {selectedStatuses.map((status) => {
+                const option = statusOptions.find(opt => opt.value === status);
+                return (
+                  <Badge key={status} variant="secondary" className="gap-1">
+                    {option?.label}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => toggleStatus(status)}
+                    />
+                  </Badge>
+                );
+              })}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-7"
+                >
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
