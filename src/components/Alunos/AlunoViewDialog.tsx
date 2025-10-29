@@ -51,11 +51,11 @@ export const AlunoViewDialog = ({ aluno, open, onOpenChange }: AlunoViewDialogPr
                 <p className="font-medium text-foreground">{aluno.nomalu}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Código do Aluno</p>
+                <p className="text-sm text-muted-foreground">Código do aluno (SIGER)</p>
                 <p className="font-medium text-foreground">{aluno.numalu}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Número de Matrícula</p>
+                <p className="text-sm text-muted-foreground">Número na chamada</p>
                 <p className="font-medium text-foreground">{aluno.nummtr || "-"}</p>
               </div>
               <div>
