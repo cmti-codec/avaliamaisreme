@@ -31,22 +31,49 @@ export interface Aluno {
   };
 }
 
+const PAGE_SIZE = 1000;
+
+const fetchInChunks = async (escolaId?: string | null): Promise<Aluno[]> => {
+  const allData: Aluno[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase
+      .from("alunos")
+      .select(`
+        *,
+        escola:escolas!alunos_saesc_fkey(id, nome, codigo_inep),
+        turma:turmas!alunos_turma_id_fkey(id, turma, grupo_ano, turno, etapa_modalidade)
+      `)
+      .range(offset, offset + PAGE_SIZE - 1)
+      .order("nomalu", { ascending: true });
+
+    if (escolaId) {
+      query = query.eq("saesc", escolaId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      allData.push(...(data as Aluno[]));
+      offset += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allData;
+};
+
 export const useAlunos = () => {
   return useQuery({
     queryKey: ["alunos"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("alunos")
-        .select(`
-          *,
-          escola:escolas!alunos_saesc_fkey(id, nome, codigo_inep),
-          turma:turmas!alunos_turma_id_fkey(id, turma, grupo_ano, turno, etapa_modalidade)
-        `)
-        .range(0, 4999)
-        .order("nomalu", { ascending: true });
-
-      if (error) throw error;
-      return data as Aluno[];
+      return await fetchInChunks();
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
@@ -57,20 +84,7 @@ export const useAlunosPorEscola = (escolaId: string | null) => {
     queryKey: ["alunos", "escola", escolaId],
     queryFn: async () => {
       if (!escolaId) return [];
-
-      const { data, error } = await supabase
-        .from("alunos")
-        .select(`
-          *,
-          escola:escolas!alunos_saesc_fkey(id, nome, codigo_inep),
-          turma:turmas!alunos_turma_id_fkey(id, turma, grupo_ano, turno, etapa_modalidade)
-        `)
-        .eq("saesc", escolaId)
-        .range(0, 4999)
-        .order("nomalu", { ascending: true });
-
-      if (error) throw error;
-      return data as Aluno[];
+      return await fetchInChunks(escolaId);
     },
     enabled: !!escolaId,
     staleTime: 5 * 60 * 1000, // 5 minutos
