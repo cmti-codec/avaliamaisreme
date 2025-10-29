@@ -3,6 +3,7 @@ import { useUsuario } from "@/hooks/useUsuario";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 export function AppFooter() {
   const { data: usuario } = useUsuario();
@@ -41,7 +42,12 @@ export function AppFooter() {
           <School className="h-4 w-4 text-primary flex-shrink-0" />
           
           {showAdminLabel ? (
-            <span className="font-medium text-foreground">Administrador do Sistema</span>
+            <>
+              <span className="font-medium text-foreground">Administrador do Sistema</span>
+              <Badge variant="destructive" className="ml-2 text-xs">
+                Área Restrita
+              </Badge>
+            </>
           ) : escola ? (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-foreground">{escola.nome}</span>

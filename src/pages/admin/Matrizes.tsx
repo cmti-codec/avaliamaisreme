@@ -150,15 +150,9 @@ const Matrizes = () => {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-foreground">
-              Gestão de Matrizes Curriculares
-            </h1>
-            <Badge variant="destructive" className="gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5" />
-              Área Restrita - Somente Administradores
-            </Badge>
-          </div>
+          <h1 className="text-3xl font-bold text-foreground">
+            Gestão de Matrizes Curriculares
+          </h1>
           <p className="text-muted-foreground max-w-3xl">
             Defina as matrizes curriculares (conjuntos de componentes + cargas horárias) 
             para toda a rede. Apenas administradores podem gerenciar matrizes.
