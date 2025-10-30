@@ -74,11 +74,41 @@ const Lancamento = () => {
 
   const carregarDados = useCallback(async () => {
     try {
-      // Buscar turmas da escola do usuário
+      // Buscar escola_id do usuário logado
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Usuário não autenticado",
+          description: "Faça login para acessar esta página",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: userRoles, error: userRolesError } = await supabase
+        .from("user_roles")
+        .select("escola_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (userRolesError) throw userRolesError;
+
+      if (!userRoles?.escola_id) {
+        toast({
+          title: "Escola não encontrada",
+          description: "Você não está vinculado a nenhuma escola",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Buscar apenas turmas da escola do usuário
       const { data: turmasData, error: turmasError } = await supabase
         .from("turmas")
         .select("*")
-        .eq("ativa", true);
+        .eq("ativa", true)
+        .eq("escola_id", userRoles.escola_id);
 
       if (turmasError) throw turmasError;
       const turmasFormatadas = (turmasData || []).map(t => ({
@@ -87,11 +117,28 @@ const Lancamento = () => {
       }));
       setTurmas(sortTurmasPedagogica(turmasFormatadas));
 
-      // Buscar professores
+      // Buscar professores lotados na escola do usuário
+      const { data: lotacoesData, error: lotacoesError } = await supabase
+        .from("lotacoes_professores")
+        .select("professor_id")
+        .eq("escola_id", userRoles.escola_id)
+        .eq("status", "ATIVO");
+
+      if (lotacoesError) throw lotacoesError;
+
+      const professorIds = (lotacoesData || []).map(l => l.professor_id);
+
+      if (professorIds.length === 0) {
+        setProfessores([]);
+        return;
+      }
+
+      // Buscar dados completos dos professores lotados
       const { data: professoresData, error: professoresError } = await supabase
         .from("professores")
         .select("*")
         .eq("ativo", true)
+        .in("id", professorIds)
         .order("nome", { ascending: true });
 
       if (professoresError) throw professoresError;
