@@ -106,9 +106,11 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
       : alunos.filter(a => a.saesc === selectedEscola);
     
     // Criar mapa de turmas únicas usando o ID da turma como chave
-    const turmasMap = new Map();
+    const turmasMap = new Map<string, NonNullable<Aluno['turma']>>();
+    
     alunosFiltrados.forEach((aluno) => {
-      if (aluno.turma && aluno.turma_id) {
+      // Apenas adicionar se a turma existe e tem ID
+      if (aluno.turma && aluno.turma_id && !turmasMap.has(aluno.turma_id)) {
         turmasMap.set(aluno.turma_id, aluno.turma);
       }
     });
