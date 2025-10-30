@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus, Mail, Phone, GraduationCap, CheckCircle, XCircle } from "lucide-react";
+import { Search, Pencil, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ProfessorREMEEditDialog } from "@/components/Admin/ProfessorREMEEditDialog";
 interface Professor {
   id: string;
   nome: string;
@@ -28,6 +29,8 @@ export default function ProfessoresREME() {
     user
   } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProfessor, setSelectedProfessor] = useState<Professor | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Verificar se é admin
   const isAdmin = user?.roles?.includes("ADMIN");
@@ -84,6 +87,7 @@ export default function ProfessoresREME() {
                   <TableHead>Email</TableHead>
                   <TableHead>Matrícula</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -105,6 +109,18 @@ export default function ProfessoresREME() {
                         {professor.ativo ? "Ativo" : "Inativo"}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedProfessor(professor);
+                          setEditDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>)}
               </TableBody>
             </Table>
@@ -122,5 +138,11 @@ export default function ProfessoresREME() {
             </div>
           </div>}
       </Card>
+
+      <ProfessorREMEEditDialog
+        professor={selectedProfessor}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>;
 }
