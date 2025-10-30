@@ -20,6 +20,15 @@ export interface Escola {
 }
 
 export interface EscolaComMatriz extends Escola {
+  matrizes?: Array<{
+    id: string;
+    codigo: string;
+    nome: string;
+    etapa_modalidade: string;
+    grupo_ano: string;
+    tipo_jornada: string | null;
+  }>;
+  // Mantido para compatibilidade com código antigo
   matriz?: {
     id: string;
     codigo: string;
@@ -42,10 +51,27 @@ export const useEscolas = () => {
 
       if (error) throw error;
 
-      return (data || []).map((escola: any) => ({
-        ...escola,
-        matriz: escola.matriz || null,
-      })) as EscolaComMatriz[];
+      // Buscar matrizes da nova tabela
+      const escolasComMatrizes = await Promise.all(
+        (data || []).map(async (escola) => {
+          const { data: matrizesData } = await supabase
+            .from("escola_matrizes")
+            .select(`
+              matriz_id,
+              matrizes_curriculares(id, codigo, nome, etapa_modalidade, grupo_ano, tipo_jornada)
+            `)
+            .eq("escola_id", escola.id);
+
+          const matrizes = matrizesData?.map((m: any) => m.matrizes_curriculares) || [];
+
+          return {
+            ...escola,
+            matrizes,
+          } as EscolaComMatriz;
+        })
+      );
+
+      return escolasComMatrizes;
     },
   });
 };
@@ -76,34 +102,86 @@ export const useEscola = (id: string | null) => {
         .single();
 
       if (error) throw error;
-      return data as EscolaComMatriz;
+
+      // Buscar matrizes da nova tabela
+      const { data: matrizesData } = await supabase
+        .from("escola_matrizes")
+        .select(`
+          matriz_id,
+          matrizes_curriculares(
+            id,
+            codigo,
+            nome,
+            etapa_modalidade,
+            grupo_ano,
+            tipo_jornada,
+            total_horas_semanais,
+            componentes:matriz_componentes(*)
+          )
+        `)
+        .eq("escola_id", id);
+
+      const matrizes = matrizesData?.map((m: any) => m.matrizes_curriculares) || [];
+
+      return {
+        ...data,
+        matrizes,
+      } as EscolaComMatriz;
     },
     enabled: !!id,
   });
 };
 
-export const useAtribuirMatriz = () => {
+export const useAtribuirMatrizes = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (dados: { escolaId: string; matrizId: string | null }) => {
-      const { error } = await supabase
-        .from("escolas")
-        .update({ matriz_curricular_id: dados.matrizId })
-        .eq("id", dados.escolaId);
+    mutationFn: async (dados: {
+      escolaId: string;
+      matrizesIds: string[];
+    }) => {
+      // Deletar matrizes antigas
+      await supabase
+        .from("escola_matrizes")
+        .delete()
+        .eq("escola_id", dados.escolaId);
 
-      if (error) throw error;
+      // Inserir novas matrizes
+      if (dados.matrizesIds.length > 0) {
+        const inserts = dados.matrizesIds.map((matrizId) => ({
+          escola_id: dados.escolaId,
+          matriz_id: matrizId,
+        }));
+
+        const { error } = await supabase
+          .from("escola_matrizes")
+          .insert(inserts);
+
+        if (error) throw error;
+      }
+
+      // Atualizar matriz_curricular_id para compatibilidade (primeira matriz ou null)
+      await supabase
+        .from("escolas")
+        .update({ matriz_curricular_id: dados.matrizesIds[0] || null })
+        .eq("id", dados.escolaId);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["escolas"] });
+      queryClient.invalidateQueries({ queryKey: ["escola", variables.escolaId] });
+      
+      const qtd = variables.matrizesIds.length;
       toast({
-        title: "✅ Matriz atribuída com sucesso!",
+        title: "✅ Matrizes atribuídas com sucesso!",
+        description: qtd === 0 
+          ? "Todas as matrizes foram removidas" 
+          : `${qtd} matriz(es) atribuída(s) à escola`,
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro ao atribuir matriz",
+        title: "Erro ao atribuir matrizes",
         description: error.message,
         variant: "destructive",
       });
@@ -116,33 +194,51 @@ export const useAtribuirMatrizEmLote = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (dados: { escolasIds: string[]; matrizId: string }) => {
-      // Usar transaction para garantir atomicidade
-      const promises = dados.escolasIds.map((id) =>
-        supabase
+    mutationFn: async (dados: {
+      escolasIds: string[];
+      matrizesIds: string[];
+    }) => {
+      // Para cada escola, deletar matrizes antigas e inserir novas
+      const updates = dados.escolasIds.map(async (escolaId) => {
+        // Deletar matrizes antigas
+        await supabase
+          .from("escola_matrizes")
+          .delete()
+          .eq("escola_id", escolaId);
+
+        // Inserir novas matrizes
+        if (dados.matrizesIds.length > 0) {
+          const inserts = dados.matrizesIds.map((matrizId) => ({
+            escola_id: escolaId,
+            matriz_id: matrizId,
+          }));
+
+          await supabase
+            .from("escola_matrizes")
+            .insert(inserts);
+        }
+
+        // Atualizar matriz_curricular_id para compatibilidade
+        await supabase
           .from("escolas")
-          .update({ matriz_curricular_id: dados.matrizId })
-          .eq("id", id)
-      );
+          .update({ matriz_curricular_id: dados.matrizesIds[0] || null })
+          .eq("id", escolaId);
+      });
 
-      const results = await Promise.all(promises);
-      
-      const errors = results.filter((r) => r.error);
-      if (errors.length > 0) {
-        throw new Error(`Falha ao atribuir ${errors.length} escolas`);
-      }
-
-      return results.length;
+      await Promise.all(updates);
     },
-    onSuccess: (count) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["escolas"] });
+      
+      const qtdMatrizes = variables.matrizesIds.length;
       toast({
-        title: `✅ Matriz atribuída para ${count} escolas com sucesso!`,
+        title: "✅ Matrizes atribuídas em lote com sucesso!",
+        description: `${qtdMatrizes} matriz(es) atribuída(s) para ${variables.escolasIds.length} escola(s).`,
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Erro na atribuição em lote",
+        title: "Erro ao atribuir matrizes em lote",
         description: error.message,
         variant: "destructive",
       });

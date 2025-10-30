@@ -2,21 +2,14 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
-import { useEscola, useAtribuirMatriz } from "@/hooks/useEscolas";
+import { AlertTriangle, X } from "lucide-react";
+import { useEscola, useAtribuirMatrizes } from "@/hooks/useEscolas";
 import { useMatrizes } from "@/hooks/useMatrizes";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { MatrizPreview } from "./MatrizPreview";
 
 interface AtribuirMatrizModalProps {
@@ -28,14 +21,14 @@ interface AtribuirMatrizModalProps {
 export const AtribuirMatrizModal = ({ open, onClose, escolaId }: AtribuirMatrizModalProps) => {
   const { data: escola, isLoading: loadingEscola } = useEscola(escolaId);
   const { data: matrizes } = useMatrizes();
-  const atribuirMutation = useAtribuirMatriz();
-  const [matrizSelecionada, setMatrizSelecionada] = useState<string>("none");
+  const atribuirMutation = useAtribuirMatrizes();
+  const [matrizesSelecionadas, setMatrizesSelecionadas] = useState<string[]>([]);
 
   useEffect(() => {
-    if (escola?.matriz_curricular_id) {
-      setMatrizSelecionada(escola.matriz_curricular_id);
+    if (escola?.matrizes && escola.matrizes.length > 0) {
+      setMatrizesSelecionadas(escola.matrizes.map((m) => m.id));
     } else {
-      setMatrizSelecionada("none");
+      setMatrizesSelecionadas([]);
     }
   }, [escola]);
 
@@ -51,9 +44,19 @@ export const AtribuirMatrizModal = ({ open, onClose, escolaId }: AtribuirMatrizM
     return acc;
   }, {} as Record<string, typeof matrizesAtivas>);
 
-  const matrizAtual = escola?.matriz;
-  const matrizNova = matrizes?.find((m) => m.id === matrizSelecionada);
-  const mudandoMatriz = matrizAtual && matrizSelecionada !== matrizAtual.id;
+  const handleToggleMatriz = (matrizId: string) => {
+    setMatrizesSelecionadas((prev) =>
+      prev.includes(matrizId)
+        ? prev.filter((id) => id !== matrizId)
+        : [...prev, matrizId]
+    );
+  };
+
+  const handleRemoveMatriz = (matrizId: string) => {
+    setMatrizesSelecionadas((prev) => prev.filter((id) => id !== matrizId));
+  };
+
+  const matrizesObj = matrizes?.filter((m) => matrizesSelecionadas.includes(m.id));
 
   const handleSalvar = async () => {
     if (!escolaId) return;
@@ -61,7 +64,7 @@ export const AtribuirMatrizModal = ({ open, onClose, escolaId }: AtribuirMatrizM
     try {
       await atribuirMutation.mutateAsync({
         escolaId,
-        matrizId: matrizSelecionada === "none" ? null : matrizSelecionada,
+        matrizesIds: matrizesSelecionadas,
       });
       onClose();
     } catch (error) {
@@ -85,54 +88,89 @@ export const AtribuirMatrizModal = ({ open, onClose, escolaId }: AtribuirMatrizM
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Alerta se já possui matriz */}
-            {mudandoMatriz && matrizAtual && (
-              <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-800 dark:text-amber-200">
-                  Esta escola já possui a matriz{" "}
-                  <strong>{matrizAtual.codigo}</strong>. Ao alterar, todas as
-                  turmas desta escola usarão a nova matriz. Horários já lançados{" "}
-                  <strong>NÃO serão alterados automaticamente</strong>.
+            {/* Alerta informativo */}
+            {escola?.matrizes && escola.matrizes.length > 0 && (
+              <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
+                <AlertTriangle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 dark:text-blue-200">
+                  Esta escola já possui {escola.matrizes.length} matriz(es) atribuída(s).
+                  Você pode adicionar ou remover matrizes conforme necessário.
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* Seleção de Matriz */}
+            {/* Matrizes Selecionadas */}
+            {matrizesSelecionadas.length > 0 && (
+              <div className="space-y-2">
+                <Label>Matrizes Selecionadas ({matrizesSelecionadas.length})</Label>
+                <div className="flex flex-wrap gap-2">
+                  {matrizesObj?.map((matriz) => (
+                    <Badge key={matriz.id} variant="secondary" className="gap-2 py-1.5 px-3">
+                      <span className="font-mono text-xs">{matriz.codigo}</span>
+                      <span>-</span>
+                      <span className="text-xs">{matriz.nome}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 p-0 hover:bg-transparent"
+                        onClick={() => handleRemoveMatriz(matriz.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Seleção de Matrizes */}
             <div className="space-y-2">
-              <Label htmlFor="matriz">
-                Matriz Curricular <span className="text-destructive">*</span>
+              <Label>
+                Adicionar Matrizes Curriculares
               </Label>
-              <Select value={matrizSelecionada} onValueChange={setMatrizSelecionada}>
-                <SelectTrigger id="matriz">
-                  <SelectValue placeholder="Selecione uma matriz..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    <span className="text-muted-foreground">Remover matriz</span>
-                  </SelectItem>
+              <ScrollArea className="h-80 rounded-md border p-4">
+                <div className="space-y-4">
                   {matrizesAgrupadas &&
                     Object.entries(matrizesAgrupadas).map(([etapa, matrizesGrupo]) => (
-                      <SelectGroup key={etapa}>
-                        <SelectLabel>{etapa}</SelectLabel>
-                        {matrizesGrupo
-                          .sort((a, b) => a.codigo.localeCompare(b.codigo))
-                          .map((matriz) => (
-                            <SelectItem key={matriz.id} value={matriz.id}>
-                              <span className="font-mono text-xs mr-2">
-                                {matriz.codigo}
-                              </span>
-                              - {matriz.nome}
-                            </SelectItem>
-                          ))}
-                      </SelectGroup>
+                      <div key={etapa} className="space-y-2">
+                        <div className="font-semibold text-sm text-muted-foreground">
+                          {etapa}
+                        </div>
+                        <div className="space-y-1.5 pl-2">
+                          {matrizesGrupo
+                            .sort((a, b) => a.codigo.localeCompare(b.codigo))
+                            .map((matriz) => (
+                              <div
+                                key={matriz.id}
+                                className="flex items-center gap-3 p-2 rounded hover:bg-muted/50"
+                              >
+                                <Checkbox
+                                  id={matriz.id}
+                                  checked={matrizesSelecionadas.includes(matriz.id)}
+                                  onCheckedChange={() => handleToggleMatriz(matriz.id)}
+                                />
+                                <Label
+                                  htmlFor={matriz.id}
+                                  className="flex-1 cursor-pointer font-normal"
+                                >
+                                  <span className="font-mono text-xs mr-2 text-muted-foreground">
+                                    {matriz.codigo}
+                                  </span>
+                                  <span className="text-sm">{matriz.nome}</span>
+                                  {matriz.tipo_jornada && (
+                                    <Badge variant="outline" className="ml-2 text-xs">
+                                      {matriz.tipo_jornada}
+                                    </Badge>
+                                  )}
+                                </Label>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
                     ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </ScrollArea>
             </div>
-
-            {/* Preview da Matriz */}
-            {matrizNova && <MatrizPreview matriz={matrizNova} />}
 
             {/* Botões */}
             <div className="flex justify-end gap-3 pt-4 border-t">

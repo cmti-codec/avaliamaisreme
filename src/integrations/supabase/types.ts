@@ -216,6 +216,52 @@ export type Database = {
         }
         Relationships: []
       }
+      escola_matrizes: {
+        Row: {
+          created_at: string | null
+          escola_id: string
+          id: string
+          matriz_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          escola_id: string
+          id?: string
+          matriz_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          escola_id?: string
+          id?: string
+          matriz_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escola_matrizes_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escola_matrizes_matriz_id_fkey"
+            columns: ["matriz_id"]
+            isOneToOne: false
+            referencedRelation: "matrizes_curriculares"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escola_matrizes_matriz_id_fkey"
+            columns: ["matriz_id"]
+            isOneToOne: false
+            referencedRelation: "turmas_com_matriz"
+            referencedColumns: ["matriz_id"]
+          },
+        ]
+      }
       escolas: {
         Row: {
           ativa: boolean | null

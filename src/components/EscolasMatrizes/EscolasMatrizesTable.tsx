@@ -44,8 +44,8 @@ export const EscolasMatrizesTable = ({ onEdit }: EscolasMatrizesTableProps) => {
 
       const matchMatriz =
         matrizFilter === "all" ||
-        (matrizFilter === "com" && escola.matriz_curricular_id) ||
-        (matrizFilter === "sem" && !escola.matriz_curricular_id);
+        (matrizFilter === "com" && escola.matrizes && escola.matrizes.length > 0) ||
+        (matrizFilter === "sem" && (!escola.matrizes || escola.matrizes.length === 0));
 
       return matchSearch && matchMatriz;
     });
@@ -105,7 +105,7 @@ export const EscolasMatrizesTable = ({ onEdit }: EscolasMatrizesTableProps) => {
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Com Matriz</div>
               <div className="text-2xl font-bold text-green-600">
-                {escolas?.filter((e) => e.matriz_curricular_id).length || 0}
+                {escolas?.filter((e) => e.matrizes && e.matrizes.length > 0).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -113,7 +113,7 @@ export const EscolasMatrizesTable = ({ onEdit }: EscolasMatrizesTableProps) => {
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground">Sem Matriz</div>
               <div className="text-2xl font-bold text-amber-600">
-                {escolas?.filter((e) => !e.matriz_curricular_id).length || 0}
+                {escolas?.filter((e) => !e.matrizes || e.matrizes.length === 0).length || 0}
               </div>
             </CardContent>
           </Card>
@@ -152,21 +152,35 @@ export const EscolasMatrizesTable = ({ onEdit }: EscolasMatrizesTableProps) => {
                       {escola.endereco || "-"}
                     </TableCell>
                     <TableCell className="max-w-[300px]">
-                      {escola.matriz ? (
+                      {escola.matrizes && escola.matrizes.length > 0 ? (
                         <div className="space-y-1">
-                          <div className="font-mono text-xs text-muted-foreground">
-                            {escola.matriz.codigo}
-                          </div>
-                          <div className="text-sm truncate" title={escola.matriz.nome}>
-                            {escola.matriz.nome}
-                          </div>
+                          {escola.matrizes.map((matriz, idx) => (
+                            <div key={matriz.id} className="flex items-center gap-2">
+                              <div className="font-mono text-xs text-muted-foreground">
+                                {matriz.codigo}
+                              </div>
+                              <div className="text-sm truncate" title={matriz.nome}>
+                                {matriz.nome}
+                              </div>
+                              {matriz.tipo_jornada && (
+                                <Badge variant="outline" className="text-xs">
+                                  {matriz.tipo_jornada}
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                          {escola.matrizes.length > 1 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {escola.matrizes.length} matrizes
+                            </Badge>
+                          )}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {escola.matriz_curricular_id ? (
+                      {escola.matrizes && escola.matrizes.length > 0 ? (
                         <Badge variant="default" className="bg-green-600 gap-1.5">
                           <CheckCircle className="w-3 h-3" />
                           Configurada
