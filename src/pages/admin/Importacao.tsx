@@ -189,16 +189,51 @@ export default function Importacao() {
     return [...errors, ...uniqueErrors];
   };
 
-  // 3. PROFESSORES
+  // 3. PROFESSORES (com criação automática de usuário)
   const handleImportProfessores = async (data: any[], fileName: string) => {
     const errors: ValidationError[] = [];
     let sucessos = 0;
+    let usuariosCriados = 0;
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       try {
         const formacoes = row.formacao ? [row.formacao] : [];
         
+        // 1. Criar usuário via edge function (se tiver email)
+        let usuario_id: string | null = null;
+        if (row.email) {
+          try {
+            // Gerar senha temporária: ProfREME + últimos 4 dígitos CPF ou matrícula
+            const suffix = row.cpf ? row.cpf.slice(-4) : row.matricula?.slice(-4) || '2025';
+            const senhaTemporaria = `ProfREME${suffix}`;
+            
+            const { data: userData, error: userError } = await supabase.functions.invoke(
+              'admin-create-user',
+              {
+                body: {
+                  nome: row.full_name,
+                  email: row.email,
+                  senha: senhaTemporaria,
+                  roles: ['PROFESSOR'],
+                  escola_id: null // Pool REME
+                }
+              }
+            );
+
+            if (userError) throw userError;
+            
+            if (userData?.userId) {
+              usuario_id = userData.userId;
+              usuariosCriados++;
+            }
+          } catch (userError: any) {
+            console.warn(`Não foi possível criar usuário para ${row.email}:`, userError.message);
+            // Continua mesmo se não criar o usuário
+          }
+        }
+        
+        // 2. Inserir professor
         const { error } = await supabase
           .from('professores')
           .insert({
@@ -209,10 +244,11 @@ export default function Importacao() {
             matricula: row.matricula,
             telefone: row.telefone,
             formacoes: formacoes,
-            escola_id: null, // Pool da REME (sem vínculo com escola específica)
-            funcao_atual: 'PROFESSOR', // Função padrão
+            escola_id: null, // Pool da REME
+            funcao_atual: 'PROFESSOR',
             ativo: row.ativo.toLowerCase() === 'true' || row.ativo === '1',
-            carga_horaria_contratual: 40
+            carga_horaria_contratual: 40,
+            usuario_id: usuario_id
           });
 
         if (error) throw error;
@@ -239,7 +275,7 @@ export default function Importacao() {
 
     toast({
       title: errors.length === 0 ? "✅ Professores importados com sucesso!" : "⚠️ Importação parcial",
-      description: `${sucessos} professores importados, ${errors.length} erros`,
+      description: `${sucessos} professores importados${usuariosCriados > 0 ? `, ${usuariosCriados} usuários criados` : ''}${errors.length > 0 ? `, ${errors.length} erros` : ''}`,
       variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
     });
 
