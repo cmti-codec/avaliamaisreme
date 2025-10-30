@@ -37,9 +37,11 @@ import {
   type Turma,
 } from "@/lib/horarios-utils";
 import { sortTurmasPedagogica } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Lancamento = () => {
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [turmaSelecionada, setTurmaSelecionada] = useState<Turma | null>(null);
@@ -74,41 +76,22 @@ const Lancamento = () => {
 
   const carregarDados = useCallback(async () => {
     try {
-      // Buscar escola_id do usuário logado
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Usuário não autenticado",
-          description: "Faça login para acessar esta página",
-          variant: "destructive",
-        });
-        return;
-      }
+      const escolaId = authUser?.escola_id || null;
 
-      const { data: userRoles, error: userRolesError } = await supabase
-        .from("user_roles")
-        .select("escola_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (userRolesError) throw userRolesError;
-
-      if (!userRoles?.escola_id) {
+      if (!escolaId) {
         toast({
           title: "Escola não encontrada",
-          description: "Você não está vinculado a nenhuma escola",
+          description: "Você não está vinculado a nenhuma escola neste contexto (use Modo Teste ou atribua uma escola).",
           variant: "destructive",
         });
         return;
       }
 
-      // Buscar apenas turmas da escola do usuário
       const { data: turmasData, error: turmasError } = await supabase
         .from("turmas")
         .select("*")
         .eq("ativa", true)
-        .eq("escola_id", userRoles.escola_id);
+        .eq("escola_id", escolaId);
 
       if (turmasError) throw turmasError;
       const turmasFormatadas = (turmasData || []).map(t => ({
@@ -117,11 +100,10 @@ const Lancamento = () => {
       }));
       setTurmas(sortTurmasPedagogica(turmasFormatadas));
 
-      // Buscar professores lotados na escola do usuário
       const { data: lotacoesData, error: lotacoesError } = await supabase
         .from("lotacoes_professores")
         .select("professor_id")
-        .eq("escola_id", userRoles.escola_id)
+        .eq("escola_id", escolaId)
         .eq("status", "ATIVO");
 
       if (lotacoesError) throw lotacoesError;
@@ -133,7 +115,6 @@ const Lancamento = () => {
         return;
       }
 
-      // Buscar dados completos dos professores lotados
       const { data: professoresData, error: professoresError } = await supabase
         .from("professores")
         .select("*")
@@ -153,7 +134,7 @@ const Lancamento = () => {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, authUser]);
 
   const carregarHorariosTurma = useCallback(async () => {
     if (!turmaSelecionada) return;
