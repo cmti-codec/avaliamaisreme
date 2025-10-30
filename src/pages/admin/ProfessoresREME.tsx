@@ -81,10 +81,8 @@ export default function ProfessoresREME() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Status Usuário</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Matrícula</TableHead>
-                  <TableHead>CH</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -94,15 +92,6 @@ export default function ProfessoresREME() {
                       {professor.nome}
                     </TableCell>
                     <TableCell>
-                      {professor.usuario_id ? <Badge variant="default" className="gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Cadastrado
-                        </Badge> : <Badge variant="secondary" className="gap-1">
-                          <XCircle className="h-3 w-3" />
-                          Sem acesso
-                        </Badge>}
-                    </TableCell>
-                    <TableCell>
                       {professor.email ? <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm">{professor.email}</span>
@@ -110,9 +99,6 @@ export default function ProfessoresREME() {
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">{professor.matricula || "-"}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{professor.carga_horaria_contratual || 20}h</span>
                     </TableCell>
                     <TableCell>
                       <Badge variant={professor.ativo ? "default" : "secondary"}>
