@@ -81,7 +81,6 @@ export default function ProfessoresREME() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Vínculo</TableHead>
                   <TableHead>Status Usuário</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Matrícula</TableHead>
@@ -93,11 +92,6 @@ export default function ProfessoresREME() {
                 {filteredProfessores.map(professor => <TableRow key={professor.id}>
                     <TableCell className="font-medium">
                       {professor.nome}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={professor.tipo_vinculo === 'CONVOCADO' ? "outline" : "secondary"}>
-                        {professor.tipo_vinculo === 'CONVOCADO' ? '📋 Convocado' : '✓ Efetivo'}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       {professor.usuario_id ? <Badge variant="default" className="gap-1">
