@@ -5,9 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Info } from "lucide-react";
 import { TurmaComMatriz } from "@/hooks/useTurmasComMatriz";
 import {
-  CORES_COMPONENTES,
   calcularQuota,
-  gerarSigla,
   type HorarioSlot,
   type Turma,
   TURNOS_TEMPOS,
@@ -83,27 +81,6 @@ export const PainelCargas = ({ turma, turmaComMatriz, horarios }: PainelCargasPr
               </div>
             );
           })}
-        </div>
-
-        {/* Legenda */}
-        <div className="space-y-2 pt-4 border-t">
-          <h4 className="text-sm font-semibold">Legenda</h4>
-          <div className="grid grid-cols-2 gap-2">
-            {componentesMatriz.map(([componente, _dados]) => {
-              const cor = CORES_COMPONENTES[componente] || "#95A5A6";
-              const sigla = gerarSigla(componente);
-
-              return (
-                <div key={componente} className="flex items-center gap-2">
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: cor }}
-                  />
-                  <span className="text-xs">{sigla}</span>
-                </div>
-              );
-            })}
-          </div>
         </div>
 
         {/* Informações da Turma */}
