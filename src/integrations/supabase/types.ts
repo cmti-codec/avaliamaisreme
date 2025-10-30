@@ -413,6 +413,60 @@ export type Database = {
         }
         Relationships: []
       }
+      lotacoes_professores: {
+        Row: {
+          ano_letivo: string
+          carga_total: number | null
+          created_at: string | null
+          escola_id: string
+          horas_aula: number | null
+          id: string
+          pl: number | null
+          professor_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ano_letivo: string
+          carga_total?: number | null
+          created_at?: string | null
+          escola_id: string
+          horas_aula?: number | null
+          id?: string
+          pl?: number | null
+          professor_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ano_letivo?: string
+          carga_total?: number | null
+          created_at?: string | null
+          escola_id?: string
+          horas_aula?: number | null
+          id?: string
+          pl?: number | null
+          professor_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lotacoes_professores_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotacoes_professores_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matriz_componentes: {
         Row: {
           carga_horaria_semanal: number
@@ -576,6 +630,7 @@ export type Database = {
           email: string | null
           escola_id: string
           formacoes: Json | null
+          funcao_atual: string | null
           horas_pl: number | null
           id: string
           matricula: string | null
@@ -592,6 +647,7 @@ export type Database = {
           email?: string | null
           escola_id: string
           formacoes?: Json | null
+          funcao_atual?: string | null
           horas_pl?: number | null
           id?: string
           matricula?: string | null
@@ -608,6 +664,7 @@ export type Database = {
           email?: string | null
           escola_id?: string
           formacoes?: Json | null
+          funcao_atual?: string | null
           horas_pl?: number | null
           id?: string
           matricula?: string | null

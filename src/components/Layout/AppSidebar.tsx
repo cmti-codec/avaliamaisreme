@@ -57,6 +57,10 @@ const adminItems = [{
   url: "/admin/escolas",
   icon: Building2
 }, {
+  title: "Professores (REME)",
+  url: "/admin/professores",
+  icon: Users
+}, {
   title: "Matrizes Curriculares",
   url: "/admin/matrizes",
   icon: BookOpen
@@ -78,6 +82,9 @@ export function AppSidebar() {
     data: usuario
   } = useUsuario();
   const isAdmin = usuario?.roles.includes("ADMIN");
+  const isGestaoEscolar = usuario?.roles.some(r => 
+    ['DIRETOR', 'SECRETARIO', 'COORDENADOR'].includes(r)
+  );
   return <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarContent>
         {/* Logo Section */}
@@ -98,7 +105,14 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map(item => <SidebarMenuItem key={item.title}>
+              {menuItems
+                .filter(item => {
+                  if (item.url === '/professores') {
+                    return isGestaoEscolar;
+                  }
+                  return true;
+                })
+                .map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={({
                   isActive

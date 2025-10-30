@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/Layout/AppSidebar";
 import { AppHeader } from "@/components/Layout/AppHeader";
 import { AppFooter } from "@/components/Layout/AppFooter";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ImpersonateBanner } from "@/components/ImpersonateBanner";
 import { cn } from "@/lib/utils";
 import Dashboard from "./pages/Dashboard";
@@ -78,7 +79,13 @@ const App = () => (
 
             {/* Protected Routes */}
             <Route path="/" element={<LayoutWrapper><Dashboard /></LayoutWrapper>} />
-            <Route path="/professores" element={<LayoutWrapper><Professores /></LayoutWrapper>} />
+            <Route path="/professores" element={
+              <LayoutWrapper>
+                <ProtectedRoute perfisPermitidos={['DIRETOR', 'SECRETARIO', 'COORDENADOR']}>
+                  <Professores />
+                </ProtectedRoute>
+              </LayoutWrapper>
+            } />
             <Route path="/turmas" element={<LayoutWrapper><Turmas /></LayoutWrapper>} />
             <Route path="/escolas" element={<LayoutWrapper><Escolas /></LayoutWrapper>} />
             <Route path="/alunos" element={<LayoutWrapper><Alunos /></LayoutWrapper>} />
