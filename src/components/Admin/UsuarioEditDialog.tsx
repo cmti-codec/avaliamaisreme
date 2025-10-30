@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, X } from 'lucide-react';
 
 interface Usuario {
   id: string;
@@ -47,24 +47,65 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
   const [email, setEmail] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Campos extras para professores
+  const [cpf, setCpf] = useState('');
+  const [matricula, setMatricula] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [formacoes, setFormacoes] = useState<string[]>([]);
+  const [novaFormacao, setNovaFormacao] = useState('');
+  const [professorId, setProfessorId] = useState<string | null>(null);
+  const [isProfessor, setIsProfessor] = useState(false);
 
   useEffect(() => {
-    const loadRealRoles = async () => {
+    const loadUserData = async () => {
       if (usuario && open) {
         setNome(usuario.nome);
         setEmail(usuario.email);
         
-        // Buscar roles reais do banco para garantir sincronização
+        // Buscar roles reais do banco
         const { data: rolesData } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', usuario.id);
         
-        setSelectedRoles(rolesData?.map(r => r.role) || []);
+        const roles = rolesData?.map(r => r.role) || [];
+        setSelectedRoles(roles);
+        
+        // Verificar se é professor e buscar dados extras
+        const hasProfessorRole = roles.includes('PROFESSOR');
+        setIsProfessor(hasProfessorRole);
+        
+        if (hasProfessorRole) {
+          const { data: professorData } = await supabase
+            .from('professores')
+            .select('id, cpf, matricula, telefone, formacoes')
+            .eq('usuario_id', usuario.id)
+            .maybeSingle();
+          
+          if (professorData) {
+            setProfessorId(professorData.id);
+            setCpf(professorData.cpf || '');
+            setMatricula(professorData.matricula || '');
+            setTelefone(professorData.telefone || '');
+            setFormacoes(
+              Array.isArray(professorData.formacoes) 
+                ? (professorData.formacoes as string[]) 
+                : []
+            );
+          }
+        } else {
+          // Reset campos de professor
+          setProfessorId(null);
+          setCpf('');
+          setMatricula('');
+          setTelefone('');
+          setFormacoes([]);
+        }
       }
     };
     
-    loadRealRoles();
+    loadUserData();
   }, [usuario, open]);
 
   const handleToggleRole = async (role: string) => {
@@ -76,14 +117,29 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
       const { data: { user: sessionUser } } = await supabase.auth.getUser();
       if (sessionUser?.id === usuario?.id) {
         toast.error('Você não pode remover seu próprio perfil de Administrador.');
-        return; // Bloqueia completamente a ação
+        return;
       }
     }
     
-    // Só atualiza se passou pela validação
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
+    // Atualizar roles
+    const newRoles = selectedRoles.includes(role) 
+      ? selectedRoles.filter((r) => r !== role) 
+      : [...selectedRoles, role];
+    setSelectedRoles(newRoles);
+    
+    // Atualizar flag isProfessor
+    setIsProfessor(newRoles.includes('PROFESSOR'));
+  };
+
+  const handleAddFormacao = () => {
+    if (novaFormacao.trim()) {
+      setFormacoes([...formacoes, novaFormacao.trim()]);
+      setNovaFormacao('');
+    }
+  };
+
+  const handleRemoveFormacao = (index: number) => {
+    setFormacoes(formacoes.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,6 +209,41 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
         if (deleteError) throw deleteError;
       }
 
+      // Atualizar dados do professor se for PROFESSOR
+      if (selectedRoles.includes('PROFESSOR')) {
+        if (professorId) {
+          // Atualizar professor existente
+          const { error: profError } = await supabase
+            .from('professores')
+            .update({
+              cpf: cpf || null,
+              matricula: matricula || null,
+              telefone: telefone || null,
+              formacoes: formacoes.length > 0 ? formacoes : null
+            })
+            .eq('id', professorId);
+
+          if (profError) throw profError;
+        } else {
+          // Criar registro de professor se não existir
+          const { error: profError } = await supabase
+            .from('professores')
+            .insert({
+              usuario_id: usuario.id,
+              nome: nome,
+              email: email,
+              cpf: cpf || null,
+              matricula: matricula || null,
+              telefone: telefone || null,
+              formacoes: formacoes.length > 0 ? formacoes : null,
+              escola_id: null,
+              ativo: true
+            });
+
+          if (profError) throw profError;
+        }
+      }
+
       toast.success('Usuário atualizado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       onOpenChange(false);
@@ -215,6 +306,92 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
               ))}
             </div>
           </div>
+
+          {/* Campos extras para Professores */}
+          {isProfessor && (
+            <>
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-sm font-semibold mb-3">Dados do Professor</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cpf">CPF</Label>
+                    <Input
+                      id="cpf"
+                      value={cpf}
+                      onChange={(e) => setCpf(e.target.value)}
+                      placeholder="000.000.000-00"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="matricula">Matrícula</Label>
+                    <Input
+                      id="matricula"
+                      value={matricula}
+                      onChange={(e) => setMatricula(e.target.value)}
+                      placeholder="000000"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <Label htmlFor="telefone">Telefone</Label>
+                  <Input
+                    id="telefone"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <Label>Formações</Label>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      value={novaFormacao}
+                      onChange={(e) => setNovaFormacao(e.target.value)}
+                      placeholder="Ex: Pedagogia"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddFormacao();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddFormacao}
+                      size="icon"
+                      variant="outline"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {formacoes.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {formacoes.map((formacao, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm"
+                        >
+                          {formacao}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFormacao(index)}
+                            className="hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           <DialogFooter>
             <Button
