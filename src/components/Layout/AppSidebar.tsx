@@ -152,7 +152,7 @@ export function AppSidebar() {
 
         {/* Admin Navigation - Only visible to admins */}
         {isAdmin && <SidebarGroup>
-            <SidebarGroupLabel>🔒 Administração</SidebarGroupLabel>
+            <SidebarGroupLabel>Administração</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {adminItems.map(item => <SidebarMenuItem key={item.title}>
