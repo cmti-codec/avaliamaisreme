@@ -75,7 +75,7 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
   const [codigo, setCodigo] = useState("");
   const [nome, setNome] = useState("");
   const [etapaModalidade, setEtapaModalidade] = useState("");
-  const [tipoJornada, setTipoJornada] = useState<"PARCIAL" | "INTEGRAL">("PARCIAL");
+  const [tipoJornada, setTipoJornada] = useState<"PARCIAL" | "INTEGRAL" | "MISTO">("PARCIAL");
   const [descricao, setDescricao] = useState("");
   const [anos, setAnos] = useState<AnoForm[]>([]);
   const [modoEdicao, setModoEdicao] = useState(true);
@@ -286,12 +286,12 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
       if (matrizId) {
         await updateMutation.mutateAsync({
           id: matrizId,
-          matriz: matrizData,
+          matriz: matrizData as any,
           componentes: componentesData,
         });
       } else {
         await createMutation.mutateAsync({
-          matriz: matrizData,
+          matriz: matrizData as any,
           componentes: componentesData,
         });
       }
@@ -379,7 +379,7 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
                   </Label>
                   <RadioGroup
                     value={tipoJornada}
-                    onValueChange={(v) => setTipoJornada(v as "PARCIAL" | "INTEGRAL")}
+                    onValueChange={(v) => setTipoJornada(v as "PARCIAL" | "INTEGRAL" | "MISTO")}
                     className="flex gap-6"
                   >
                     <div className="flex items-center space-x-2">
@@ -392,6 +392,12 @@ export const MatrizModal = ({ open, onClose, matrizId }: MatrizModalProps) => {
                       <RadioGroupItem value="INTEGRAL" id="integral" />
                       <Label htmlFor="integral" className="font-normal">
                         INTEGRAL (até 40h)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="MISTO" id="misto" />
+                      <Label htmlFor="misto" className="font-normal">
+                        PARCIAL + INTEGRAL
                       </Label>
                     </div>
                   </RadioGroup>
