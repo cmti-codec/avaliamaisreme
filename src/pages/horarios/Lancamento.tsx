@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import GradeHoraria from "@/components/Horarios/GradeHoraria";
 import PainelCargas from "@/components/Horarios/PainelCargas";
 import { GradeHorariaLoading } from "@/components/Horarios/GradeHorariaLoading";
+import HorarioProfessor from "@/components/Horarios/HorarioProfessor";
 import { useTurmaComMatriz, type TurmaComMatriz } from "@/hooks/useTurmasComMatriz";
 import {
   detectarConflitos,
@@ -404,9 +405,12 @@ const Lancamento = () => {
               </TabsContent>
 
               <TabsContent value="professor">
-                <div className="p-8 text-center text-muted-foreground border rounded-lg">
-                  <p>Horário do Professor em desenvolvimento</p>
-                </div>
+                <HorarioProfessor
+                  professores={professores}
+                  turmas={turmas}
+                  horarios={horarios}
+                  turmaSelecionada={turmaSelecionada}
+                />
               </TabsContent>
             </Tabs>
           </div>
