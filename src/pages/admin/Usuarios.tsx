@@ -396,7 +396,7 @@ export default function Usuarios() {
         </div>
 
         {/* Table */}
-        <div className="border rounded-lg overflow-x-auto">
+        <div className="border rounded-lg overflow-x-auto w-full">
           <Table>
             <TableHeader>
               <TableRow>

@@ -55,7 +55,7 @@ function LayoutWrapper({ children }: { children: React.ReactNode }) {
         isImpersonating && "pt-12"
       )}>
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           <AppHeader />
           <main className="flex-1 p-6 md:p-8">
             {children}
