@@ -153,28 +153,9 @@ export const EscolasMatrizesTable = ({ onEdit }: EscolasMatrizesTableProps) => {
                     </TableCell>
                     <TableCell className="max-w-[300px]">
                       {escola.matrizes && escola.matrizes.length > 0 ? (
-                        <div className="space-y-1">
-                          {escola.matrizes.map((matriz, idx) => (
-                            <div key={matriz.id} className="flex items-center gap-2">
-                              <div className="font-mono text-xs text-muted-foreground">
-                                {matriz.codigo}
-                              </div>
-                              <div className="text-sm truncate" title={matriz.nome}>
-                                {matriz.nome}
-                              </div>
-                              {matriz.tipo_jornada && (
-                                <Badge variant="outline" className="text-xs">
-                                  {matriz.tipo_jornada}
-                                </Badge>
-                              )}
-                            </div>
-                          ))}
-                          {escola.matrizes.length > 1 && (
-                            <Badge variant="secondary" className="text-xs">
-                              {escola.matrizes.length} matrizes
-                            </Badge>
-                          )}
-                        </div>
+                        <Badge variant="secondary" className="text-sm">
+                          {escola.matrizes.length} {escola.matrizes.length === 1 ? 'matriz' : 'matrizes'}
+                        </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
