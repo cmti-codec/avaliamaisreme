@@ -6,6 +6,16 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, FileText, Download, CheckCircle2, AlertCircle } from "lucide-react";
 import { ValidationErrors } from "./ValidationErrors";
 import { ValidationError, validateRequired, validateDataTypes } from "@/lib/import-validators";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ExpectedHeader {
   name: string;
@@ -59,6 +69,8 @@ export function CSVUploaderAdvanced({
   const [progress, setProgress] = useState(0);
   const [success, setSuccess] = useState(false);
   const [detectedDelimiter, setDetectedDelimiter] = useState<string>('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [recordCount, setRecordCount] = useState(0);
 
   const handleDrag = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -167,6 +179,7 @@ export function CSVUploaderAdvanced({
     });
 
     setPreview(data.slice(0, 10));
+    setRecordCount(data.length);
     
     // Validações básicas
     let allErrors: ValidationError[] = [];
@@ -193,7 +206,7 @@ export function CSVUploaderAdvanced({
     setErrors(allErrors);
   };
 
-  const handleImport = async () => {
+  const handleImportClick = () => {
     if (!file || preview.length === 0) return;
     
     const criticalErrors = errors.filter(e => e.tipo === 'critico');
@@ -201,6 +214,11 @@ export function CSVUploaderAdvanced({
       return;
     }
 
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmImport = async () => {
+    setShowConfirmDialog(false);
     setIsImporting(true);
     setProgress(0);
 
@@ -280,6 +298,7 @@ export function CSVUploaderAdvanced({
     setErrors([]);
     setSuccess(false);
     setProgress(0);
+    setRecordCount(0);
   };
 
   const downloadTemplate = () => {
@@ -416,7 +435,7 @@ export function CSVUploaderAdvanced({
 
         <div className="flex gap-2">
           <Button
-            onClick={handleImport}
+            onClick={handleImportClick}
             disabled={!canImport}
             className="flex-1"
           >
@@ -430,6 +449,23 @@ export function CSVUploaderAdvanced({
             Baixar Template
           </Button>
         </div>
+
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Importação</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja importar <strong>{recordCount} registro(s)</strong> de <strong>{title.toLowerCase()}</strong>?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmImport}>
+                Confirmar Importação
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
