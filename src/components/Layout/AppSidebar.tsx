@@ -1,6 +1,6 @@
 import { LayoutDashboard, Users, School, Building2, GraduationCap, Calendar as CalendarIcon, FileText, Download, Settings, BookOpen, Link2, Clock, Search, BarChart3 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { useUsuario } from "@/hooks/useUsuario";
+import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 const menuItems = [{
   title: "Painel",
@@ -78,9 +78,7 @@ export function AppSidebar() {
     state
   } = useSidebar();
   const collapsed = state === "collapsed";
-  const {
-    data: usuario
-  } = useUsuario();
+  const { user: usuario } = useAuth();
   const isAdmin = usuario?.roles.includes("ADMIN");
   const isGestaoEscolar = usuario?.roles.some(r => 
     ['DIRETOR', 'SECRETARIO', 'COORDENADOR'].includes(r)
