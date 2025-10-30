@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { gerarSigla, DIAS_SEMANA } from "@/lib/horarios-utils";
+import { sortTurmasPedagogica } from "@/lib/utils";
 
 interface TurmaConsolidada {
   id: string;
@@ -67,9 +68,7 @@ const Consulta = () => {
     const { data: turmas, error: turmasError } = await supabase
       .from("turmas")
       .select("*")
-      .eq("ativa", true)
-      .order("segmento", { ascending: true })
-      .order("grupo_ano", { ascending: true });
+      .eq("ativa", true);
 
     if (turmasError) throw turmasError;
 
@@ -107,7 +106,7 @@ const Consulta = () => {
       };
     });
 
-    setTurmasConsolidadas(consolidadas);
+    setTurmasConsolidadas(sortTurmasPedagogica(consolidadas));
   };
 
   const carregarProfessores = async () => {

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Eye, Filter, Search } from "lucide-react";
+import { sortTurmasPedagogica } from "@/lib/utils";
 
 interface TurmasTableProps {
   onView: (id: string) => void;
@@ -59,7 +60,7 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
   const filteredTurmas = useMemo(() => {
     if (!turmas) return [];
     
-    return turmas.filter((turma) => {
+    const filtered = turmas.filter((turma) => {
       const matchesSearch = 
         turma.turma.toLowerCase().includes(searchTerm.toLowerCase()) ||
         turma.etapa_modalidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -73,6 +74,8 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
 
       return matchesSearch && matchesTurno && matchesStatus && matchesEscola;
     });
+    
+    return sortTurmasPedagogica(filtered);
   }, [turmas, searchTerm, turnoFilter, statusFilter, escolaFilter]);
 
   const stats = useMemo(() => {

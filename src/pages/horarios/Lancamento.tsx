@@ -36,6 +36,7 @@ import {
   type Professor,
   type Turma,
 } from "@/lib/horarios-utils";
+import { sortTurmasPedagogica } from "@/lib/utils";
 
 const Lancamento = () => {
   const { toast } = useToast();
@@ -77,15 +78,14 @@ const Lancamento = () => {
       const { data: turmasData, error: turmasError } = await supabase
         .from("turmas")
         .select("*")
-        .eq("ativa", true)
-        .order("etapa_modalidade", { ascending: true })
-        .order("grupo_ano", { ascending: true });
+        .eq("ativa", true);
 
       if (turmasError) throw turmasError;
-      setTurmas((turmasData || []).map(t => ({
+      const turmasFormatadas = (turmasData || []).map(t => ({
         ...t,
         matriz_curricular: (t.matriz_curricular as any) || {}
-      })));
+      }));
+      setTurmas(sortTurmasPedagogica(turmasFormatadas));
 
       // Buscar professores
       const { data: professoresData, error: professoresError } = await supabase

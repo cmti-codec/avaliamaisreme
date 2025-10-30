@@ -24,6 +24,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { sortTurmasPedagogica } from "@/lib/utils";
 
 interface AlunosTableProps {
   alunos: Aluno[];
@@ -107,7 +108,7 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
     const uniqueTurmas = Array.from(
       new Map(alunosFiltrados.map((a) => [a.turma_id, a.turma])).values()
     ).filter((t): t is NonNullable<typeof t> => t !== null && t !== undefined);
-    return uniqueTurmas.sort((a, b) => a.grupo_ano.localeCompare(b.grupo_ano));
+    return sortTurmasPedagogica(uniqueTurmas);
   }, [alunos, selectedEscola]);
 
   // Filtragem
