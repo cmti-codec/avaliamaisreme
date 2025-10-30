@@ -92,8 +92,9 @@ export default function Importacao() {
     const parts = [successMsg, skippedMsg, errorMsg].filter(Boolean);
 
     toast({
-      title: errors.length === 0 && sucessos > 0 ? "Sucesso!" : skipped > 0 && sucessos === 0 ? "Nenhum registro novo" : "Importação parcial",
+      title: errors.length === 0 && sucessos > 0 ? "✅ Componentes importados com sucesso!" : skipped > 0 && sucessos === 0 ? "⚠️ Nenhum registro novo" : "⚠️ Importação parcial",
       description: parts.join(', '),
+      variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
     });
 
     return { success: sucessos, errors: allErrors };
@@ -148,8 +149,9 @@ export default function Importacao() {
     });
 
     toast({
-      title: errors.length === 0 ? "Sucesso!" : "Importação parcial",
+      title: errors.length === 0 ? "✅ Formações importadas com sucesso!" : "⚠️ Importação parcial",
       description: `${sucessos} formações importadas, ${errors.length} erros`,
+      variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
     });
 
     return { success: sucessos, errors };
@@ -235,8 +237,9 @@ export default function Importacao() {
     });
 
     toast({
-      title: errors.length === 0 ? "Sucesso!" : "Importação parcial",
+      title: errors.length === 0 ? "✅ Professores importados com sucesso!" : "⚠️ Importação parcial",
       description: `${sucessos} professores importados, ${errors.length} erros`,
+      variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
     });
 
     return { success: sucessos, errors };
@@ -352,7 +355,7 @@ export default function Importacao() {
       if (escolasAtualizadas > 0) parts.push(`${escolasAtualizadas} atualizadas`);
 
       toast({
-        title: "✅ Importação concluída!",
+        title: "✅ Escolas importadas com sucesso!",
         description: parts.join(' | '),
       });
 
@@ -376,7 +379,7 @@ export default function Importacao() {
       });
 
       toast({
-        title: "Erro na importação",
+        title: "❌ Erro na importação de escolas",
         description: error.message,
         variant: "destructive"
       });
@@ -641,8 +644,9 @@ export default function Importacao() {
     });
 
     toast({
-      title: errors.length === 0 ? "Sucesso!" : "Importação parcial",
-      description: `${sucessos} alunos importados, ${turmasCriadas} turmas criadas, ${errors.length} erros`,
+      title: errors.length === 0 ? "✅ Alunos importados com sucesso!" : "⚠️ Importação parcial",
+      description: `${sucessos} alunos importados, ${turmasCriadas} turmas criadas${errors.length > 0 ? `, ${errors.length} erros` : ''}`,
+      variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
     });
 
     return { success: sucessos, errors };
@@ -784,8 +788,9 @@ export default function Importacao() {
     });
 
     toast({
-      title: errors.length === 0 ? "Sucesso!" : "Importação parcial",
-      description: `${sucessos} cargas horárias processadas (inseridas ou atualizadas), ${errors.length} erros`,
+      title: errors.length === 0 ? "✅ Cargas horárias processadas com sucesso!" : "⚠️ Importação parcial",
+      description: `${sucessos} cargas horárias processadas (inseridas ou atualizadas)${errors.length > 0 ? `, ${errors.length} erros` : ''}`,
+      variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
     });
 
     return { success: sucessos, errors };
