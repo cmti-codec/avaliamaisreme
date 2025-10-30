@@ -37,26 +37,14 @@ export default function ProfessoresREME() {
   } = useQuery({
     queryKey: ["professores-reme"],
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase
+      const { data, error } = await supabase
         .from("professores")
-        .select(`
-          *,
-          usuario:usuarios(nome, email)
-        `)
+        .select("*")
         .is("escola_id", null)
         .order("nome", { ascending: true });
-      
+
       if (error) throw error;
-      
-      // Priorizar dados de usuarios quando disponível
-      return (data || []).map(prof => ({
-        ...prof,
-        nome: prof.usuario?.nome || prof.nome,
-        email: prof.usuario?.email || prof.email
-      })) as Professor[];
+      return data as Professor[];
     },
     enabled: isAdmin
   });
