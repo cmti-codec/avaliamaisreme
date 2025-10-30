@@ -68,7 +68,12 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
         (aluno.nummtr && aluno.nummtr.toLowerCase().includes(searchLower));
 
       const matchesEscola = selectedEscola === "all" || aluno.saesc === selectedEscola;
-      const matchesTurma = selectedTurma === "all" || aluno.turma_id === selectedTurma;
+      
+      // Filtro de turma por nome de exibição
+      const nomeExibicaoTurma = (aluno.turma && aluno.turma.grupo_ano && aluno.turma.turma) 
+        ? `${aluno.turma.grupo_ano} ${aluno.turma.turma}` 
+        : null;
+      const matchesTurma = selectedTurma === "all" || nomeExibicaoTurma === selectedTurma;
 
       // Incluir filtro de status
       const matchesStatus = 
@@ -105,13 +110,19 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
       ? alunos 
       : alunos.filter(a => a.saesc === selectedEscola);
     
-    // Criar mapa de turmas únicas usando o ID da turma como chave
+    // Criar mapa de turmas únicas usando o NOME DE EXIBIÇÃO como chave
     const turmasMap = new Map<string, NonNullable<Aluno['turma']>>();
     
     alunosFiltrados.forEach((aluno) => {
-      // Apenas adicionar se a turma existe e tem ID
-      if (aluno.turma && aluno.turma_id && !turmasMap.has(aluno.turma_id)) {
-        turmasMap.set(aluno.turma_id, aluno.turma);
+      // Apenas adicionar se a turma existe e tem os dados necessários
+      if (aluno.turma && aluno.turma.grupo_ano && aluno.turma.turma) {
+        // Criar o nome de exibição que será usado como chave
+        const nomeExibicaoTurma = `${aluno.turma.grupo_ano} ${aluno.turma.turma}`;
+        
+        // Usar o NOME como chave de desduplicação
+        if (!turmasMap.has(nomeExibicaoTurma)) {
+          turmasMap.set(nomeExibicaoTurma, aluno.turma);
+        }
       }
     });
     
@@ -133,8 +144,11 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
       // Filtro de escola
       const matchesEscola = selectedEscola === "all" || aluno.saesc === selectedEscola;
 
-      // Filtro de turma
-      const matchesTurma = selectedTurma === "all" || aluno.turma_id === selectedTurma;
+      // Filtro de turma por nome de exibição
+      const nomeExibicaoTurma = (aluno.turma && aluno.turma.grupo_ano && aluno.turma.turma) 
+        ? `${aluno.turma.grupo_ano} ${aluno.turma.turma}` 
+        : null;
+      const matchesTurma = selectedTurma === "all" || nomeExibicaoTurma === selectedTurma;
 
       // Filtro de status
       const matchesStatus = 
@@ -304,11 +318,15 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as turmas</SelectItem>
-                {turmas.map((turma) => (
-                  <SelectItem key={turma.id} value={turma.id}>
-                    {turma.grupo_ano} {turma.turma}
-                  </SelectItem>
-                ))}
+                {turmas.map((turma) => {
+                  // Usar o nome de exibição como valor e chave
+                  const nomeExibicaoTurma = `${turma.grupo_ano} ${turma.turma}`;
+                  return (
+                    <SelectItem key={nomeExibicaoTurma} value={nomeExibicaoTurma}>
+                      {nomeExibicaoTurma}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
 
