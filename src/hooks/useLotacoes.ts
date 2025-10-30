@@ -19,6 +19,8 @@ export interface Lotacao {
     telefone?: string;
     formacoes?: any;
     funcao_atual?: string;
+    tipo_vinculo?: string;
+    carga_horaria_contratual?: number;
   };
 }
 
@@ -38,7 +40,9 @@ export const useLotacoes = (escolaId: string, anoLetivo: string) => {
             email, 
             telefone, 
             formacoes, 
-            funcao_atual
+            funcao_atual,
+            tipo_vinculo,
+            carga_horaria_contratual
           )
         `)
         .eq("escola_id", escolaId)

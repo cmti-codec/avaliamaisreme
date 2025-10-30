@@ -299,6 +299,20 @@ export default function Importacao() {
           });
         }
       }
+
+      // Validar tipo_vinculo
+      if (row.tipo_vinculo) {
+        const tipoVinculoUpper = row.tipo_vinculo.toUpperCase();
+        if (tipoVinculoUpper !== 'EFETIVO' && tipoVinculoUpper !== 'CONVOCADO') {
+          errors.push({
+            linha: index + 2,
+            campo: 'tipo_vinculo',
+            valor: row.tipo_vinculo,
+            erro: 'Tipo de vínculo deve ser "EFETIVO" ou "CONVOCADO"',
+            tipo: 'critico'
+          });
+        }
+      }
     });
     
     // Validar formação existe

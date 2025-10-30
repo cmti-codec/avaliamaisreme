@@ -636,6 +636,7 @@ export type Database = {
           matricula: string | null
           nome: string
           telefone: string | null
+          tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"] | null
           usuario_id: string | null
         }
         Insert: {
@@ -653,6 +654,7 @@ export type Database = {
           matricula?: string | null
           nome: string
           telefone?: string | null
+          tipo_vinculo?: Database["public"]["Enums"]["tipo_vinculo"] | null
           usuario_id?: string | null
         }
         Update: {
@@ -670,6 +672,7 @@ export type Database = {
           matricula?: string | null
           nome?: string
           telefone?: string | null
+          tipo_vinculo?: Database["public"]["Enums"]["tipo_vinculo"] | null
           usuario_id?: string | null
         }
         Relationships: [
@@ -893,6 +896,7 @@ export type Database = {
         | "SECRETARIO"
         | "COORDENADOR"
         | "PROFESSOR"
+      tipo_vinculo: "EFETIVO" | "CONVOCADO"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1038,6 +1042,7 @@ export const Constants = {
         "COORDENADOR",
         "PROFESSOR",
       ],
+      tipo_vinculo: ["EFETIVO", "CONVOCADO"],
     },
   },
 } as const

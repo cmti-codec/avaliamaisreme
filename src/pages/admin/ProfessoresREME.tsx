@@ -21,6 +21,7 @@ interface Professor {
   ativo: boolean;
   usuario_id: string | null;
   carga_horaria_contratual: number | null;
+  tipo_vinculo: string | null;
 }
 export default function ProfessoresREME() {
   const {
@@ -80,11 +81,10 @@ export default function ProfessoresREME() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
+                  <TableHead>Vínculo</TableHead>
                   <TableHead>Status Usuário</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Matrícula</TableHead>
-                  <TableHead>Cargo</TableHead>
-                  <TableHead>Formações</TableHead>
                   <TableHead>CH</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -93,6 +93,11 @@ export default function ProfessoresREME() {
                 {filteredProfessores.map(professor => <TableRow key={professor.id}>
                     <TableCell className="font-medium">
                       {professor.nome}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={professor.tipo_vinculo === 'CONVOCADO' ? "outline" : "secondary"}>
+                        {professor.tipo_vinculo === 'CONVOCADO' ? '📋 Convocado' : '✓ Efetivo'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {professor.usuario_id ? <Badge variant="default" className="gap-1">
@@ -111,15 +116,6 @@ export default function ProfessoresREME() {
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">{professor.matricula || "-"}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{professor.cargo || "-"}</span>
-                    </TableCell>
-                    <TableCell>
-                      {professor.formacoes && professor.formacoes.length > 0 ? <div className="flex items-center gap-2">
-                          <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{professor.formacoes.join(", ")}</span>
-                        </div> : <span className="text-muted-foreground text-sm">-</span>}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">{professor.carga_horaria_contratual || 20}h</span>

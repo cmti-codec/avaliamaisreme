@@ -123,6 +123,8 @@ const Professores = () => {
             <ProfessorLotadoCard
               key={lotacao.id}
               lotacao={lotacao}
+              anoLetivo={anoLetivo}
+              escolaId={escolaId}
               onAtualizarCarga={handleAtualizarCarga}
               onRemover={removerLotacao}
               isSaving={isSaving}

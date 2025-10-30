@@ -16,6 +16,7 @@ export interface Professor {
   escola_id: string | null; // Permite NULL para pool REME
   carga_horaria_contratual?: number;
   horas_pl?: number;
+  tipo_vinculo?: 'EFETIVO' | 'CONVOCADO';
 }
 
 export const useProfessoresDisponiveis = (escolaId: string, anoLetivo: string) => {
