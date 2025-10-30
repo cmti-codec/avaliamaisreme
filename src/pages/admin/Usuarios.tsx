@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock, UserCheck } from 'lucide-react';
+import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock, UserCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,6 +60,7 @@ export default function Usuarios() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<Usuario | null>(null);
   const [toggleStatusUser, setToggleStatusUser] = useState<Usuario | null>(null);
+  const [deleteUser, setDeleteUser] = useState<Usuario | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [impersonateUser, setImpersonateUser] = useState<Usuario | null>(null);
   const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
@@ -243,6 +244,52 @@ export default function Usuarios() {
     },
     onError: (error: any) => {
       toast.error('Erro ao enviar email: ' + error.message);
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (usuario: Usuario) => {
+      // 🛑 PROTEÇÃO 1: Impedir deletar a si mesmo
+      const { data: { user: sessionUser } } = await supabase.auth.getUser();
+      if (sessionUser?.id === usuario.id) {
+        throw new Error('Você não pode excluir seu próprio usuário.');
+      }
+
+      // 🛑 PROTEÇÃO 2: Impedir deletar o último ADMIN ativo
+      const { data: adminRows, error: rolesErr } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'ADMIN');
+      if (rolesErr) throw rolesErr;
+
+      const adminIds = (adminRows ?? []).map(r => r.user_id);
+      if (adminIds.includes(usuario.id)) {
+        const { data: activeAdmins, error: actErr } = await supabase
+          .from('usuarios')
+          .select('id')
+          .in('id', adminIds)
+          .eq('ativo', true);
+        if (actErr) throw actErr;
+
+        if ((activeAdmins?.length ?? 0) <= 1) {
+          throw new Error('Você não pode excluir o último Administrador ativo do sistema.');
+        }
+      }
+
+      // Deletar usuário (cascade vai deletar roles e outras relações)
+      const { error } = await supabase
+        .from('usuarios')
+        .delete()
+        .eq('id', usuario.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Usuário excluído com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      setDeleteUser(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Erro ao excluir usuário');
     },
   });
 
@@ -465,6 +512,20 @@ export default function Usuarios() {
                             <Unlock className="w-4 h-4" />
                           )}
                         </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteUser(usuario)}
+                          title="Excluir usuário"
+                          disabled={
+                            usuario.id === currentUserId ||
+                            (usuario.roles?.includes('ADMIN') && activeAdminCount === 1)
+                          }
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -539,6 +600,35 @@ export default function Usuarios() {
                 onClick={() => toggleStatusUser && toggleStatusMutation.mutate(toggleStatusUser)}
               >
                 Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete User Dialog */}
+        <AlertDialog
+          open={!!deleteUser}
+          onOpenChange={(open) => !open && setDeleteUser(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir permanentemente o usuário{' '}
+                <strong>{deleteUser?.nome}</strong> ({deleteUser?.email})?
+                <br /><br />
+                <span className="text-destructive font-semibold">
+                  Esta ação não pode ser desfeita.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteUser && deleteUserMutation.mutate(deleteUser)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
