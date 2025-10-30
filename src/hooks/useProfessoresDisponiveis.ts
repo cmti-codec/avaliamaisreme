@@ -13,7 +13,7 @@ export interface Professor {
   formacoes?: any;
   ativo: boolean;
   usuario_id?: string;
-  escola_id: string;
+  escola_id: string | null; // Permite null para pool da REME
   carga_horaria_contratual?: number;
   horas_pl?: number;
 }

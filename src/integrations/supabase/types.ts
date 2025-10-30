@@ -628,7 +628,7 @@ export type Database = {
           cpf: string | null
           created_at: string | null
           email: string | null
-          escola_id: string
+          escola_id: string | null
           formacoes: Json | null
           funcao_atual: string | null
           horas_pl: number | null
@@ -645,7 +645,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string | null
           email?: string | null
-          escola_id: string
+          escola_id?: string | null
           formacoes?: Json | null
           funcao_atual?: string | null
           horas_pl?: number | null
@@ -662,7 +662,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string | null
           email?: string | null
-          escola_id?: string
+          escola_id?: string | null
           formacoes?: Json | null
           funcao_atual?: string | null
           horas_pl?: number | null
@@ -683,7 +683,7 @@ export type Database = {
           {
             foreignKeyName: "professores_usuario_id_fkey"
             columns: ["usuario_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },

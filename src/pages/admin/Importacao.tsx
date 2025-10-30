@@ -209,7 +209,8 @@ export default function Importacao() {
             matricula: row.matricula,
             telefone: row.telefone,
             formacoes: formacoes,
-            escola_id: null, // Será associado manualmente depois
+            escola_id: null, // Pool da REME (sem vínculo com escola específica)
+            funcao_atual: 'PROFESSOR', // Função padrão
             ativo: row.ativo.toLowerCase() === 'true' || row.ativo === '1',
             carga_horaria_contratual: 40
           });
