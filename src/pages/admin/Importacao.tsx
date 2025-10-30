@@ -285,6 +285,22 @@ export default function Importacao() {
   const validateProfessores = async (data: any[]) => {
     const errors: ValidationError[] = [];
     
+    // Validar formato da matrícula (6 dígitos)
+    data.forEach((row, index) => {
+      if (row.matricula) {
+        const cleaned = row.matricula.replace(/\D/g, '');
+        if (cleaned.length !== 6) {
+          errors.push({
+            linha: index + 2,
+            campo: 'matricula',
+            valor: row.matricula,
+            erro: 'Matrícula deve conter exatamente 6 dígitos numéricos',
+            tipo: 'critico'
+          });
+        }
+      }
+    });
+    
     // Validar formação existe
     for (let i = 0; i < data.length; i++) {
       const row = data[i];

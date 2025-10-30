@@ -96,6 +96,12 @@ export function validateCPF(cpf: string): boolean {
   return cleaned.length === 11;
 }
 
+export function validateMatricula(matricula: string): boolean {
+  if (!matricula) return false;
+  const cleaned = matricula.replace(/\D/g, '');
+  return cleaned.length === 6;
+}
+
 export function validateDate(dateStr: string): boolean {
   if (!dateStr) return true; // Campos opcionais
   
