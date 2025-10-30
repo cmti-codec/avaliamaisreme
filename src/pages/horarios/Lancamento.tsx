@@ -276,7 +276,7 @@ const Lancamento = () => {
 
   const formatarTurma = useMemo(
     () => (turma: Turma): string => {
-      return `${turma.etapa_modalidade} - ${turma.grupo_ano} ${turma.turma} - ${turma.turno}`;
+      return `${turma.grupo_ano} ${turma.turma} - ${turma.turno}`;
     },
     []
   );
