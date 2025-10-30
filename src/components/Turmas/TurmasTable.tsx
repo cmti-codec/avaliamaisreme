@@ -76,23 +76,23 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
   }, [turmas, searchTerm, turnoFilter, statusFilter, escolaFilter]);
 
   const stats = useMemo(() => {
-    if (!turmas) return { total: 0, ativas: 0, porTurno: {} };
+    if (!filteredTurmas) return { total: 0, ativas: 0, porTurno: {} };
     
     const porTurno: Record<string, number> = {};
     let ativas = 0;
     
-    turmas.forEach((t) => {
+    filteredTurmas.forEach((t) => {
       if (t.ativa) ativas++;
       const turno = t.turno || "SEM_TURNO";
       porTurno[turno] = (porTurno[turno] || 0) + 1;
     });
     
     return {
-      total: turmas.length,
+      total: filteredTurmas.length,
       ativas,
       porTurno,
     };
-  }, [turmas]);
+  }, [filteredTurmas]);
 
   if (isLoading) {
     return (
