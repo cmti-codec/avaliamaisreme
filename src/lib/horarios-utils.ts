@@ -24,7 +24,7 @@ export interface HorarioSlot {
 export interface Professor {
   id: string;
   nome: string;
-  formacoes: string[];
+  formacoes: string[] | null;
   carga_horaria_contratual: number;
   horas_pl: number;
 }
@@ -61,41 +61,67 @@ export function normalizarTempo(turno: string, tempo: number): { turno: string; 
 
 // Validar se professor tem formação para dar aula de componente
 export function validarFormacao(
-  professorFormacoes: string[],
+  professorFormacoes: string[] | null,
   componente: string,
   etapa_modalidade: string,
   grupoAno: string
 ): boolean {
-  // Educação Infantil com ATIVIDADES requer "Pedagogia - Ed. Infantil"
-  if (etapa_modalidade === "Educação Infantil" && ["Grupo 1", "Grupo 2", "Grupo 3"].includes(grupoAno)) {
-    if (componente === "ATIVIDADES") {
-      return professorFormacoes.includes("Pedagogia - Ed. Infantil");
+  // Se não há formações cadastradas, não validar (permitir)
+  if (!professorFormacoes || professorFormacoes.length === 0) {
+    return true;
+  }
+
+  // Normalizar componente para comparação
+  const componenteNorm = componente.toUpperCase().trim();
+  
+  // Educação Infantil com ATIVIDADES - aceitar Pedagogia
+  if (etapa_modalidade === "Educação Infantil") {
+    if (componenteNorm.includes("ATIVIDADES")) {
+      return professorFormacoes.some((f) => 
+        f.toUpperCase().includes("PEDAGOGIA") || 
+        f.toUpperCase().includes("EDUCAÇÃO INFANTIL")
+      );
     }
   }
 
-  // EF I - Anos Iniciais
+  // EF I - Anos Iniciais (polivalência)
   if (etapa_modalidade === "Ensino Fundamental I - Anos Iniciais") {
-    const componentesCamposMat = ["MATEMÁTICA", "LÍNGUA PORTUGUESA", "HISTÓRIA", "GEOGRAFIA"];
-    if (componentesCamposMat.includes(componente)) {
-      return professorFormacoes.includes("Pedagogia - Anos Iniciais");
+    const componentesPolivalentes = ["MATEMÁTICA", "LÍNGUA PORTUGUESA", "HISTÓRIA", "GEOGRAFIA", "CIÊNCIAS"];
+    
+    if (componentesPolivalentes.includes(componenteNorm)) {
+      // Aceitar Pedagogia ou formação específica na área
+      return professorFormacoes.some((f) => {
+        const fNorm = f.toUpperCase();
+        return fNorm.includes("PEDAGOGIA") || 
+               fNorm.includes("ANOS INICIAIS") ||
+               fNorm.includes(componenteNorm);
+      });
     }
-    if (componente === "CIÊNCIAS") {
-      return professorFormacoes.includes("Pedagogia - Ciências");
+  }
+
+  // Componentes específicos - match direto ou parcial
+  return professorFormacoes.some((f) => {
+    const fNorm = f.toUpperCase();
+    const compNorm = componenteNorm;
+    
+    // Match exato ou parcial
+    if (fNorm.includes(compNorm) || compNorm.includes(fNorm)) {
+      return true;
     }
-  }
-
-  // Componentes universais
-  const universais = ["ARTE", "EDUCAÇÃO FÍSICA", "INGLÊS"];
-  if (universais.includes(componente)) {
-    return professorFormacoes.some((f) => f.includes(componente));
-  }
-
-  // EF II e EJA: match direto
-  if (["Ensino Fundamental II - Anos Finais", "EJA"].includes(etapa_modalidade)) {
-    return professorFormacoes.some((f) => f.includes(componente));
-  }
-
-  return false;
+    
+    // Casos especiais
+    if (compNorm.includes("EDUCAÇÃO FÍSICA") && fNorm.includes("EDUCAÇÃO FÍSICA")) {
+      return true;
+    }
+    if (compNorm.includes("INGLÊS") && (fNorm.includes("INGLÊS") || fNorm.includes("INGLESA"))) {
+      return true;
+    }
+    if (compNorm.includes("PORTUGUÊS") && fNorm.includes("PORTUGUESA")) {
+      return true;
+    }
+    
+    return false;
+  });
 }
 
 // Detectar conflitos de professor
