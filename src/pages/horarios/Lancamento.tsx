@@ -392,6 +392,7 @@ const Lancamento = () => {
                 ) : (
                   <GradeHoraria
                     turma={turmaSelecionada}
+                    turmaComMatriz={turmaComMatriz}
                     professores={professores}
                     horarios={horarios}
                     onHorarioChange={handleHorarioChange}

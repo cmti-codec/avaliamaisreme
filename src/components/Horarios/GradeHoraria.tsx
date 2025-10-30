@@ -28,9 +28,11 @@ import {
   type Professor,
   type Turma,
 } from "@/lib/horarios-utils";
+import { type TurmaComMatriz } from "@/hooks/useTurmasComMatriz";
 
 interface GradeHorariaProps {
   turma: Turma;
+  turmaComMatriz?: TurmaComMatriz | null;
   professores: Professor[];
   horarios: Record<string, HorarioSlot>;
   onHorarioChange: (key: string, slot: HorarioSlot) => void;
@@ -41,6 +43,7 @@ interface GradeHorariaProps {
 
 export const GradeHoraria = ({
   turma,
+  turmaComMatriz,
   professores,
   horarios,
   onHorarioChange,
@@ -50,7 +53,11 @@ export const GradeHoraria = ({
 }: GradeHorariaProps) => {
   const [professorTravado, setProfessorTravado] = useState<string | null>(null);
   const tempos = TURNOS_TEMPOS[turma.turno] || [];
-  const componentesDisponiveis = Object.keys(turma.matriz_curricular || {}).sort();
+  
+  // Usar componentes da matriz atribuída à turma
+  const componentesDisponiveis = turmaComMatriz?.componentes 
+    ? Object.keys(turmaComMatriz.componentes).sort()
+    : [];
 
   useEffect(() => {
     // Detectar professor travado
