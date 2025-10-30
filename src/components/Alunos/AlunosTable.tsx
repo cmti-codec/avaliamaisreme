@@ -98,13 +98,17 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
     return uniqueEscolas.sort((a, b) => a.nome.localeCompare(b.nome));
   }, [alunos, isAdmin]);
 
-  // Lista de turmas únicas
+  // Lista de turmas únicas (filtrando por escola se selecionada)
   const turmas = useMemo(() => {
+    const alunosFiltrados = selectedEscola === "all" 
+      ? alunos 
+      : alunos.filter(a => a.saesc === selectedEscola);
+    
     const uniqueTurmas = Array.from(
-      new Map(alunos.map((a) => [a.turma_id, a.turma])).values()
+      new Map(alunosFiltrados.map((a) => [a.turma_id, a.turma])).values()
     ).filter((t): t is NonNullable<typeof t> => t !== null && t !== undefined);
     return uniqueTurmas.sort((a, b) => a.grupo_ano.localeCompare(b.grupo_ano));
-  }, [alunos]);
+  }, [alunos, selectedEscola]);
 
   // Filtragem
   const filteredAlunos = useMemo(() => {
@@ -146,10 +150,15 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
     return filteredAlunos.slice(startIndex, endIndex);
   }, [filteredAlunos, currentPage, itemsPerPage]);
 
-  // Reset para página 1 quando filtros mudarem
+  // Reset para página 1 e limpar turma quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
   }, [search, selectedEscola, selectedTurma, selectedStatuses]);
+
+  // Resetar turma quando escola mudar
+  useEffect(() => {
+    setSelectedTurma("all");
+  }, [selectedEscola]);
 
   const toggleStatus = (status: string) => {
     setSelectedStatuses(prev => 
