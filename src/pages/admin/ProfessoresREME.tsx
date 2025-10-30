@@ -40,11 +40,23 @@ export default function ProfessoresREME() {
       const {
         data,
         error
-      } = await supabase.from("professores").select("*").is("escola_id", null).order("nome", {
-        ascending: true
-      });
+      } = await supabase
+        .from("professores")
+        .select(`
+          *,
+          usuario:usuarios(nome, email)
+        `)
+        .is("escola_id", null)
+        .order("nome", { ascending: true });
+      
       if (error) throw error;
-      return data as Professor[];
+      
+      // Priorizar dados de usuarios quando disponível
+      return (data || []).map(prof => ({
+        ...prof,
+        nome: prof.usuario?.nome || prof.nome,
+        email: prof.usuario?.email || prof.email
+      })) as Professor[];
     },
     enabled: isAdmin
   });
