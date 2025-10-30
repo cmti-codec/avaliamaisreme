@@ -108,7 +108,7 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
   return (
     <div className="space-y-6">
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Total de Turmas</div>
           <div className="text-2xl font-bold">{stats.total}</div>
@@ -124,6 +124,14 @@ export const TurmasTable = ({ onView }: TurmasTableProps) => {
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Vespertino</div>
           <div className="text-2xl font-bold">{stats.porTurno.VESPERTINO || 0}</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-sm text-muted-foreground">Noturno</div>
+          <div className="text-2xl font-bold">{stats.porTurno.NOTURNO || 0}</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-sm text-muted-foreground">Integral</div>
+          <div className="text-2xl font-bold">{stats.porTurno.INTEGRAL || 0}</div>
         </Card>
       </div>
 
