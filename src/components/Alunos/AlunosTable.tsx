@@ -105,9 +105,15 @@ export const AlunosTable = ({ alunos, isLoading, isAdmin, onViewAluno }: AlunosT
       ? alunos 
       : alunos.filter(a => a.saesc === selectedEscola);
     
-    const uniqueTurmas = Array.from(
-      new Map(alunosFiltrados.map((a) => [a.turma_id, a.turma])).values()
-    ).filter((t): t is NonNullable<typeof t> => t !== null && t !== undefined);
+    // Criar mapa de turmas únicas usando o ID da turma como chave
+    const turmasMap = new Map();
+    alunosFiltrados.forEach((aluno) => {
+      if (aluno.turma && aluno.turma_id) {
+        turmasMap.set(aluno.turma_id, aluno.turma);
+      }
+    });
+    
+    const uniqueTurmas = Array.from(turmasMap.values());
     return sortTurmasPedagogica(uniqueTurmas);
   }, [alunos, selectedEscola]);
 
