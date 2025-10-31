@@ -95,6 +95,14 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
                 ? (professorData.formacoes as string[]) 
                 : []
             );
+          } else {
+            // Sem registro de professor ainda: garantir reset total para evitar "replicação" visual
+            setProfessorId(null);
+            setCpf('');
+            setMatricula('');
+            setTelefone('');
+            setProfessorAtivo(true);
+            setFormacoes([]);
           }
         } else {
           // Reset campos de professor
@@ -219,6 +227,8 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
           const { error: profError } = await supabase
             .from('professores')
             .update({
+              nome: nome,
+              email: email,
               cpf: cpf || null,
               matricula: matricula || null,
               telefone: telefone || null,
@@ -230,7 +240,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
           if (profError) throw profError;
         } else {
           // Criar registro de professor se não existir
-          const { error: profError } = await supabase
+          const { data: newProfessor, error: profError } = await supabase
             .from('professores')
             .insert({
               usuario_id: usuario.id,
@@ -242,14 +252,18 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
               formacoes: formacoes.length > 0 ? formacoes : null,
               escola_id: null,
               ativo: professorAtivo
-            });
+            })
+            .select('id')
+            .single();
 
           if (profError) throw profError;
+          setProfessorId(newProfessor?.id || null);
         }
       }
 
       toast.success('Usuário atualizado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      queryClient.invalidateQueries({ queryKey: ['professores-disponiveis'] });
       onOpenChange(false);
     } catch (error: any) {
       console.error('Erro ao atualizar usuário:', error);
@@ -392,7 +406,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
                     <div className="flex flex-wrap gap-2 mt-3">
                       {formacoes.map((formacao, index) => (
                         <div
-                          key={index}
+                          key={`${usuario?.id}-formacao-${index}`}
                           className="flex items-center gap-2 bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm"
                         >
                           {formacao}

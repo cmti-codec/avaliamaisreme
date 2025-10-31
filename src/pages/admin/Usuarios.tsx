@@ -107,9 +107,9 @@ export default function Usuarios() {
         return [];
       }
 
-      // Para cada usuário, buscar suas roles e dados de professor
+          // Para cada usuário, buscar suas roles e dados de professor
       const usuariosComRoles = await Promise.all(
-        usuariosData.map(async (u) => {
+        usuariosData.map(async (u, index) => {
           const { data: rolesData, error: rolesError } = await supabase
             .from('user_roles')
             .select('role, escola_id')
