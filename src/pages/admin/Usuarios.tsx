@@ -48,6 +48,8 @@ interface Usuario {
   escola_id: string | null;
   ativo: boolean;
   created_at: string;
+  professor_id?: string | null;
+  professor_ativo?: boolean | null;
 }
 
 export default function Usuarios() {
@@ -105,7 +107,7 @@ export default function Usuarios() {
         return [];
       }
 
-      // Para cada usuário, buscar suas roles
+      // Para cada usuário, buscar suas roles e dados de professor
       const usuariosComRoles = await Promise.all(
         usuariosData.map(async (u) => {
           const { data: rolesData, error: rolesError } = await supabase
@@ -120,6 +122,22 @@ export default function Usuarios() {
           const roles = rolesData?.map((r) => r.role) || [];
           const primaryRole = roles[0] || 'PROFESSOR';
 
+          // Se tem perfil de professor, buscar dados do professor
+          let professor_id = null;
+          let professor_ativo = null;
+          if (roles.includes('PROFESSOR')) {
+            const { data: professorData } = await supabase
+              .from('professores')
+              .select('id, ativo')
+              .eq('usuario_id', u.id)
+              .maybeSingle();
+            
+            if (professorData) {
+              professor_id = professorData.id;
+              professor_ativo = professorData.ativo;
+            }
+          }
+
           return {
             id: u.id,
             nome: u.nome,
@@ -129,6 +147,8 @@ export default function Usuarios() {
             escola_id: u.escola_id,
             ativo: u.ativo,
             created_at: u.created_at,
+            professor_id,
+            professor_ativo,
           };
         })
       );
@@ -403,7 +423,8 @@ export default function Usuarios() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Perfil</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Status Usuário</TableHead>
+                <TableHead>Status Professor</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -415,12 +436,13 @@ export default function Usuarios() {
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredUsuarios.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Nenhum usuário encontrado
                   </TableCell>
                 </TableRow>
@@ -446,6 +468,21 @@ export default function Usuarios() {
                       <Badge variant={usuario.ativo ? 'default' : 'secondary'}>
                         {usuario.ativo ? 'Ativo' : 'Inativo'}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {usuario.roles?.includes('PROFESSOR') ? (
+                        usuario.professor_id ? (
+                          <Badge variant={usuario.professor_ativo ? 'default' : 'secondary'}>
+                            {usuario.professor_ativo ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Não vinculado
+                          </Badge>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, CheckCircle, UserPlus, TrendingUp, TrendingDown } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Search, CheckCircle, UserPlus, TrendingUp, TrendingDown, Info, AlertCircle } from "lucide-react";
 import { useProfessoresDisponiveis } from "@/hooks/useProfessoresDisponiveis";
 import { useCargaTotalProfessor } from "@/hooks/useCargaTotalProfessor";
 
@@ -18,6 +21,93 @@ interface LotarProfessorDialogProps {
   anoLetivo: string;
   onLotar: (professorIds: string[]) => void;
   isSaving: boolean;
+}
+
+function ResumoDisponibilidade({ 
+  escolaId, 
+  anoLetivo, 
+  includeInativos 
+}: { 
+  escolaId: string; 
+  anoLetivo: string;
+  includeInativos: boolean;
+}) {
+  const { data: resumo, isLoading } = useQuery({
+    queryKey: ["resumo-disponibilidade", escolaId, anoLetivo],
+    queryFn: async () => {
+      // Total no pool (escola_id = NULL)
+      const { count: totalPool } = await supabase
+        .from("professores")
+        .select("*", { count: "exact", head: true })
+        .is("escola_id", null);
+
+      // Ativos no pool
+      const { count: totalPoolAtivos } = await supabase
+        .from("professores")
+        .select("*", { count: "exact", head: true })
+        .is("escola_id", null)
+        .eq("ativo", true);
+
+      // Já lotados na escola/ano (do pool ativo)
+      const { data: professoresAtivosPool } = await supabase
+        .from("professores")
+        .select("id")
+        .is("escola_id", null)
+        .eq("ativo", true);
+
+      const idsPool = professoresAtivosPool?.map(p => p.id) || [];
+
+      const { count: jaLotados } = await supabase
+        .from("lotacoes_professores")
+        .select("*", { count: "exact", head: true })
+        .eq("escola_id", escolaId)
+        .eq("ano_letivo", anoLetivo)
+        .in("professor_id", idsPool);
+
+      return {
+        totalPool: totalPool || 0,
+        totalPoolAtivos: totalPoolAtivos || 0,
+        jaLotados: jaLotados || 0,
+        disponiveis: (totalPoolAtivos || 0) - (jaLotados || 0)
+      };
+    },
+    enabled: !!escolaId && !!anoLetivo,
+  });
+
+  if (isLoading) {
+    return (
+      <p className="text-center text-muted-foreground py-8">Carregando resumo...</p>
+    );
+  }
+
+  return (
+    <div className="space-y-4 py-4">
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription className="space-y-2">
+          <p className="font-semibold">Resumo de Disponibilidade</p>
+          <div className="space-y-1 text-sm">
+            <p>• <strong>Total no pool (REME):</strong> {resumo?.totalPool || 0} professores</p>
+            <p>• <strong>Ativos no pool:</strong> {resumo?.totalPoolAtivos || 0} professores</p>
+            <p>• <strong>Já lotados nesta escola ({anoLetivo}):</strong> {resumo?.jaLotados || 0} professores</p>
+            <p className="text-primary font-semibold">• <strong>Disponíveis para lotação:</strong> {resumo?.disponiveis || 0} professores</p>
+          </div>
+        </AlertDescription>
+      </Alert>
+
+      {!includeInativos && (resumo?.totalPool || 0) > (resumo?.totalPoolAtivos || 0) && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="text-sm">
+              Existem <strong>{(resumo?.totalPool || 0) - (resumo?.totalPoolAtivos || 0)} professores inativos</strong> no pool. 
+              Ative a opção "Incluir professores inativos (REME)" acima para visualizá-los.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
 }
 
 function ProfessorDisponibilidade({ professorId, anoLetivo }: { professorId: string; anoLetivo: string }) {
@@ -63,8 +153,9 @@ export function LotarProfessorDialog({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [filtroVinculo, setFiltroVinculo] = useState<string>("TODOS");
   const [ordenacao, setOrdenacao] = useState<string>("nome");
+  const [includeInativos, setIncludeInativos] = useState(false);
   
-  const { data: professores = [], isLoading } = useProfessoresDisponiveis(escolaId, anoLetivo);
+  const { data: professores = [], isLoading } = useProfessoresDisponiveis(escolaId, anoLetivo, includeInativos);
 
   const professoresComInfo = useMemo(() => {
     return professores.map(p => ({
@@ -121,6 +212,7 @@ export function LotarProfessorDialog({
       setSelectedIds([]);
       setSearchTerm("");
       setFiltroVinculo("TODOS");
+      setIncludeInativos(false);
       onOpenChange(false);
     }
   };
@@ -162,6 +254,17 @@ export function LotarProfessorDialog({
             </div>
           </div>
 
+          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+            <Checkbox
+              id="include-inativos"
+              checked={includeInativos}
+              onCheckedChange={(checked) => setIncludeInativos(checked as boolean)}
+            />
+            <label htmlFor="include-inativos" className="text-sm font-medium cursor-pointer">
+              Incluir professores inativos (REME)
+            </label>
+          </div>
+
           {filteredProfessores.length > 0 && (
             <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
               <Checkbox
@@ -182,9 +285,11 @@ export function LotarProfessorDialog({
             {isLoading ? (
               <p className="text-center text-muted-foreground py-8">Carregando...</p>
             ) : filteredProfessores.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhum professor disponível para lotação
-              </p>
+              <ResumoDisponibilidade 
+                escolaId={escolaId} 
+                anoLetivo={anoLetivo} 
+                includeInativos={includeInativos}
+              />
             ) : (
               filteredProfessores.map((prof) => (
                 <Card
@@ -207,6 +312,20 @@ export function LotarProfessorDialog({
                           <Badge variant={prof.tipo_vinculo === 'CONVOCADO' ? "outline" : "secondary"} className="text-xs">
                             {prof.tipo_vinculo === 'CONVOCADO' ? 'Convocado' : 'Efetivo'}
                           </Badge>
+                          {prof.escola_id === null ? (
+                            <Badge variant="default" className="text-xs">
+                              Pool (REME)
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">
+                              Da escola
+                            </Badge>
+                          )}
+                          {!prof.ativo && (
+                            <Badge variant="secondary" className="text-xs text-muted-foreground">
+                              Inativo
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Matrícula: {prof.matricula || 'N/A'} | CH: {prof.carga_horaria_contratual || 40}h

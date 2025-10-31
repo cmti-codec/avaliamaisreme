@@ -19,9 +19,13 @@ export interface Professor {
   tipo_vinculo?: 'EFETIVO' | 'CONVOCADO';
 }
 
-export const useProfessoresDisponiveis = (escolaId: string, anoLetivo: string) => {
+export const useProfessoresDisponiveis = (
+  escolaId: string, 
+  anoLetivo: string,
+  includeInativos: boolean = false
+) => {
   return useQuery({
-    queryKey: ["professores-disponiveis", escolaId, anoLetivo],
+    queryKey: ["professores-disponiveis", escolaId, anoLetivo, includeInativos],
     queryFn: async () => {
       // Buscar IDs de professores já lotados nesta escola/ano
       const { data: lotados } = await supabase
@@ -32,12 +36,18 @@ export const useProfessoresDisponiveis = (escolaId: string, anoLetivo: string) =
 
       const idsLotados = lotados?.map(l => l.professor_id) || [];
 
-      // Buscar todos professores ativos
-      const { data: allProfessores, error } = await supabase
+      // Buscar todos professores (ativos ou incluindo inativos conforme flag)
+      let query = supabase
         .from("professores")
         .select("*")
-        .eq("ativo", true)
         .order("nome", { ascending: true });
+
+      // Se não incluir inativos, filtrar apenas ativos
+      if (!includeInativos) {
+        query = query.eq("ativo", true);
+      }
+
+      const { data: allProfessores, error } = await query;
 
       if (error) throw error;
 

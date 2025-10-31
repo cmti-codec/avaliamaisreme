@@ -56,6 +56,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
   const [novaFormacao, setNovaFormacao] = useState('');
   const [professorId, setProfessorId] = useState<string | null>(null);
   const [isProfessor, setIsProfessor] = useState(false);
+  const [professorAtivo, setProfessorAtivo] = useState(true);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -79,7 +80,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
         if (hasProfessorRole) {
           const { data: professorData } = await supabase
             .from('professores')
-            .select('id, cpf, matricula, telefone, formacoes')
+            .select('id, cpf, matricula, telefone, formacoes, ativo')
             .eq('usuario_id', usuario.id)
             .maybeSingle();
           
@@ -88,6 +89,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
             setCpf(professorData.cpf || '');
             setMatricula(professorData.matricula || '');
             setTelefone(professorData.telefone || '');
+            setProfessorAtivo(professorData.ativo ?? true);
             setFormacoes(
               Array.isArray(professorData.formacoes) 
                 ? (professorData.formacoes as string[]) 
@@ -101,6 +103,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
           setMatricula('');
           setTelefone('');
           setFormacoes([]);
+          setProfessorAtivo(true);
         }
       }
     };
@@ -219,7 +222,8 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
               cpf: cpf || null,
               matricula: matricula || null,
               telefone: telefone || null,
-              formacoes: formacoes.length > 0 ? formacoes : null
+              formacoes: formacoes.length > 0 ? formacoes : null,
+              ativo: professorAtivo
             })
             .eq('id', professorId);
 
@@ -237,7 +241,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
               telefone: telefone || null,
               formacoes: formacoes.length > 0 ? formacoes : null,
               escola_id: null,
-              ativo: true
+              ativo: professorAtivo
             });
 
           if (profError) throw profError;
@@ -311,7 +315,22 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
           {isProfessor && (
             <>
               <div className="border-t pt-4 mt-4">
-                <h3 className="text-sm font-semibold mb-3">Dados do Professor</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold">Dados do Professor</h3>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="professor-ativo"
+                      checked={professorAtivo}
+                      onCheckedChange={(checked) => setProfessorAtivo(checked as boolean)}
+                    />
+                    <Label
+                      htmlFor="professor-ativo"
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      Professor Ativo (REME)
+                    </Label>
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
