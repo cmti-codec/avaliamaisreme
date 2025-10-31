@@ -32,20 +32,21 @@ export const useProfessoresDisponiveis = (escolaId: string, anoLetivo: string) =
 
       const idsLotados = lotados?.map(l => l.professor_id) || [];
 
-      // Buscar professores ativos que NÃO estão lotados
-      let query = supabase
+      // Buscar todos professores ativos
+      const { data: allProfessores, error } = await supabase
         .from("professores")
         .select("*")
         .eq("ativo", true)
         .order("nome", { ascending: true });
 
-      if (idsLotados.length > 0) {
-        query = query.not("id", "in", `(${idsLotados.join(",")})`);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data as Professor[];
+
+      // Filtrar no cliente os professores já lotados (mais robusto)
+      const professoresDisponiveis = idsLotados.length > 0
+        ? (allProfessores || []).filter(p => !idsLotados.includes(p.id))
+        : (allProfessores || []);
+
+      return professoresDisponiveis as Professor[];
     },
     enabled: !!escolaId && !!anoLetivo,
   });

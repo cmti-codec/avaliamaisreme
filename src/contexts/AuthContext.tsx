@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Determinar role principal (maior privilégio)
       const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
       const primaryRole = roles[0] || 'PROFESSOR';
-      const escola_id = rolesData?.[0]?.escola_id || null;
+      const escola_id = rolesData?.[0]?.escola_id ?? userData.escola_id ?? null;
 
       setUser({
         ...userData,
@@ -287,7 +287,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setOriginalAdmin(user);
       }
 
-      // 1) Criar usuário real via função do backend (garante integridade do FK)
+      // 0) Limpar impersonações antigas deste admin (para evitar múltiplos usuários de teste)
+      const { error: cleanupErr } = await supabase
+        .from('usuarios')
+        .update({ impersonated_by: null })
+        .eq('impersonated_by', user.id);
+      
+      if (cleanupErr) {
+        console.warn('Aviso ao limpar impersonações antigas:', cleanupErr);
+      }
+
+      // 1) Criar usuário real via função do backend (garante integridade do FK e já define escola_id)
       const email = `teste-${profile.toLowerCase()}-${Date.now()}@example.test`;
       const password = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
 
@@ -316,15 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', newUserId);
       if (impErr) throw impErr;
 
-      // 3) Garantir que a role tenha escola_id para RLS funcionar
-      const { error: roleSchoolErr } = await supabase
-        .from('user_roles')
-        .update({ escola_id: schoolId })
-        .eq('user_id', newUserId)
-        .eq('role', profile);
-      if (roleSchoolErr) throw roleSchoolErr;
-
-      // 4) Buscar dados do usuário de teste para setar no contexto
+      // 3) Buscar dados do usuário de teste para setar no contexto (escola_id já foi definido em admin-create-user)
       const { data: userRow, error: userRowErr } = await supabase
         .from('usuarios')
         .select('*')

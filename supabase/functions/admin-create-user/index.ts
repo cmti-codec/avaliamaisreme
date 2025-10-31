@@ -137,11 +137,11 @@ serve(async (req) => {
         throw usuarioErr;
       }
 
-      // Insert roles
+      // Insert roles (com escola_id se fornecido)
       const rolesToInsert = roles.map((role) => ({
         user_id: newUserId,
         role,
-        escola_id: null,
+        escola_id: escola_id || null,
       }));
 
       const { error: rolesErr } = await supabaseAdmin
@@ -153,7 +153,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ ok: true, user_id: newUserId }),
+        JSON.stringify({ success: true, user_id: newUserId }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (e) {
