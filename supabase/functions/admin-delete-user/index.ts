@@ -93,14 +93,19 @@ serve(async (req) => {
       console.error("Failed to delete usuario row", delUsuarioError);
     }
 
-    // Delete auth user last
+    // Delete auth user last (tolerar se já foi deletado)
     const { error: delAuthError } = await adminClient.auth.admin.deleteUser(userId);
     if (delAuthError) {
-      console.error("Failed to delete auth user", delAuthError);
-      return new Response(JSON.stringify({ error: "Failed to delete auth user" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Se o usuário já foi deletado, considerar sucesso
+      if (delAuthError.message?.includes('User not found') || delAuthError.status === 404) {
+        console.log("Auth user already deleted, continuing...");
+      } else {
+        console.error("Failed to delete auth user", delAuthError);
+        return new Response(JSON.stringify({ error: "Failed to delete auth user" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
