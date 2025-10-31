@@ -34,8 +34,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   impersonate: (targetUserId: string) => Promise<void>;
   stopImpersonating: () => void;
-  startTestMode: (schoolId: string, profile: PerfilUsuario, schoolName: string) => void;
-  stopTestMode: () => void;
+  startTestMode: (schoolId: string, profile: PerfilUsuario, schoolName: string) => Promise<void>;
+  stopTestMode: () => Promise<void>;
   temPermissao: (funcionalidade: string, tipo: 'ler' | 'escrever' | 'aprovar') => boolean;
 }
 
@@ -275,61 +275,133 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast.info('Voltou para sua conta admin');
   };
 
-  const startTestMode = (schoolId: string, profile: PerfilUsuario, schoolName: string) => {
+  const startTestMode = async (schoolId: string, profile: PerfilUsuario, schoolName: string) => {
     if (!user?.roles.includes('ADMIN')) {
       toast.error('Apenas administradores podem usar o modo teste');
       return;
     }
 
-    // Salvar admin atual se ainda não estiver impersonando
-    if (!isImpersonating) {
-      setOriginalAdmin(user);
+    try {
+      // Salvar admin atual se ainda não estiver impersonando
+      if (!isImpersonating) {
+        setOriginalAdmin(user);
+      }
+
+      // 1. Criar um usuário temporário no banco de dados
+      const { data: testUserData, error: userError } = await supabase
+        .from('usuarios')
+        .insert([{
+          nome: `Teste - ${profile} (${schoolName})`,
+          email: `teste-${profile.toLowerCase()}-${Date.now()}@temp.local`,
+          escola_id: schoolId,
+          ativo: true,
+          impersonated_by: user.id, // Registrar quem está impersonando
+        }] as any)
+        .select()
+        .single();
+
+      if (userError) throw userError;
+
+      // 2. Criar role temporária para o usuário de teste
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: testUserData.id,
+          role: profile,
+          escola_id: schoolId,
+        });
+
+      if (roleError) {
+        // Se falhar ao criar role, deletar o usuário criado
+        await supabase.from('usuarios').delete().eq('id', testUserData.id);
+        throw roleError;
+      }
+
+      // 3. Criar usuário teste para o frontend
+      const testUser: Usuario = {
+        id: testUserData.id,
+        nome: `Teste - ${profile} (${schoolName})`,
+        email: testUserData.email,
+        roles: [profile],
+        primaryRole: profile,
+        escola_id: schoolId,
+        ativo: true,
+      };
+
+      setUser(testUser);
+      setIsImpersonating(true);
+      setTestSchoolId(schoolId);
+      setTestProfile(profile);
+
+      // Persistir no localStorage
+      localStorage.setItem('impersonating', 'true');
+      localStorage.setItem('originalAdmin', JSON.stringify(originalAdmin || user));
+      localStorage.setItem('testSchoolId', schoolId);
+      localStorage.setItem('testProfile', profile);
+      localStorage.setItem('testSchoolName', schoolName);
+      localStorage.setItem('testUserId', testUserData.id);
+
+      toast.success(`Modo Teste: ${profile} em ${schoolName}`);
+    } catch (error: any) {
+      console.error('Erro ao iniciar modo teste:', error);
+      toast.error('Erro ao iniciar modo teste: ' + error.message);
     }
-
-    // Criar usuário teste
-    const testUser: Usuario = {
-      id: user.id, // Mantém o ID do admin
-      nome: `Teste - ${profile} (${schoolName})`,
-      email: user.email,
-      roles: [profile],
-      primaryRole: profile,
-      escola_id: schoolId,
-      ativo: true,
-    };
-
-    setUser(testUser);
-    setIsImpersonating(true);
-    setTestSchoolId(schoolId);
-    setTestProfile(profile);
-
-    // Persistir no localStorage
-    localStorage.setItem('impersonating', 'true');
-    localStorage.setItem('originalAdmin', JSON.stringify(originalAdmin || user));
-    localStorage.setItem('testSchoolId', schoolId);
-    localStorage.setItem('testProfile', profile);
-    localStorage.setItem('testSchoolName', schoolName);
-
-    toast.success(`Modo Teste: ${profile} em ${schoolName}`);
   };
 
-  const stopTestMode = () => {
+  const stopTestMode = async () => {
     if (!originalAdmin) return;
 
-    // Restaurar admin original
-    setUser(originalAdmin);
-    setIsImpersonating(false);
-    setOriginalAdmin(null);
-    setTestSchoolId(null);
-    setTestProfile(null);
+    try {
+      const testUserId = localStorage.getItem('testUserId');
+      
+      if (testUserId) {
+        // 1. Deletar role temporária
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', testUserId);
 
-    // Limpar localStorage
-    localStorage.removeItem('impersonating');
-    localStorage.removeItem('originalAdmin');
-    localStorage.removeItem('testSchoolId');
-    localStorage.removeItem('testProfile');
-    localStorage.removeItem('testSchoolName');
+        // 2. Deletar usuário temporário
+        await supabase
+          .from('usuarios')
+          .delete()
+          .eq('id', testUserId);
+      }
 
-    toast.info('Saiu do modo teste');
+      // Restaurar admin original
+      setUser(originalAdmin);
+      setIsImpersonating(false);
+      setOriginalAdmin(null);
+      setTestSchoolId(null);
+      setTestProfile(null);
+
+      // Limpar localStorage
+      localStorage.removeItem('impersonating');
+      localStorage.removeItem('originalAdmin');
+      localStorage.removeItem('testSchoolId');
+      localStorage.removeItem('testProfile');
+      localStorage.removeItem('testSchoolName');
+      localStorage.removeItem('testUserId');
+
+      toast.info('Saiu do modo teste');
+    } catch (error: any) {
+      console.error('Erro ao sair do modo teste:', error);
+      toast.error('Erro ao sair do modo teste');
+      
+      // Mesmo com erro, restaurar o estado local
+      setUser(originalAdmin);
+      setIsImpersonating(false);
+      setOriginalAdmin(null);
+      setTestSchoolId(null);
+      setTestProfile(null);
+      
+      localStorage.removeItem('impersonating');
+      localStorage.removeItem('originalAdmin');
+      localStorage.removeItem('testSchoolId');
+      localStorage.removeItem('testProfile');
+      localStorage.removeItem('testSchoolName');
+      localStorage.removeItem('testUserId');
+    }
   };
 
   const temPermissao = (funcionalidade: string, tipo: 'ler' | 'escrever' | 'aprovar'): boolean => {

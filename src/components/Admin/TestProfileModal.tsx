@@ -26,13 +26,13 @@ export function TestProfileModal({ open, onOpenChange }: TestProfileModalProps) 
   const { data: escolas, isLoading } = useEscolas();
   const { startTestMode } = useAuth();
 
-  const handleStartTest = () => {
+  const handleStartTest = async () => {
     if (!selectedSchool || !selectedProfile) return;
 
     const escola = escolas?.find(e => e.id === selectedSchool);
     if (!escola) return;
 
-    startTestMode(selectedSchool, selectedProfile, escola.nome);
+    await startTestMode(selectedSchool, selectedProfile, escola.nome);
     onOpenChange(false);
     
     // Reset form
