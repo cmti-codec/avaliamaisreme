@@ -296,7 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           escola_id: schoolId,
           ativo: true,
           impersonated_by: user.id, // Registrar quem está impersonando
-        }] as any)
+        }])
         .select()
         .single();
 

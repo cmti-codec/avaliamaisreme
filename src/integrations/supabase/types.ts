@@ -832,7 +832,7 @@ export type Database = {
           created_at?: string | null
           email: string
           escola_id?: string | null
-          id: string
+          id?: string
           impersonated_by?: string | null
           nome: string
         }
