@@ -287,44 +287,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setOriginalAdmin(user);
       }
 
-      // 1. Criar um usuário temporário no banco de dados
-      const { data: testUserData, error: userError } = await supabase
-        .from('usuarios')
-        .insert([{
+      // 1) Criar usuário real via função do backend (garante integridade do FK)
+      const email = `teste-${profile.toLowerCase()}-${Date.now()}@example.test`;
+      const password = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
+
+      const { data: createResp, error: createErr } = await supabase.functions.invoke('admin-create-user', {
+        body: {
           nome: `Teste - ${profile} (${schoolName})`,
-          email: `teste-${profile.toLowerCase()}-${Date.now()}@temp.local`,
+          email,
+          senha: password,
+          roles: [profile],
           escola_id: schoolId,
-          ativo: true,
-          impersonated_by: user.id, // Registrar quem está impersonando
-        }])
-        .select()
-        .single();
+        },
+      });
 
-      if (userError) throw userError;
+      if (createErr) throw createErr;
 
-      // 2. Criar role temporária para o usuário de teste
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: testUserData.id,
-          role: profile,
-          escola_id: schoolId,
-        });
-
-      if (roleError) {
-        // Se falhar ao criar role, deletar o usuário criado
-        await supabase.from('usuarios').delete().eq('id', testUserData.id);
-        throw roleError;
+      const newUserId: string | undefined = createResp?.userId ?? createResp?.id ?? createResp?.user_id;
+      if (!newUserId) {
+        console.error('Resposta inesperada de admin-create-user:', createResp);
+        throw new Error('ID do usuário de teste não retornado');
       }
 
-      // 3. Criar usuário teste para o frontend
+      // 2) Marcar impersonação no usuário de teste para get_effective_user_id()
+      const { error: impErr } = await supabase
+        .from('usuarios')
+        .update({ impersonated_by: user.id })
+        .eq('id', newUserId);
+      if (impErr) throw impErr;
+
+      // 3) Garantir que a role tenha escola_id para RLS funcionar
+      const { error: roleSchoolErr } = await supabase
+        .from('user_roles')
+        .update({ escola_id: schoolId })
+        .eq('user_id', newUserId)
+        .eq('role', profile);
+      if (roleSchoolErr) throw roleSchoolErr;
+
+      // 4) Buscar dados do usuário de teste para setar no contexto
+      const { data: userRow, error: userRowErr } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', newUserId)
+        .single();
+      if (userRowErr) throw userRowErr;
+
+      const { data: rolesData, error: rolesErr } = await supabase
+        .from('user_roles')
+        .select('role, escola_id')
+        .eq('user_id', newUserId);
+      if (rolesErr) throw rolesErr;
+
+      const roles = (rolesData?.map(r => r.role as PerfilUsuario) || []);
+      const primaryRole = roles[0] || profile;
+      const escola_id = rolesData?.[0]?.escola_id || schoolId;
+
       const testUser: Usuario = {
-        id: testUserData.id,
+        id: newUserId,
         nome: `Teste - ${profile} (${schoolName})`,
-        email: testUserData.email,
-        roles: [profile],
-        primaryRole: profile,
-        escola_id: schoolId,
+        email,
+        roles,
+        primaryRole,
+        escola_id,
         ativo: true,
       };
 
@@ -339,12 +363,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('testSchoolId', schoolId);
       localStorage.setItem('testProfile', profile);
       localStorage.setItem('testSchoolName', schoolName);
-      localStorage.setItem('testUserId', testUserData.id);
+      localStorage.setItem('testUserId', newUserId);
 
       toast.success(`Modo Teste: ${profile} em ${schoolName}`);
     } catch (error: any) {
       console.error('Erro ao iniciar modo teste:', error);
-      toast.error('Erro ao iniciar modo teste: ' + error.message);
+      toast.error('Erro ao iniciar modo teste: ' + (error?.message || 'erro desconhecido'));
     }
   };
 
@@ -353,19 +377,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const testUserId = localStorage.getItem('testUserId');
-      
-      if (testUserId) {
-        // 1. Deletar role temporária
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', testUserId);
 
-        // 2. Deletar usuário temporário
-        await supabase
-          .from('usuarios')
-          .delete()
-          .eq('id', testUserId);
+      if (testUserId) {
+        // Deletar usuário real via função do backend (limpa auth + tabelas)
+        const { error: delErr, data: delResp } = await supabase.functions.invoke('admin-delete-user', {
+          body: { userId: testUserId },
+        });
+        if (delErr) {
+          console.error('Erro ao deletar usuário de teste:', delErr, delResp);
+          // Continua a restauração mesmo com erro
+        }
       }
 
       // Restaurar admin original
@@ -387,14 +408,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       console.error('Erro ao sair do modo teste:', error);
       toast.error('Erro ao sair do modo teste');
-      
+
       // Mesmo com erro, restaurar o estado local
       setUser(originalAdmin);
       setIsImpersonating(false);
       setOriginalAdmin(null);
       setTestSchoolId(null);
       setTestProfile(null);
-      
+
       localStorage.removeItem('impersonating');
       localStorage.removeItem('originalAdmin');
       localStorage.removeItem('testSchoolId');
