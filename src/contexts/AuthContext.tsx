@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { toast } from 'sonner';
@@ -49,6 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [originalAdmin, setOriginalAdmin] = useState<Usuario | null>(null);
   const [testSchoolId, setTestSchoolId] = useState<string | null>(null);
   const [testProfile, setTestProfile] = useState<PerfilUsuario | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const profileLoadAttempts = useRef(0);
 
   useEffect(() => {
     // Restaurar sessão de impersonation se existir
@@ -82,12 +84,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         setSession(session);
         
-        if (session?.user) {
+        if (session?.user && !isLoadingProfile) {
           // Defer fetching user profile with setTimeout to avoid deadlock
           setTimeout(() => {
             fetchUserProfile(session.user.id);
-          }, 0);
-        } else {
+          }, 100);
+        } else if (!session?.user) {
           setUser(null);
           setLoading(false);
         }
@@ -95,19 +97,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    if (!isLoadingProfile) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        if (session?.user) {
+          fetchUserProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      });
+    }
 
     return () => subscription.unsubscribe();
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
+    // Prevenir execuções simultâneas
+    if (isLoadingProfile) {
+      console.log('⏸️ Perfil já está sendo carregado, ignorando chamada duplicada');
+      return;
+    }
+
+    setIsLoadingProfile(true);
+    
     try {
       console.log('🔵 Buscando perfil do usuário:', userId);
       
@@ -120,14 +132,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (userError) {
         console.error('❌ Erro ao buscar dados do usuário:', userError);
+        
+        // Se for erro de RLS/permissão e ainda não tentou muitas vezes, retry
+        if ((userError.code === 'PGRST116' || userError.message?.includes('permission')) && profileLoadAttempts.current < 3) {
+          profileLoadAttempts.current++;
+          console.log(`🔄 Tentando novamente (${profileLoadAttempts.current}/3)...`);
+          setIsLoadingProfile(false);
+          setTimeout(() => fetchUserProfile(userId), 500);
+          return;
+        }
+        
         throw userError;
       }
 
       if (!userData) {
         console.error('❌ Usuário não encontrado na tabela usuarios:', userId);
-        throw new Error('Usuário não encontrado');
+        
+        // Retry se ainda não excedeu tentativas
+        if (profileLoadAttempts.current < 3) {
+          profileLoadAttempts.current++;
+          console.log(`🔄 Tentando novamente (${profileLoadAttempts.current}/3)...`);
+          setIsLoadingProfile(false);
+          setTimeout(() => fetchUserProfile(userId), 500);
+          return;
+        }
+        
+        throw new Error('Usuário não encontrado após 3 tentativas');
       }
 
+      // Reset contador de tentativas em caso de sucesso
+      profileLoadAttempts.current = 0;
       console.log('✅ Dados do usuário encontrados:', userData.email);
 
       // Buscar roles do usuário
@@ -158,11 +192,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('✅ Perfil do usuário carregado com sucesso');
     } catch (error) {
       console.error('❌ Erro fatal ao buscar perfil do usuário:', error);
-      toast.error('Erro ao carregar perfil do usuário');
-      // IMPORTANTE: fazer logout se falhar
+      toast.error('Erro ao carregar perfil do usuário. Por favor, tente fazer login novamente.');
+      // Fazer logout apenas após esgotadas as tentativas
       await supabase.auth.signOut();
     } finally {
       setLoading(false);
+      setIsLoadingProfile(false);
     }
   };
 
