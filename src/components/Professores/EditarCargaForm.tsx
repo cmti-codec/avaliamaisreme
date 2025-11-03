@@ -115,15 +115,26 @@ export function EditarCargaForm({
           <AlertDescription>
             <div className="space-y-1 text-sm">
               <p className="font-medium">
-                Carga atual na rede: {cargaAtualSemEstaLotacao}h / 50h limite
+                Carga contratual: {cargaProfessor.carga_contratual || 40}h
               </p>
-              <p className="text-muted-foreground">
-                Disponível: {cargaDisponivel}h
+              <p className="font-medium">
+                Carga alocada na rede: {cargaProfessor.carga_alocada}h / 50h máximo
               </p>
+              <div className="ml-3 space-y-0.5 text-muted-foreground">
+                {horasAulaInicial && plInicial ? (
+                  <>
+                    <p>• Nesta escola (atual): {(horasAulaInicial || 0) + (plInicial || 0)}h</p>
+                    <p>• Outras escolas: {cargaAtualSemEstaLotacao}h</p>
+                  </>
+                ) : (
+                  <p>• Em outras escolas: {cargaProfessor.carga_alocada}h</p>
+                )}
+              </div>
               {horasAula && pl && (
-                <p className={`font-semibold ${excedeLimiteRede ? 'text-red-600' : 'text-green-600'}`}>
-                  → Após salvar: {cargaTotalRede}h na rede
-                  {excedeLimiteRede && " ⚠️ EXCEDE LIMITE!"}
+                <p className={`font-semibold pt-1 ${excedeLimiteRede ? 'text-red-600' : excedeLimiteContratual ? 'text-orange-600' : 'text-green-600'}`}>
+                  → Após salvar: {cargaTotalEscola}h nesta escola | {cargaTotalRede}h total na rede
+                  {excedeLimiteRede && " ⚠️ EXCEDE 50h"}
+                  {excedeLimiteContratual && !excedeLimiteRede && " ⚠️ Excede contratual"}
                 </p>
               )}
             </div>

@@ -61,6 +61,26 @@ export const useLotacoes = (escolaId: string, anoLetivo: string) => {
       escola_id: string;
       ano_letivo: string;
     }) => {
+      // Validação: verificar se não existe professor duplicado
+      const { data: professorData, error: profError } = await supabase
+        .from("professores")
+        .select("id, nome")
+        .eq("id", dados.professor_id)
+        .single();
+
+      if (profError) throw new Error("Professor não encontrado");
+
+      // Verificar se existe outro professor com o mesmo nome (case insensitive)
+      const { data: duplicatas, error: dupError } = await supabase
+        .from("professores")
+        .select("id, nome, ativo, usuario_id")
+        .ilike("nome", professorData.nome)
+        .neq("id", dados.professor_id);
+
+      if (!dupError && duplicatas && duplicatas.length > 0) {
+        throw new Error(`⚠️ Detectado professor duplicado: "${professorData.nome}". Contate o administrador para resolver.`);
+      }
+
       const { data, error } = await supabase
         .from("lotacoes_professores")
         .insert({
@@ -81,10 +101,10 @@ export const useLotacoes = (escolaId: string, anoLetivo: string) => {
       const msg = error.message || "";
       if (msg.includes('excede')) {
         toast.error("❌ Carga horária excede o limite de 50h na rede!");
-      } else if (msg.includes('duplicate')) {
-        toast.error("Este professor já está lotado nesta escola/ano.");
+      } else if (msg.includes('duplicate') || msg.includes('duplicado')) {
+        toast.error(msg.includes('Detectado') ? msg : "Este professor já está lotado nesta escola/ano.");
       } else {
-        toast.error("Erro ao lotar professor");
+        toast.error(msg || "Erro ao lotar professor");
       }
     },
   });
