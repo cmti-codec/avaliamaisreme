@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [testProfile, setTestProfile] = useState<PerfilUsuario | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const profileLoadAttempts = useRef(0);
+  const cleanupAttempted = useRef(false);
 
   useEffect(() => {
     // Restaurar sessão de impersonation se existir
@@ -125,30 +126,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // 1. Buscar effectiveUserId via RPC
       const { data: effId, error: effErr } = await supabase.rpc('get_effective_user_id');
-      const effectiveUserId = effId ?? userId;
+      let effectiveUserId = effId ?? userId;
       
       console.log('🔵 Effective User ID:', effectiveUserId);
       console.log('🔵 Impersonating flag:', localStorage.getItem('impersonating'));
       
       // 2. Se effectiveUserId é diferente de userId E não está em modo impersonation legítimo, limpar
-      if (effectiveUserId !== userId && localStorage.getItem('impersonating') !== 'true') {
-        console.warn('⚠️ Detectada impersonação pendente não intencional. Limpando...');
-        
-        // Limpar o impersonated_by
-        const { error: cleanupErr } = await supabase
-          .from('usuarios')
-          .update({ impersonated_by: null })
-          .eq('impersonated_by', userId);
-        
-        if (cleanupErr) {
-          console.error('❌ Erro ao limpar impersonação:', cleanupErr);
-        } else {
+      // 2. Se effectiveUserId é diferente de userId E não está em modo impersonation legítimo, limpar (apenas 1x)
+      if (
+        effectiveUserId !== userId &&
+        localStorage.getItem('impersonating') !== 'true' &&
+        !cleanupAttempted.current
+      ) {
+        console.warn('⚠️ Detectada impersonação pendente não intencional. Limpando via RPC...');
+        cleanupAttempted.current = true;
+
+        const { data: clearedCount, error: rpcErr } = await supabase.rpc(
+          'clear_impersonations_for',
+          { _user_id: userId }
+        );
+
+        if (rpcErr) {
+          console.error('❌ Erro ao limpar impersonação via RPC:', rpcErr);
+        } else if ((clearedCount ?? 0) > 0) {
           console.log('✅ Impersonação pendente limpa. Recarregando perfil...');
           // Pequena pausa e recarregar
           setIsLoadingProfile(false);
           setTimeout(() => fetchUserProfile(userId), 200);
           return;
         }
+      }
+
+      // Fail-safe: após tentativa de limpeza, se ainda diferir, forçar auth.uid para evitar loop
+      if (effectiveUserId !== userId && cleanupAttempted.current) {
+        console.warn('⚠️ EffectiveUserId ainda difere após limpeza. Forçando uso do auth.uid.');
+        effectiveUserId = userId;
       }
       
       // 3. Buscar dados básicos do usuário usando effectiveUserId
@@ -217,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         escola_id,
       } as Usuario);
       
+      cleanupAttempted.current = false;
       console.log('✅ Perfil do usuário carregado com sucesso');
     } catch (error) {
       console.error('❌ Erro fatal ao buscar perfil do usuário:', error);
