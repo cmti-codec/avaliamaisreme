@@ -52,7 +52,7 @@ function LayoutWrapper({ children }: { children: React.ReactNode }) {
       <ImpersonateBanner />
       <div className={cn(
         "min-h-screen flex w-full bg-background",
-        isImpersonating && "pt-12"
+        isImpersonating && "pb-12"
       )}>
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">

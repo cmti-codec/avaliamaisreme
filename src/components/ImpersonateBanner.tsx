@@ -11,7 +11,7 @@ export function ImpersonateBanner() {
   const handleStop = isTestMode ? stopTestMode : stopImpersonating;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white px-4 py-2 flex items-center justify-between shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-amber-500 text-white px-4 py-2 flex items-center justify-between shadow-lg">
       <div className="flex items-center gap-3">
         <AlertTriangle className="h-5 w-5 flex-shrink-0" />
         <span className="font-semibold text-sm md:text-base">
