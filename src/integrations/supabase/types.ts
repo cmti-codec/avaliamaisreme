@@ -398,11 +398,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "horarios_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "horarios_professor_id_fkey"
             columns: ["professor_id"]
             isOneToOne: false
             referencedRelation: "professores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "horarios_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["professor_id"]
           },
           {
             foreignKeyName: "horarios_turma_id_fkey"
@@ -510,6 +524,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "professores"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotacoes_professores_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["professor_id"]
           },
         ]
       }
@@ -664,6 +685,13 @@ export type Database = {
             referencedRelation: "professores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "professor_eventos_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["professor_id"]
+          },
         ]
       }
       professores: {
@@ -734,6 +762,13 @@ export type Database = {
             columns: ["usuario_id"]
             isOneToOne: true
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professores_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios_completos"
             referencedColumns: ["id"]
           },
         ]
@@ -860,6 +895,13 @@ export type Database = {
             referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "usuarios_impersonated_by_fkey"
+            columns: ["impersonated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -885,6 +927,51 @@ export type Database = {
             columns: ["saesc"]
             isOneToOne: false
             referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usuarios_completos: {
+        Row: {
+          ativo: boolean | null
+          carga_horaria_contratual: number | null
+          cargo: string | null
+          cpf: string | null
+          created_at: string | null
+          email: string | null
+          escola_id: string | null
+          formacoes: Json | null
+          funcao_atual: string | null
+          horas_pl: number | null
+          id: string | null
+          impersonated_by: string | null
+          matricula: string | null
+          nome: string | null
+          professor_id: string | null
+          roles: Json | null
+          telefone: string | null
+          tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_impersonated_by_fkey"
+            columns: ["impersonated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_impersonated_by_fkey"
+            columns: ["impersonated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
             referencedColumns: ["id"]
           },
         ]
