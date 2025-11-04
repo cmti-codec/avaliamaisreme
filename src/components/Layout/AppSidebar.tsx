@@ -78,11 +78,16 @@ export function AppSidebar() {
     state
   } = useSidebar();
   const collapsed = state === "collapsed";
-  const { user: usuario } = useAuth();
+  const { user: usuario, isImpersonating, testSchoolId } = useAuth();
   const isAdmin = usuario?.roles.includes("ADMIN");
   const isGestaoEscolar = usuario?.roles.some(r => 
     ['DIRETOR', 'SECRETARIO', 'COORDENADOR'].includes(r)
   );
+  
+  // Obter nome da escola do localStorage quando em modo teste
+  const testSchoolName = testSchoolId ? localStorage.getItem('testSchoolName') : null;
+  const isTestMode = !!testSchoolId;
+
   return <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarContent>
         {/* Logo Section */}
@@ -96,6 +101,22 @@ export function AppSidebar() {
                 <p className="text-xs text-muted-foreground">Gestão Escolar</p>
               </div>}
           </div>
+          
+          {/* Badge de Contexto - Modo Teste */}
+          {isTestMode && !collapsed && (
+            <div className="mt-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-center gap-1 text-xs font-semibold text-amber-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                MODO TESTE
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground truncate">
+                {testSchoolName}
+              </div>
+              <div className="text-xs text-amber-600 font-medium">
+                {usuario?.primaryRole}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Main Navigation */}

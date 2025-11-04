@@ -17,8 +17,8 @@ export function ImpersonateBanner() {
         <span className="font-semibold text-sm md:text-base">
           {isTestMode ? (
             <>
-              ⏳ Modo Teste: {user.primaryRole} em {user.nome.split('(')[1]?.replace(')', '') || 'escola'}. 
-              <span className="ml-1 text-xs opacity-90">(Apenas visualização e consultas)</span>
+              ⚡ Modo Teste: {user.primaryRole} em {user.nome.split('(')[1]?.replace(')', '') || 'escola'}. 
+              <span className="ml-1 text-xs opacity-90">(Você pode editar normalmente)</span>
             </>
           ) : (
             <>

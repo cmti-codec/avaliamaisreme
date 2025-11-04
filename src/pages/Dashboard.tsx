@@ -7,11 +7,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TestProfileModal } from "@/components/Admin/TestProfileModal";
+import { useTestModeShortcut } from "@/hooks/useTestModeShortcut";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [testModalOpen, setTestModalOpen] = useState(false);
   const isAdmin = user?.roles.includes('ADMIN');
+  
+  // Atalho Ctrl+Shift+T para abrir modal de teste
+  useTestModeShortcut(() => setTestModalOpen(true), isAdmin);
 
   return (
     <div className="space-y-6">
@@ -30,7 +34,10 @@ const Dashboard = () => {
               Modo Teste de Perfil
             </CardTitle>
             <CardDescription>
-              Teste o sistema assumindo diferentes perfis por escola sem usar contas reais
+              Teste o sistema assumindo diferentes perfis por escola sem usar contas reais.
+              <span className="block mt-1 text-xs font-medium text-amber-700">
+                Atalho: Ctrl+Shift+T (Cmd+Shift+T no Mac)
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
