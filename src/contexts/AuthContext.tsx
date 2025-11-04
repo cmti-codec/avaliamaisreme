@@ -121,13 +121,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoadingProfile(true);
     
     try {
-      console.log('🔵 Buscando perfil do usuário:', userId);
+      console.log('🔵 Buscando perfil - Auth UID:', userId);
       
-      // Buscar dados básicos do usuário (usar maybeSingle para evitar erro)
+      // 1. Buscar effectiveUserId via RPC
+      const { data: effId, error: effErr } = await supabase.rpc('get_effective_user_id');
+      const effectiveUserId = effId ?? userId;
+      
+      console.log('🔵 Effective User ID:', effectiveUserId);
+      console.log('🔵 Impersonating flag:', localStorage.getItem('impersonating'));
+      
+      // 2. Se effectiveUserId é diferente de userId E não está em modo impersonation legítimo, limpar
+      if (effectiveUserId !== userId && localStorage.getItem('impersonating') !== 'true') {
+        console.warn('⚠️ Detectada impersonação pendente não intencional. Limpando...');
+        
+        // Limpar o impersonated_by
+        const { error: cleanupErr } = await supabase
+          .from('usuarios')
+          .update({ impersonated_by: null })
+          .eq('impersonated_by', userId);
+        
+        if (cleanupErr) {
+          console.error('❌ Erro ao limpar impersonação:', cleanupErr);
+        } else {
+          console.log('✅ Impersonação pendente limpa. Recarregando perfil...');
+          // Pequena pausa e recarregar
+          setIsLoadingProfile(false);
+          setTimeout(() => fetchUserProfile(userId), 200);
+          return;
+        }
+      }
+      
+      // 3. Buscar dados básicos do usuário usando effectiveUserId
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('*')
-        .eq('id', userId)
+        .eq('id', effectiveUserId)
         .maybeSingle();
 
       if (userError) {
@@ -146,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!userData) {
-        console.error('❌ Usuário não encontrado na tabela usuarios:', userId);
+        console.error('❌ Usuário não encontrado na tabela usuarios:', effectiveUserId);
         
         // Retry se ainda não excedeu tentativas
         if (profileLoadAttempts.current < 3) {
@@ -164,11 +192,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileLoadAttempts.current = 0;
       console.log('✅ Dados do usuário encontrados:', userData.email);
 
-      // Buscar roles do usuário
+      // 4. Buscar roles do usuário usando effectiveUserId
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('role, escola_id')
-        .eq('user_id', userId);
+        .eq('user_id', effectiveUserId);
 
       if (rolesError) {
         console.error('❌ Erro ao buscar roles:', rolesError);
@@ -194,7 +222,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('❌ Erro fatal ao buscar perfil do usuário:', error);
       toast.error('Erro ao carregar perfil do usuário. Por favor, tente fazer login novamente.');
       // Fazer logout apenas após esgotadas as tentativas
-      await supabase.auth.signOut();
+      if (profileLoadAttempts.current >= 3) {
+        await supabase.auth.signOut();
+      }
     } finally {
       setLoading(false);
       setIsLoadingProfile(false);
