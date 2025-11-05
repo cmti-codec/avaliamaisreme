@@ -59,6 +59,29 @@ export function normalizarTempo(turno: string, tempo: number): { turno: string; 
   return { turno, tempo };
 }
 
+// Normalizar etapa/modalidade (remover variações ETI/Campo)
+export function normalizarEtapaModalidade(etapa_modalidade: string): string {
+  if (!etapa_modalidade) return "";
+  
+  // Remover "ETI" e "do Campo" para normalizar
+  let normalizado = etapa_modalidade
+    .replace(/\s*ETI\s*/gi, "")
+    .replace(/\s*do\s+Campo\s*/gi, "")
+    .trim();
+  
+  return normalizado;
+}
+
+// Verificar se professor é Assistente de Educação Infantil
+export function isAssistenteEducacaoInfantil(professorFormacoes: string[] | null): boolean {
+  if (!professorFormacoes || professorFormacoes.length === 0) return false;
+  
+  return professorFormacoes.some((f) => 
+    f.toUpperCase().includes("ASSISTENTE") && 
+    f.toUpperCase().includes("EDUCAÇÃO INFANTIL")
+  );
+}
+
 // Validar se professor tem formação para dar aula de componente
 export function validarFormacao(
   professorFormacoes: string[] | null,
@@ -71,57 +94,181 @@ export function validarFormacao(
     return true;
   }
 
-  // Normalizar componente para comparação
+  // Normalizar para comparações
   const componenteNorm = componente.toUpperCase().trim();
+  const segmentoNormalizado = normalizarEtapaModalidade(etapa_modalidade);
   
-  // Educação Infantil com ATIVIDADES - aceitar Pedagogia
-  if (etapa_modalidade === "Educação Infantil") {
-    if (componenteNorm.includes("ATIVIDADES")) {
+  // ATIVIDADES DIVERSAS - apenas Assistentes de Educação Infantil
+  if (componenteNorm === "ATIVIDADES DIVERSAS") {
+    return isAssistenteEducacaoInfantil(professorFormacoes);
+  }
+
+  // Educação Infantil - Grupos 1, 1I, 1II, 2, 3
+  if (segmentoNormalizado === "Educação Infantil" &&
+      ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAno)) {
+    if (componenteNorm === "ATIVIDADES") {
+      return professorFormacoes.some((f) => {
+        const fNorm = f.toUpperCase();
+        return (fNorm.includes("PEDAGOGIA") && fNorm.includes("INFANTIL")) ||
+               fNorm.includes("EDUCAÇÃO INFANTIL");
+      });
+    }
+    if (componenteNorm === "EDUCAÇÃO FÍSICA") {
       return professorFormacoes.some((f) => 
-        f.toUpperCase().includes("PEDAGOGIA") || 
-        f.toUpperCase().includes("EDUCAÇÃO INFANTIL")
+        f.toUpperCase().includes("EDUCAÇÃO FÍSICA") || 
+        f.toUpperCase().includes("EDUCACAO FISICA")
       );
     }
   }
 
-  // EF I - Anos Iniciais (polivalência)
-  if (etapa_modalidade === "Ensino Fundamental I - Anos Iniciais") {
-    const componentesPolivalentes = ["MATEMÁTICA", "LÍNGUA PORTUGUESA", "HISTÓRIA", "GEOGRAFIA", "CIÊNCIAS"];
-    
-    if (componentesPolivalentes.includes(componenteNorm)) {
-      // Aceitar Pedagogia ou formação específica na área
+  // Educação Infantil - Grupos 4, 4 EMEI, 4 Escola, 5, 5 EMEI, 5 Escola
+  if (segmentoNormalizado === "Educação Infantil" &&
+      ["Grupo 4", "Grupo 4 EMEI", "Grupo 4 Escola", "Grupo 5", "Grupo 5 EMEI", "Grupo 5 Escola"].includes(grupoAno)) {
+    if (componenteNorm === "ATIVIDADES") {
       return professorFormacoes.some((f) => {
         const fNorm = f.toUpperCase();
-        return fNorm.includes("PEDAGOGIA") || 
-               fNorm.includes("ANOS INICIAIS") ||
-               fNorm.includes(componenteNorm);
+        return (fNorm.includes("PEDAGOGIA") && fNorm.includes("INFANTIL")) ||
+               fNorm.includes("EDUCAÇÃO INFANTIL");
       });
+    }
+    if (componenteNorm === "EDUCAÇÃO FÍSICA") {
+      return professorFormacoes.some((f) => 
+        f.toUpperCase().includes("EDUCAÇÃO FÍSICA") || 
+        f.toUpperCase().includes("EDUCACAO FISICA")
+      );
+    }
+    if (componenteNorm === "ARTE") {
+      return professorFormacoes.some((f) => f.toUpperCase().includes("ARTE"));
     }
   }
 
-  // Componentes específicos - match direto ou parcial
-  return professorFormacoes.some((f) => {
-    const fNorm = f.toUpperCase();
-    const compNorm = componenteNorm;
+  // EF I - Anos Iniciais (componentes polivalentes)
+  if (segmentoNormalizado === "Ensino Fundamental I - Anos Iniciais") {
+    const componentesPolivalentes = ["MATEMÁTICA", "LÍNGUA PORTUGUESA", "HISTÓRIA", "GEOGRAFIA"];
     
-    // Match exato ou parcial
-    if (fNorm.includes(compNorm) || compNorm.includes(fNorm)) {
-      return true;
+    if (componentesPolivalentes.includes(componenteNorm)) {
+      return professorFormacoes.some((f) => {
+        const fNorm = f.toUpperCase();
+        return (fNorm.includes("PEDAGOGIA") && (fNorm.includes("ANOS INICIAIS") || fNorm.includes("FUNDAMENTAL"))) ||
+               fNorm.includes(componenteNorm);
+      });
     }
-    
-    // Casos especiais
-    if (compNorm.includes("EDUCAÇÃO FÍSICA") && fNorm.includes("EDUCAÇÃO FÍSICA")) {
-      return true;
+
+    // Ciências - Pedagogia com Ciências
+    if (componenteNorm === "CIÊNCIAS") {
+      return professorFormacoes.some((f) => {
+        const fNorm = f.toUpperCase();
+        return (fNorm.includes("PEDAGOGIA") && fNorm.includes("CIÊNCIAS")) ||
+               (fNorm.includes("PEDAGOGIA") && fNorm.includes("CIENCIAS")) ||
+               fNorm.includes("CIÊNCIAS") ||
+               fNorm.includes("BIOLOGIA");
+      });
     }
-    if (compNorm.includes("INGLÊS") && (fNorm.includes("INGLÊS") || fNorm.includes("INGLESA"))) {
-      return true;
+
+    // Arte
+    if (componenteNorm === "ARTE") {
+      return professorFormacoes.some((f) => f.toUpperCase().includes("ARTE"));
     }
-    if (compNorm.includes("PORTUGUÊS") && fNorm.includes("PORTUGUESA")) {
-      return true;
+
+    // Educação Física
+    if (componenteNorm === "EDUCAÇÃO FÍSICA I" || componenteNorm === "EDUCACAO FISICA I") {
+      return professorFormacoes.some((f) => 
+        f.toUpperCase().includes("EDUCAÇÃO FÍSICA") || 
+        f.toUpperCase().includes("EDUCACAO FISICA")
+      );
     }
-    
-    return false;
-  });
+  }
+
+  // Componentes universais (EF II e EJA)
+  
+  // Educação Física
+  if (componenteNorm.includes("EDUCAÇÃO FÍSICA") || componenteNorm.includes("EDUCACAO FISICA")) {
+    return professorFormacoes.some((f) => 
+      f.toUpperCase().includes("EDUCAÇÃO FÍSICA") || 
+      f.toUpperCase().includes("EDUCACAO FISICA")
+    );
+  }
+
+  // Arte
+  if (componenteNorm === "ARTE") {
+    return professorFormacoes.some((f) => f.toUpperCase().includes("ARTE"));
+  }
+
+  // Língua Inglesa
+  if (componenteNorm.includes("INGLÊS") || componenteNorm.includes("LINGUA INGLESA")) {
+    return professorFormacoes.some((f) => {
+      const fNorm = f.toUpperCase();
+      return fNorm.includes("INGLÊS") || 
+             fNorm.includes("INGLES") || 
+             fNorm.includes("LÍNGUA INGLESA") || 
+             fNorm.includes("LETRAS - INGLÊS");
+    });
+  }
+
+  // Ciências
+  if (componenteNorm.includes("CIÊNCIAS") || componenteNorm.includes("CIENCIAS")) {
+    return professorFormacoes.some((f) => {
+      const fNorm = f.toUpperCase();
+      return fNorm.includes("CIÊNCIAS") || 
+             fNorm.includes("CIENCIAS") || 
+             fNorm.includes("BIOLOGIA") || 
+             fNorm.includes("FÍSICA") || 
+             fNorm.includes("QUÍMICA");
+    });
+  }
+
+  // História
+  if (componenteNorm.includes("HISTÓRIA") || componenteNorm.includes("HISTORIA")) {
+    return professorFormacoes.some((f) => {
+      const fNorm = f.toUpperCase();
+      return fNorm.includes("HISTÓRIA") || 
+             fNorm.includes("HISTORIA") || 
+             fNorm.includes("CIÊNCIAS SOCIAIS");
+    });
+  }
+
+  // Geografia
+  if (componenteNorm.includes("GEOGRAFIA")) {
+    return professorFormacoes.some((f) => f.toUpperCase().includes("GEOGRAFIA"));
+  }
+
+  // Matemática
+  if (componenteNorm.includes("MATEMÁTICA") || 
+      componenteNorm.includes("MATEMATICA") ||
+      componenteNorm.includes("APLICAÇÕES MATEMÁTICAS") || 
+      componenteNorm.includes("APLICACOES MATEMATICAS")) {
+    return professorFormacoes.some((f) => {
+      const fNorm = f.toUpperCase();
+      return fNorm.includes("MATEMÁTICA") || fNorm.includes("MATEMATICA");
+    });
+  }
+
+  // Língua Portuguesa
+  if (componenteNorm.includes("LÍNGUA PORTUGUESA") || 
+      componenteNorm.includes("LINGUA PORTUGUESA") ||
+      componenteNorm.includes("INICIAÇÃO AOS ESTUDOS LITERÁRIOS") || 
+      componenteNorm.includes("INICIACAO AOS ESTUDOS LITERARIOS")) {
+    return professorFormacoes.some((f) => {
+      const fNorm = f.toUpperCase();
+      return fNorm.includes("PORTUGUÊS") || 
+             fNorm.includes("PORTUGUES") ||
+             fNorm.includes("LETRAS") || 
+             fNorm.includes("LÍNGUA PORTUGUESA");
+    });
+  }
+
+  // Ensino Religioso
+  if (componenteNorm.includes("ENSINO RELIGIOSO")) {
+    return professorFormacoes.some((f) => {
+      const fNorm = f.toUpperCase();
+      return fNorm.includes("TEOLOGIA") || 
+             fNorm.includes("CIÊNCIAS DA RELIGIÃO") || 
+             fNorm.includes("PEDAGOGIA");
+    });
+  }
+
+  // Para outros componentes não mapeados, retornar false
+  return false;
 }
 
 // Detectar conflitos de professor
@@ -186,15 +333,72 @@ export function gerarSigla(nomeComponente: string): string {
   return mapa[nomeComponente] || nomeComponente.substring(0, 3).toUpperCase();
 }
 
+// Verificar se componente é polivalente (professor único para vários componentes)
+export function isComponentePolivalente(
+  componenteNome: string,
+  etapa_modalidade: string
+): boolean {
+  if (!componenteNome || !etapa_modalidade) return false;
+
+  const componente = componenteNome.toUpperCase();
+  const segmentoNormalizado = normalizarEtapaModalidade(etapa_modalidade);
+
+  // Educação Infantil: ATIVIDADES é polivalente
+  if (segmentoNormalizado === "Educação Infantil" && componente === "ATIVIDADES") {
+    return true;
+  }
+
+  // Ensino Fundamental I: Língua Portuguesa, Matemática, História e Geografia são polivalentes
+  if (segmentoNormalizado === "Ensino Fundamental I - Anos Iniciais") {
+    const componentesPolivalentes = [
+      "LÍNGUA PORTUGUESA", "LINGUA PORTUGUESA",
+      "MATEMÁTICA", "MATEMATICA",
+      "HISTÓRIA", "HISTORIA",
+      "GEOGRAFIA"
+    ];
+    return componentesPolivalentes.includes(componente);
+  }
+
+  return false;
+}
+
 // Validar se professor está travado (unidocência)
 export function isProfessorTravado(
   etapa_modalidade: string,
   grupoAno: string,
   componente: string
 ): boolean {
+  const segmentoNormalizado = normalizarEtapaModalidade(etapa_modalidade);
+  
   return (
-    etapa_modalidade === "Educação Infantil" &&
-    ["Grupo 1", "Grupo 2", "Grupo 3"].includes(grupoAno) &&
+    segmentoNormalizado === "Educação Infantil" &&
+    ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAno) &&
     componente === "ATIVIDADES"
   );
+}
+
+// Obter nível de qualificação do professor para um componente
+export function getNivelQualificacao(
+  professorFormacoes: string[] | null,
+  componente: string,
+  etapa_modalidade: string,
+  grupoAno: string
+): "ideal" | "aceitavel" | "nao_qualificado" {
+  if (!validarFormacao(professorFormacoes, componente, etapa_modalidade, grupoAno)) {
+    return "nao_qualificado";
+  }
+
+  if (!professorFormacoes || professorFormacoes.length === 0) {
+    return "aceitavel"; // Sem formação cadastrada
+  }
+
+  const componenteNorm = componente.toUpperCase().trim();
+  
+  // Verificar se tem formação específica exata
+  const temFormacaoEspecifica = professorFormacoes.some((f) => {
+    const fNorm = f.toUpperCase();
+    return fNorm.includes(componenteNorm);
+  });
+
+  return temFormacaoEspecifica ? "ideal" : "aceitavel";
 }

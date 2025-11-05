@@ -24,6 +24,8 @@ import {
   gerarSigla,
   validarFormacao,
   isProfessorTravado,
+  getNivelQualificacao,
+  isComponentePolivalente,
   type HorarioSlot,
   type Professor,
   type Turma,
@@ -80,11 +82,21 @@ export const GradeHoraria = ({
   };
 
   const getProfessoresFiltrados = useCallback((componente: string): Professor[] => {
-    return professores
+    const professoresValidos = professores
       .filter((prof) =>
         validarFormacao(prof.formacoes, componente, turma.etapa_modalidade, turma.grupo_ano)
-      )
-      .sort((a, b) => a.nome.localeCompare(b.nome));
+      );
+
+    // Ordenar por nível de qualificação (ideais primeiro) e depois por nome
+    return professoresValidos.sort((a, b) => {
+      const nivelA = getNivelQualificacao(a.formacoes, componente, turma.etapa_modalidade, turma.grupo_ano);
+      const nivelB = getNivelQualificacao(b.formacoes, componente, turma.etapa_modalidade, turma.grupo_ano);
+      
+      if (nivelA === "ideal" && nivelB !== "ideal") return -1;
+      if (nivelA !== "ideal" && nivelB === "ideal") return 1;
+      
+      return a.nome.localeCompare(b.nome);
+    });
   }, [professores, turma.etapa_modalidade, turma.grupo_ano]);
 
   const handleComponenteChange = useCallback((dia: string, tempo: number, componente: string) => {
@@ -92,7 +104,20 @@ export const GradeHoraria = ({
     const profsFiltrados = getProfessoresFiltrados(componente);
 
     // Auto-selecionar se houver apenas 1 professor
-    const professorId = profsFiltrados.length === 1 ? profsFiltrados[0].id : null;
+    let professorId = profsFiltrados.length === 1 ? profsFiltrados[0].id : null;
+
+    // Se for componente polivalente, verificar se já existe professor selecionado
+    if (isComponentePolivalente(componente, turma.etapa_modalidade)) {
+      const professorPolivalenteExistente = Object.values(horarios).find(
+        (slot) => 
+          isComponentePolivalente(slot.componente, turma.etapa_modalidade) && 
+          slot.professor_id
+      )?.professor_id;
+
+      if (professorPolivalenteExistente) {
+        professorId = professorPolivalenteExistente;
+      }
+    }
 
     const slot: HorarioSlot = {
       dia_semana: dia,
@@ -119,7 +144,7 @@ export const GradeHoraria = ({
     ) {
       setProfessorTravado(professorId);
     }
-  }, [aulasGeminadas, tempos, onHorarioChange, getProfessoresFiltrados, turma]);
+  }, [aulasGeminadas, tempos, onHorarioChange, getProfessoresFiltrados, turma, horarios]);
 
   const handleProfessorChange = useCallback((dia: string, tempo: number, professorId: string) => {
     const key = getSlotKey(dia, tempo);
@@ -234,11 +259,49 @@ export const GradeHoraria = ({
                             <SelectValue placeholder="Professor" />
                           </SelectTrigger>
                           <SelectContent>
-                            {profsFiltrados.map((prof) => (
-                              <SelectItem key={prof.id} value={prof.id}>
-                                {prof.nome}
-                              </SelectItem>
-                            ))}
+                            {profsFiltrados.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                Nenhum professor qualificado
+                              </div>
+                            ) : (
+                              profsFiltrados.map((prof) => {
+                                const nivel = getNivelQualificacao(
+                                  prof.formacoes,
+                                  slot.componente,
+                                  turma.etapa_modalidade,
+                                  turma.grupo_ano
+                                );
+                                const formacao = prof.formacoes && prof.formacoes.length > 0
+                                  ? prof.formacoes[0]
+                                  : "Sem formação cadastrada";
+
+                                return (
+                                  <SelectItem key={prof.id} value={prof.id}>
+                                    <div className="flex items-center justify-between gap-2 w-full">
+                                      <span className="truncate">{prof.nome}</span>
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        {nivel === "ideal" && (
+                                          <Badge 
+                                            variant="outline" 
+                                            className="h-5 px-1.5 text-xs bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                          >
+                                            ✓
+                                          </Badge>
+                                        )}
+                                        {nivel === "aceitavel" && (
+                                          <Badge 
+                                            variant="outline" 
+                                            className="h-5 px-1.5 text-xs bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                          >
+                                            !
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })
+                            )}
                           </SelectContent>
                         </Select>
                       )}
