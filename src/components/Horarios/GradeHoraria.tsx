@@ -26,6 +26,7 @@ import {
   isProfessorTravado,
   getNivelQualificacao,
   isComponentePolivalente,
+  isComponenteValidoParaTurma,
   type HorarioSlot,
   type Professor,
   type Turma,
@@ -56,10 +57,16 @@ export const GradeHoraria = ({
   const [professorTravado, setProfessorTravado] = useState<string | null>(null);
   const tempos = TURNOS_TEMPOS[turma.turno] || [];
   
-  // Usar componentes da matriz atribuída à turma
-  const componentesDisponiveis = turmaComMatriz?.componentes 
-    ? Object.keys(turmaComMatriz.componentes).sort()
-    : [];
+  // Usar componentes da matriz atribuída à turma e filtrar por validade
+  const componentesDisponiveis = useMemo(() => {
+    if (!turmaComMatriz?.componentes) return [];
+    
+    return Object.keys(turmaComMatriz.componentes)
+      .filter((comp) => 
+        isComponenteValidoParaTurma(comp, turma.etapa_modalidade, turma.grupo_ano)
+      )
+      .sort();
+  }, [turmaComMatriz, turma.etapa_modalidade, turma.grupo_ano]);
 
   useEffect(() => {
     // Detectar professor travado

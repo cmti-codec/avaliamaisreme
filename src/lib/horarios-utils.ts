@@ -377,6 +377,35 @@ export function isProfessorTravado(
   );
 }
 
+// Validar se um componente é válido para uma etapa/modalidade e grupo/ano
+export function isComponenteValidoParaTurma(
+  componenteNome: string,
+  etapa_modalidade: string,
+  grupoAno: string
+): boolean {
+  if (!componenteNome || !etapa_modalidade) return false;
+
+  const componenteNorm = componenteNome.toUpperCase().trim();
+  const segmentoNormalizado = normalizarEtapaModalidade(etapa_modalidade);
+
+  // Educação Infantil - Grupos 1, 1I, 1II, 2, 3
+  if (segmentoNormalizado === "Educação Infantil" &&
+      ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAno)) {
+    const componentesValidos = ["ATIVIDADES", "ATIVIDADES DIVERSAS", "EDUCAÇÃO FÍSICA"];
+    return componentesValidos.includes(componenteNorm);
+  }
+
+  // Educação Infantil - Grupos 4 e 5
+  if (segmentoNormalizado === "Educação Infantil" &&
+      ["Grupo 4", "Grupo 4 EMEI", "Grupo 4 Escola", "Grupo 5", "Grupo 5 EMEI", "Grupo 5 Escola"].includes(grupoAno)) {
+    const componentesValidos = ["ATIVIDADES", "ATIVIDADES DIVERSAS", "EDUCAÇÃO FÍSICA", "ARTE"];
+    return componentesValidos.includes(componenteNorm);
+  }
+
+  // Para EF I, EF II, EJA - todos os componentes são válidos
+  return true;
+}
+
 // Obter nível de qualificação do professor para um componente
 export function getNivelQualificacao(
   professorFormacoes: string[] | null,
