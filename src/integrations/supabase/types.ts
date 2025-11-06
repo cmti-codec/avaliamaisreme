@@ -405,6 +405,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "horarios_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
             foreignKeyName: "horarios_professor_id_fkey"
             columns: ["professor_id"]
             isOneToOne: false
@@ -472,6 +479,87 @@ export type Database = {
           usuario_id?: string
         }
         Relationships: []
+      }
+      lotacoes: {
+        Row: {
+          ativo: boolean
+          carga_horaria: number | null
+          created_at: string
+          created_by: string | null
+          data_fim: string | null
+          data_inicio: string
+          escola_saesc: string
+          id: string
+          observacoes: string | null
+          perfil: string
+          pessoa_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          carga_horaria?: number | null
+          created_at?: string
+          created_by?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          escola_saesc: string
+          id?: string
+          observacoes?: string | null
+          perfil: string
+          pessoa_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          carga_horaria?: number | null
+          created_at?: string
+          created_by?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          escola_saesc?: string
+          id?: string
+          observacoes?: string | null
+          perfil?: string
+          pessoa_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lotacoes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotacoes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotacoes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
+            foreignKeyName: "lotacoes_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotacoes_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["pessoa_id"]
+          },
+        ]
       }
       lotacoes_professores: {
         Row: {
@@ -652,6 +740,42 @@ export type Database = {
         }
         Relationships: []
       }
+      pessoas: {
+        Row: {
+          ativo: boolean
+          cpf: string
+          created_at: string
+          data_nascimento: string | null
+          email: string
+          id: string
+          nome_completo: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cpf: string
+          created_at?: string
+          data_nascimento?: string | null
+          email: string
+          id?: string
+          nome_completo: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cpf?: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string
+          id?: string
+          nome_completo?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       professor_eventos: {
         Row: {
           created_at: string | null
@@ -771,6 +895,69 @@ export type Database = {
             referencedRelation: "usuarios_completos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "professores_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+        ]
+      }
+      sessoes_contexto: {
+        Row: {
+          atualizado_em: string
+          escola_saesc: string
+          id: string
+          iniciado_em: string
+          lotacao_id: string
+          usuario_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          escola_saesc: string
+          id?: string
+          iniciado_em?: string
+          lotacao_id: string
+          usuario_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          escola_saesc?: string
+          id?: string
+          iniciado_em?: string
+          lotacao_id?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessoes_contexto_lotacao_id_fkey"
+            columns: ["lotacao_id"]
+            isOneToOne: false
+            referencedRelation: "lotacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_contexto_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_contexto_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessoes_contexto_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
         ]
       }
       turmas: {
@@ -861,6 +1048,8 @@ export type Database = {
           id: string
           impersonated_by: string | null
           nome: string
+          pessoa_id: string | null
+          ultimo_acesso: string | null
         }
         Insert: {
           ativo?: boolean | null
@@ -870,6 +1059,8 @@ export type Database = {
           id?: string
           impersonated_by?: string | null
           nome: string
+          pessoa_id?: string | null
+          ultimo_acesso?: string | null
         }
         Update: {
           ativo?: boolean | null
@@ -879,6 +1070,8 @@ export type Database = {
           id?: string
           impersonated_by?: string | null
           nome?: string
+          pessoa_id?: string | null
+          ultimo_acesso?: string | null
         }
         Relationships: [
           {
@@ -901,6 +1094,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "usuarios_completos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_impersonated_by_fkey"
+            columns: ["impersonated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
+            foreignKeyName: "usuarios_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usuarios_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["pessoa_id"]
           },
         ]
       }
@@ -974,7 +1188,29 @@ export type Database = {
             referencedRelation: "usuarios_completos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "usuarios_impersonated_by_fkey"
+            columns: ["impersonated_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
         ]
+      }
+      usuarios_contextualizados: {
+        Row: {
+          carga_horaria_total: number | null
+          cpf: string | null
+          email: string | null
+          lotacoes_ativas: Json | null
+          nome_completo: string | null
+          pessoa_id: string | null
+          telefone: string | null
+          total_lotacoes_ativas: number | null
+          usuario_ativo: boolean | null
+          usuario_id: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
