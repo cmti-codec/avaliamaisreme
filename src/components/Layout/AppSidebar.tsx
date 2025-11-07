@@ -65,6 +65,10 @@ const adminItems = [{
   url: "/admin/professores-pool",
   icon: Users
 }, {
+  title: "Diretores e Secretários",
+  url: "/admin/diretores-secretarios",
+  icon: Users
+}, {
   title: "Matrizes Curriculares",
   url: "/admin/matrizes",
   icon: BookOpen
@@ -75,6 +79,10 @@ const adminItems = [{
 }, {
   title: "Importar Dados",
   url: "/admin/importacao",
+  icon: Download
+}, {
+  title: "Importar Lotações",
+  url: "/admin/importar-lotacoes",
   icon: Download
 }];
 export function AppSidebar() {
