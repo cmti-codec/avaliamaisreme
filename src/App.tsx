@@ -8,10 +8,12 @@ import { AppSidebar } from "@/components/Layout/AppSidebar";
 import { AppHeader } from "@/components/Layout/AppHeader";
 import { AppFooter } from "@/components/Layout/AppFooter";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SchoolProvider, useSchool } from "@/contexts/SchoolContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ImpersonateBanner } from "@/components/ImpersonateBanner";
 import { cn } from "@/lib/utils";
 import Dashboard from "./pages/Dashboard";
+import SelecaoEscola from "./pages/SelecaoEscola";
 import Professores from "./pages/Professores";
 import Turmas from "./pages/Turmas";
 import Escolas from "./pages/Escolas";
@@ -39,13 +41,19 @@ const queryClient = new QueryClient({
 
 function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const { user, loading, isImpersonating } = useAuth();
+  const { needsSchoolSelection, loading: schoolLoading } = useSchool();
 
-  if (loading) {
+  if (loading || schoolLoading) {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Se precisa selecionar escola, redirecionar
+  if (needsSchoolSelection) {
+    return <Navigate to="/selecionar-escola" replace />;
   }
 
   return (
@@ -75,9 +83,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
+          <SchoolProvider>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/selecionar-escola" element={<SelecaoEscola />} />
 
             {/* Protected Routes */}
             <Route path="/" element={<LayoutWrapper><Dashboard /></LayoutWrapper>} />
@@ -105,8 +115,9 @@ const App = () => (
             <Route path="/horarios/consulta" element={<LayoutWrapper><ConsultaHorarios /></LayoutWrapper>} />
             <Route path="/horarios/lancamento" element={<LayoutWrapper><LancamentoHorarios /></LayoutWrapper>} />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </SchoolProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

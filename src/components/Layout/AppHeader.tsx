@@ -1,4 +1,11 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSchool } from "@/contexts/SchoolContext";
+import { useUsuario } from "@/hooks/useUsuario";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,17 +14,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, LogOut } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { useUsuario } from "@/hooks/useUsuario";
+import { User, LogOut, School, RefreshCw, Info, ChevronDown } from "lucide-react";
+import { TrocarEscolaDialog } from "./TrocarEscolaDialog";
+import { MinhasLotacoesDialog } from "./MinhasLotacoesDialog";
 
 export function AppHeader() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const { data: usuario } = useUsuario();
+  const { escolaAtual, todasLotacoes } = useSchool();
+  const navigate = useNavigate();
+  const [showTrocarEscola, setShowTrocarEscola] = useState(false);
+  const [showMinhasLotacoes, setShowMinhasLotacoes] = useState(false);
 
   const getPerfilLabel = (perfil: string) => {
     const labels: Record<string, string> = {
@@ -38,51 +46,104 @@ export function AppHeader() {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 sticky top-0 z-40">
-      <div className="flex items-center gap-4">
-        <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-      </div>
-
-      <div className="flex items-center gap-4">
-        {user && (
-          <>
-            <Badge variant="outline" className="hidden sm:flex">
-              {getPerfilLabel(user.primaryRole)}
-            </Badge>
-            
+    <>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-14 items-center px-4 gap-4">
+          <SidebarTrigger />
+          
+          {/* Escola Atual */}
+          {escolaAtual && todasLotacoes.length > 1 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {user.nome.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium hidden sm:block">{user.nome}</span>
-                </button>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <School className="h-4 w-4" />
+                  <span className="hidden sm:inline">{escolaAtual.nome}</span>
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">{user.nome}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                  </div>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel className="flex items-center gap-2">
+                  <School className="h-4 w-4" />
+                  Escola Atual
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  Perfil
-                </DropdownMenuItem>
+                <div className="px-2 py-1.5 text-sm">
+                  <p className="font-medium">{escolaAtual.nome}</p>
+                  <Badge variant="secondary" className="mt-1">
+                    {escolaAtual.perfil}
+                  </Badge>
+                </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sair
+                <DropdownMenuItem onClick={() => setShowTrocarEscola(true)}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Trocar Escola
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowMinhasLotacoes(true)}>
+                  <Info className="mr-2 h-4 w-4" />
+                  Minhas Lotações
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </>
-        )}
-      </div>
-    </header>
+          )}
+
+          {escolaAtual && todasLotacoes.length === 1 && (
+            <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+              <School className="h-4 w-4" />
+              <span>{escolaAtual.nome}</span>
+            </div>
+          )}
+          
+          {usuario && (
+            <div className="ml-auto flex items-center gap-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">
+                        {usuario.nome
+                          .split(' ')
+                          .map(n => n[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start text-left">
+                      <span className="text-sm font-medium">{usuario.nome}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {getPerfilLabel(usuario.primaryRole)}
+                      </span>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/perfil')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Perfil
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <TrocarEscolaDialog
+        open={showTrocarEscola}
+        onOpenChange={setShowTrocarEscola}
+      />
+
+      <MinhasLotacoesDialog
+        open={showMinhasLotacoes}
+        onOpenChange={setShowMinhasLotacoes}
+      />
+    </>
   );
 }
