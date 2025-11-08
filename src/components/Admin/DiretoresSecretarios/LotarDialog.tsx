@@ -27,7 +27,7 @@ interface LotarDialogProps {
     pessoa_id: string;
     nome_completo: string;
   } | null;
-  perfil: 'DIRETOR' | 'SECRETARIO';
+  perfil: 'DIRETOR' | 'SECRETARIO' | 'COORDENADOR';
   onConfirm: (data: {
     pessoa_id: string;
     escola_saesc: string;
@@ -78,7 +78,7 @@ export function LotarDialog({
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            Lotar {perfil === 'DIRETOR' ? 'Diretor(a)' : 'Secretário(a)'}
+            Lotar {perfil === 'DIRETOR' ? 'Diretor(a)' : perfil === 'SECRETARIO' ? 'Secretário(a)' : 'Coordenador(a)'}
           </DialogTitle>
           <DialogDescription>
             {pessoa?.nome_completo}

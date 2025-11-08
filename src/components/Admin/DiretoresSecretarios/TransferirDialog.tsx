@@ -33,7 +33,7 @@ interface TransferirDialogProps {
       escola_nome: string;
     } | null;
   } | null;
-  perfil: 'DIRETOR' | 'SECRETARIO';
+  perfil: 'DIRETOR' | 'SECRETARIO' | 'COORDENADOR';
   onConfirm: (data: {
     pessoa_id: string;
     escola_atual_saesc: string;

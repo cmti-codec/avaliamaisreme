@@ -61,8 +61,8 @@ const adminItems = [{
   url: "/admin/professores",
   icon: Users
 }, {
-  title: "Diretores e Secretários",
-  url: "/admin/diretores-secretarios",
+  title: "Gestores Escolares",
+  url: "/admin/gestores",
   icon: Users
 }, {
   title: "Matrizes Curriculares",

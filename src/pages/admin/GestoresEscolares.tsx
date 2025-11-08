@@ -11,20 +11,20 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useDiretoresSecretarios } from "@/hooks/useDiretoresSecretarios";
+import { useGestoresEscolares } from "@/hooks/useGestoresEscolares";
 import { TransferirDialog } from "@/components/Admin/DiretoresSecretarios/TransferirDialog";
 import { LotarDialog } from "@/components/Admin/DiretoresSecretarios/LotarDialog";
 import { RefreshCw, Plus, Edit, Eye, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export default function DiretoresSecretarios() {
-  const [activeTab, setActiveTab] = useState<'DIRETOR' | 'SECRETARIO'>('DIRETOR');
+export default function GestoresEscolares() {
+  const [activeTab, setActiveTab] = useState<'DIRETOR' | 'SECRETARIO' | 'COORDENADOR'>('DIRETOR');
   const [showTransferirDialog, setShowTransferirDialog] = useState(false);
   const [showLotarDialog, setShowLotarDialog] = useState(false);
   const [pessoaSelecionada, setPessoaSelecionada] = useState<any>(null);
 
-  const { pessoas, isLoading, transferir, lotar, isTransferindo } = useDiretoresSecretarios(activeTab);
+  const { pessoas, isLoading, transferir, lotar, isTransferindo } = useGestoresEscolares(activeTab);
 
   const handleTransferir = (pessoa: any) => {
     setPessoaSelecionada(pessoa);
@@ -43,9 +43,9 @@ export default function DiretoresSecretarios() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Gestão de Diretores e Secretários</h1>
+        <h1 className="text-3xl font-bold">Gestores Escolares</h1>
         <p className="text-muted-foreground mt-2">
-          Gerencie as lotações de diretores e secretários nas escolas da rede
+          Gerencie as lotações de diretores, secretários e coordenadores nas escolas da rede
         </p>
       </div>
 
@@ -53,16 +53,17 @@ export default function DiretoresSecretarios() {
         <TabsList>
           <TabsTrigger value="DIRETOR">Diretores</TabsTrigger>
           <TabsTrigger value="SECRETARIO">Secretários</TabsTrigger>
+          <TabsTrigger value="COORDENADOR">Coordenadores</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>
-                {activeTab === 'DIRETOR' ? 'Diretores' : 'Secretários'}
+                {activeTab === 'DIRETOR' ? 'Diretores' : activeTab === 'SECRETARIO' ? 'Secretários' : 'Coordenadores'}
               </CardTitle>
               <CardDescription>
-                Lista de {activeTab === 'DIRETOR' ? 'diretores' : 'secretários'} cadastrados no sistema
+                Lista de {activeTab === 'DIRETOR' ? 'diretores' : activeTab === 'SECRETARIO' ? 'secretários' : 'coordenadores'} cadastrados no sistema
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -72,7 +73,7 @@ export default function DiretoresSecretarios() {
                 </div>
               ) : pessoas.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Nenhum {activeTab === 'DIRETOR' ? 'diretor' : 'secretário'} cadastrado
+                  Nenhum {activeTab === 'DIRETOR' ? 'diretor' : activeTab === 'SECRETARIO' ? 'secretário' : 'coordenador'} cadastrado
                 </div>
               ) : (
                 <Table>

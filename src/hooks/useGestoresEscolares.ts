@@ -26,11 +26,11 @@ interface TransferenciaData {
   motivo?: string;
 }
 
-export const useDiretoresSecretarios = (perfil: 'DIRETOR' | 'SECRETARIO') => {
+export const useGestoresEscolares = (perfil: 'DIRETOR' | 'SECRETARIO' | 'COORDENADOR') => {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["diretores-secretarios", perfil],
+    queryKey: ["gestores-escolares", perfil],
     queryFn: async () => {
       // Buscar pessoas com lotações via view usuarios_contextualizados
       const { data, error } = await supabase
@@ -106,11 +106,10 @@ export const useDiretoresSecretarios = (perfil: 'DIRETOR' | 'SECRETARIO') => {
       return { novaLotacao, escolaNome: escola.nome };
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["diretores-secretarios"] });
+      queryClient.invalidateQueries({ queryKey: ["gestores-escolares"] });
       
-      toast.success(
-        `✅ ${perfil === 'DIRETOR' ? 'Diretor(a)' : 'Secretário(a)'} transferido(a) para ${data.escolaNome}`
-      );
+      const cargo = perfil === 'DIRETOR' ? 'Diretor(a)' : perfil === 'SECRETARIO' ? 'Secretário(a)' : 'Coordenador(a)';
+      toast.success(`✅ ${cargo} transferido(a) para ${data.escolaNome}`);
     },
     onError: (error: any) => {
       toast.error(`❌ Erro ao transferir: ${error.message}`);
@@ -144,12 +143,11 @@ export const useDiretoresSecretarios = (perfil: 'DIRETOR' | 'SECRETARIO') => {
       return data;
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["diretores-secretarios"] });
+      queryClient.invalidateQueries({ queryKey: ["gestores-escolares"] });
       
       const escolaNome = data.escolas?.nome || "escola";
-      toast.success(
-        `✅ ${perfil === 'DIRETOR' ? 'Diretor(a)' : 'Secretário(a)'} lotado(a) em ${escolaNome}`
-      );
+      const cargo = perfil === 'DIRETOR' ? 'Diretor(a)' : perfil === 'SECRETARIO' ? 'Secretário(a)' : 'Coordenador(a)';
+      toast.success(`✅ ${cargo} lotado(a) em ${escolaNome}`);
     },
     onError: (error: any) => {
       toast.error(`❌ Erro ao lotar: ${error.message}`);
