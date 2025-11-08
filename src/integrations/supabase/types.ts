@@ -904,6 +904,30 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          count: number
+          created_at: string
+          expires_at: string
+          id: string
+          key: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          key: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          key?: string
+        }
+        Relationships: []
+      }
       sessoes_contexto: {
         Row: {
           atualizado_em: string
@@ -1224,6 +1248,7 @@ export type Database = {
         }
         Returns: string
       }
+      cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       clear_impersonations_for: { Args: { _user_id: string }; Returns: number }
       get_effective_user_id: { Args: never; Returns: string }
       get_user_escola_id: { Args: { _user_id?: string }; Returns: string }
@@ -1238,6 +1263,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      sanitize_audit_data: { Args: { data: Json }; Returns: Json }
       tem_permissao: { Args: { func: string; tipo: string }; Returns: boolean }
       validar_horario: {
         Args: {

@@ -67,6 +67,43 @@ serve(async (req) => {
       });
     }
 
+    // Rate limiting: 10 requests per minute
+    const rateLimitKey = `admin-create-user:${adminUserId}`;
+    
+    // Cleanup expired entries
+    await supabaseAdmin.from("rate_limits").delete().lt("expires_at", new Date().toISOString());
+    
+    // Check current rate
+    const { data: rateLimitData } = await supabaseAdmin
+      .from("rate_limits")
+      .select("count")
+      .eq("key", rateLimitKey)
+      .gte("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (rateLimitData && rateLimitData.count >= 10) {
+      console.warn(`Rate limit exceeded for user ${adminUserId}`);
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Update or insert rate limit
+    if (rateLimitData) {
+      await supabaseAdmin
+        .from("rate_limits")
+        .update({ count: rateLimitData.count + 1 })
+        .eq("key", rateLimitKey)
+        .gte("expires_at", new Date().toISOString());
+    } else {
+      await supabaseAdmin.from("rate_limits").insert({
+        key: rateLimitKey,
+        count: 1,
+        expires_at: new Date(Date.now() + 60000).toISOString(),
+      });
+    }
+
     // Parse body
     const body = await req.json();
     const nome: string = (body?.nome || "").trim();

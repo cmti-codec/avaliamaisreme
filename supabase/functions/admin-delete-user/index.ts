@@ -67,6 +67,44 @@ serve(async (req) => {
       });
     }
 
+    // Rate limiting: 5 requests per minute for delete operations
+    const rateLimitKey = `admin-delete-user:${callerId}`;
+    const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+    
+    // Cleanup expired entries
+    await adminClient.from("rate_limits").delete().lt("expires_at", new Date().toISOString());
+    
+    // Check current rate
+    const { data: rateLimitData } = await adminClient
+      .from("rate_limits")
+      .select("count")
+      .eq("key", rateLimitKey)
+      .gte("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (rateLimitData && rateLimitData.count >= 5) {
+      console.warn(`Rate limit exceeded for user ${callerId}`);
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Update or insert rate limit
+    if (rateLimitData) {
+      await adminClient
+        .from("rate_limits")
+        .update({ count: rateLimitData.count + 1 })
+        .eq("key", rateLimitKey)
+        .gte("expires_at", new Date().toISOString());
+    } else {
+      await adminClient.from("rate_limits").insert({
+        key: rateLimitKey,
+        count: 1,
+        expires_at: new Date(Date.now() + 60000).toISOString(),
+      });
+    }
+
     // Parse body
     const { userId } = await req.json();
     if (!userId) {
