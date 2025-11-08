@@ -51,212 +51,95 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [testProfile, setTestProfile] = useState<PerfilUsuario | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const profileLoadAttempts = useRef(0);
-  const cleanupAttempted = useRef(false);
+  
+  // Store session token in memory only (NOT localStorage)
+  const impersonationToken = useRef<string | null>(null);
+  const testUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    // Restaurar sessão de impersonation se existir
-    const isImp = localStorage.getItem('impersonating') === 'true';
-    const adminData = localStorage.getItem('originalAdmin');
-    const testSchool = localStorage.getItem('testSchoolId');
-    const testProf = localStorage.getItem('testProfile');
-    
-    if (isImp && adminData) {
-      try {
-        setOriginalAdmin(JSON.parse(adminData));
-        setIsImpersonating(true);
-        
-        // Restaurar modo teste se existir
-        if (testSchool && testProf) {
-          setTestSchoolId(testSchool);
-          setTestProfile(testProf as PerfilUsuario);
-        }
-      } catch (e) {
-        console.error('Erro ao restaurar sessão de impersonation:', e);
-        localStorage.removeItem('impersonating');
-        localStorage.removeItem('originalAdmin');
-        localStorage.removeItem('testSchoolId');
-        localStorage.removeItem('testProfile');
-        localStorage.removeItem('testSchoolName');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setSession(currentSession);
+      
+      if (currentSession?.user && !isLoadingProfile) {
+        await fetchUserProfile(currentSession.user);
+      } else if (!currentSession?.user) {
+        setUser(null);
+        setIsImpersonating(false);
+        setOriginalAdmin(null);
+        setTestSchoolId(null);
+        setTestProfile(null);
+        impersonationToken.current = null;
+        testUserId.current = null;
+        setLoading(false);
       }
-    }
-
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        
-        if (session?.user && !isLoadingProfile) {
-          // Defer fetching user profile with setTimeout to avoid deadlock
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-          }, 100);
-        } else if (!session?.user) {
-          setUser(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    if (!isLoadingProfile) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        if (session?.user) {
-          fetchUserProfile(session.user.id);
-        } else {
-          setLoading(false);
-        }
-      });
-    }
+    });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isLoadingProfile]);
 
-  const fetchUserProfile = async (userId: string) => {
-    // Prevenir execuções simultâneas
-    if (isLoadingProfile) {
-      console.log('⏸️ Perfil já está sendo carregado, ignorando chamada duplicada');
-      return;
-    }
-
+  const fetchUserProfile = async (supabaseUser: SupabaseUser, retryCount = 0) => {
+    if (isLoadingProfile) return;
+    
     setIsLoadingProfile(true);
     
     try {
-      console.log('🔵 Buscando perfil - Auth UID:', userId);
-      
-      // 1. Buscar effectiveUserId via RPC
-      const { data: effId, error: effErr } = await supabase.rpc('get_effective_user_id');
-      let effectiveUserId = effId ?? userId;
-      
-      console.log('🔵 Effective User ID:', effectiveUserId);
-      console.log('🔵 Impersonating flag:', localStorage.getItem('impersonating'));
-      
-      // 2. Se effectiveUserId é diferente de userId E não está em modo impersonation legítimo, limpar
-      // 2. Se effectiveUserId é diferente de userId E não está em modo impersonation legítimo, limpar (apenas 1x)
-      if (
-        effectiveUserId !== userId &&
-        localStorage.getItem('impersonating') !== 'true' &&
-        !cleanupAttempted.current
-      ) {
-        console.warn('⚠️ Detectada impersonação pendente não intencional. Limpando via RPC...');
-        cleanupAttempted.current = true;
-
-        const { data: clearedCount, error: rpcErr } = await supabase.rpc(
-          'clear_impersonations_for',
-          { _user_id: userId }
-        );
-
-        if (rpcErr) {
-          console.error('❌ Erro ao limpar impersonação via RPC:', rpcErr);
-        } else if ((clearedCount ?? 0) > 0) {
-          console.log('✅ Impersonação pendente limpa. Recarregando perfil...');
-          // Pequena pausa e recarregar
-          setIsLoadingProfile(false);
-          setTimeout(() => fetchUserProfile(userId), 200);
-          return;
-        }
-      }
-
-      // Fail-safe: após tentativa de limpeza, se ainda diferir, forçar auth.uid para evitar loop
-      if (effectiveUserId !== userId && cleanupAttempted.current) {
-        console.warn('⚠️ EffectiveUserId ainda difere após limpeza. Forçando uso do auth.uid.');
-        effectiveUserId = userId;
-      }
-      
-      // 3. Buscar dados básicos do usuário usando effectiveUserId
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('*')
-        .eq('id', effectiveUserId)
+        .eq('id', supabaseUser.id)
         .maybeSingle();
 
-      if (userError) {
-        console.error('❌ Erro ao buscar dados do usuário:', userError);
-        
-        // Se for erro de RLS/permissão e ainda não tentou muitas vezes, retry
-        if ((userError.code === 'PGRST116' || userError.message?.includes('permission')) && profileLoadAttempts.current < 3) {
-          profileLoadAttempts.current++;
-          console.log(`🔄 Tentando novamente (${profileLoadAttempts.current}/3)...`);
-          setIsLoadingProfile(false);
-          setTimeout(() => fetchUserProfile(userId), 500);
-          return;
-        }
-        
-        throw userError;
-      }
-
+      if (userError) throw userError;
       if (!userData) {
-        console.error('❌ Usuário não encontrado na tabela usuarios:', effectiveUserId);
-        
-        // Retry se ainda não excedeu tentativas
-        if (profileLoadAttempts.current < 3) {
-          profileLoadAttempts.current++;
-          console.log(`🔄 Tentando novamente (${profileLoadAttempts.current}/3)...`);
-          setIsLoadingProfile(false);
-          setTimeout(() => fetchUserProfile(userId), 500);
-          return;
+        if (retryCount < 3) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return fetchUserProfile(supabaseUser, retryCount + 1);
         }
-        
-        throw new Error('Usuário não encontrado após 3 tentativas');
+        throw new Error('Usuário não encontrado no banco de dados');
       }
 
-      // Reset contador de tentativas em caso de sucesso
-      profileLoadAttempts.current = 0;
-      console.log('✅ Dados do usuário encontrados:', userData.email);
-
-      // 4. Buscar roles do usuário usando effectiveUserId
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('role, escola_id')
-        .eq('user_id', effectiveUserId);
+        .eq('user_id', supabaseUser.id);
 
-      if (rolesError) {
-        console.error('❌ Erro ao buscar roles:', rolesError);
-        throw rolesError;
-      }
+      if (rolesError) throw rolesError;
 
-      console.log('✅ Roles encontradas:', rolesData?.map(r => r.role));
-
-      // Determinar role principal (maior privilégio)
       const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
       const primaryRole = roles[0] || 'PROFESSOR';
-      const escola_id = rolesData?.[0]?.escola_id ?? userData.escola_id ?? null;
+      const escola_id = rolesData?.[0]?.escola_id || null;
 
-      setUser({
-        ...userData,
+      const userProfile: Usuario = {
+        id: userData.id,
+        nome: userData.nome,
+        email: userData.email,
         roles,
         primaryRole,
         escola_id,
-      } as Usuario);
-      
-      cleanupAttempted.current = false;
-      console.log('✅ Perfil do usuário carregado com sucesso');
+        ativo: userData.ativo,
+      };
+
+      setUser(userProfile);
+      profileLoadAttempts.current = 0;
     } catch (error) {
-      console.error('❌ Erro fatal ao buscar perfil do usuário:', error);
-      toast.error('Erro ao carregar perfil do usuário. Por favor, tente fazer login novamente.');
-      // Fazer logout apenas após esgotadas as tentativas
-      if (profileLoadAttempts.current >= 3) {
-        await supabase.auth.signOut();
+      console.error('Erro ao buscar perfil:', error);
+      if (retryCount < 3) {
+        profileLoadAttempts.current++;
+        await new Promise(resolve => setTimeout(resolve, 1000 * profileLoadAttempts.current));
+        return fetchUserProfile(supabaseUser, retryCount + 1);
       }
+      toast.error('Erro ao carregar perfil do usuário');
     } finally {
-      setLoading(false);
       setIsLoadingProfile(false);
+      setLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error, data } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-
-      if (data.user) {
-        await fetchUserProfile(data.user.id);
-        toast.success('Login realizado com sucesso!');
-      }
+      toast.success('Login realizado com sucesso!');
     } catch (error: any) {
       console.error('Erro no login:', error);
       toast.error(error.message || 'Erro ao fazer login');
@@ -266,117 +149,144 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      // End impersonation if active
+      if (impersonationToken.current) {
+        await stopImpersonating();
+      }
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
       setUser(null);
       setSession(null);
-      toast.success('Logout realizado com sucesso');
+      setIsImpersonating(false);
+      setOriginalAdmin(null);
+      setTestSchoolId(null);
+      setTestProfile(null);
+      impersonationToken.current = null;
+      testUserId.current = null;
+      
+      toast.success('Logout realizado com sucesso!');
     } catch (error: any) {
-      console.error('Erro no logout:', error);
-      toast.error('Erro ao fazer logout');
+      console.error('Erro ao fazer logout:', error);
+      toast.error(error.message || 'Erro ao fazer logout');
+      throw error;
     }
   };
 
   const impersonate = async (targetUserId: string) => {
+    if (!user || !user.roles.includes('ADMIN')) {
+      toast.error('Apenas administradores podem impersonar usuários');
+      return;
+    }
+
     try {
-      if (!user?.roles.includes('ADMIN')) {
-        toast.error('Apenas administradores podem assumir perfis');
-        return;
-      }
+      // Call secure edge function to create impersonation session
+      const { data, error } = await supabase.functions.invoke('secure-impersonate', {
+        body: {
+          targetUserId,
+          action: 'start'
+        }
+      });
 
-      // 1. Salvar admin atual
-      setOriginalAdmin(user);
+      if (error) throw error;
+      if (!data?.sessionToken) throw new Error('Session token not returned');
 
-      // 2. Buscar dados do usuário-alvo
-      const { data: targetUserData, error: userError } = await supabase
+      // Store token in memory only
+      impersonationToken.current = data.sessionToken;
+
+      // Fetch target user data
+      const { data: targetUserData, error: targetError } = await supabase
         .from('usuarios')
         .select('*')
         .eq('id', targetUserId)
         .single();
 
-      if (userError) throw userError;
+      if (targetError) throw targetError;
 
-      // 3. Buscar roles do usuário-alvo
-      const { data: rolesData, error: rolesError } = await supabase
+      const { data: targetRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('role, escola_id')
         .eq('user_id', targetUserId);
 
       if (rolesError) throw rolesError;
 
-      const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
+      const roles = targetRoles?.map(r => r.role as PerfilUsuario) || [];
       const primaryRole = roles[0] || 'PROFESSOR';
-      const escola_id = rolesData?.[0]?.escola_id || null;
+      const escola_id = targetRoles?.[0]?.escola_id || null;
 
-      const targetUser = {
-        ...targetUserData,
+      const targetUser: Usuario = {
+        id: targetUserData.id,
+        nome: targetUserData.nome,
+        email: targetUserData.email,
         roles,
         primaryRole,
         escola_id,
-      } as Usuario;
+        ativo: targetUserData.ativo,
+      };
 
-      // 4. Trocar contexto
+      // Store original admin ONLY in state (not localStorage)
+      setOriginalAdmin(user);
       setUser(targetUser);
       setIsImpersonating(true);
 
-      // 5. Persistir no localStorage
-      localStorage.setItem('impersonating', 'true');
-      localStorage.setItem('originalAdmin', JSON.stringify(user));
-      localStorage.setItem('impersonatedUserId', targetUserId);
-
-      toast.success(`Agora você está visualizando como: ${targetUser.nome}`);
+      toast.success(`Agora visualizando como: ${targetUser.nome}`);
     } catch (error: any) {
-      console.error('Erro ao assumir perfil:', error);
-      toast.error('Erro ao assumir perfil: ' + error.message);
+      console.error('Erro ao impersonar usuário:', error);
+      toast.error(error.message || 'Erro ao impersonar usuário');
+      throw error;
     }
   };
 
-  const stopImpersonating = () => {
-    if (!originalAdmin) return;
+  const stopImpersonating = async () => {
+    try {
+      // End impersonation session on server
+      if (impersonationToken.current) {
+        await supabase.functions.invoke('secure-impersonate', {
+          body: {
+            action: 'end',
+            sessionToken: impersonationToken.current
+          }
+        });
+      }
 
-    // Restaurar admin original
-    setUser(originalAdmin);
-    setIsImpersonating(false);
-    setOriginalAdmin(null);
-    setTestSchoolId(null);
-    setTestProfile(null);
+      // Delete test user if exists
+      if (testUserId.current) {
+        await supabase.functions.invoke('admin-delete-user', {
+          body: { userId: testUserId.current }
+        });
+      }
 
-    // Limpar localStorage
-    localStorage.removeItem('impersonating');
-    localStorage.removeItem('originalAdmin');
-    localStorage.removeItem('impersonatedUserId');
-    localStorage.removeItem('testSchoolId');
-    localStorage.removeItem('testProfile');
-    localStorage.removeItem('testSchoolName');
+      // Restore original admin
+      if (originalAdmin) {
+        setUser(originalAdmin);
+      }
+      
+      setIsImpersonating(false);
+      setOriginalAdmin(null);
+      setTestSchoolId(null);
+      setTestProfile(null);
+      impersonationToken.current = null;
+      testUserId.current = null;
 
-    toast.info('Voltou para sua conta admin');
+      toast.success('Voltou para o perfil de administrador');
+    } catch (error: any) {
+      console.error('Erro ao parar impersonation:', error);
+      toast.error('Erro ao voltar para perfil admin');
+    }
   };
 
   const startTestMode = async (schoolId: string, profile: PerfilUsuario, schoolName: string) => {
-    if (!user?.roles.includes('ADMIN')) {
+    if (!user || !user.roles.includes('ADMIN')) {
       toast.error('Apenas administradores podem usar o modo teste');
       return;
     }
 
     try {
-      // Salvar admin atual se ainda não estiver impersonando
-      if (!isImpersonating) {
-        setOriginalAdmin(user);
-      }
+      const originalAdminUser = originalAdmin || user;
 
-      // 0) Limpar impersonações antigas deste admin (para evitar múltiplos usuários de teste)
-      const { error: cleanupErr } = await supabase
-        .from('usuarios')
-        .update({ impersonated_by: null })
-        .eq('impersonated_by', user.id);
-      
-      if (cleanupErr) {
-        console.warn('Aviso ao limpar impersonações antigas:', cleanupErr);
-      }
-
-      // 1) Criar usuário real via função do backend (garante integridade do FK e já define escola_id)
-      const email = `teste-${profile.toLowerCase()}-${Date.now()}@example.test`;
+      // Create test user
+      const email = `teste.${Date.now()}@tempmail.lovable.dev`;
       const password = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
 
       const { data: createResp, error: createErr } = await supabase.functions.invoke('admin-create-user', {
@@ -392,19 +302,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (createErr) throw createErr;
 
       const newUserId: string | undefined = createResp?.userId ?? createResp?.id ?? createResp?.user_id;
-      if (!newUserId) {
-        console.error('Resposta inesperada de admin-create-user:', createResp);
-        throw new Error('ID do usuário de teste não retornado');
-      }
+      if (!newUserId) throw new Error('ID do usuário de teste não retornado');
 
-      // 2) Marcar impersonação no usuário de teste para get_effective_user_id()
-      const { error: impErr } = await supabase
-        .from('usuarios')
-        .update({ impersonated_by: user.id })
-        .eq('id', newUserId);
-      if (impErr) throw impErr;
+      // Start impersonation for test user
+      const { data: impData, error: impError } = await supabase.functions.invoke('secure-impersonate', {
+        body: {
+          targetUserId: newUserId,
+          action: 'start'
+        }
+      });
 
-      // 3) Buscar dados do usuário de teste para setar no contexto (escola_id já foi definido em admin-create-user)
+      if (impError) throw impError;
+      if (!impData?.sessionToken) throw new Error('Session token not returned');
+
+      // Store token and test user ID in memory
+      impersonationToken.current = impData.sessionToken;
+      testUserId.current = newUserId;
+
+      // Fetch test user data
       const { data: userRow, error: userRowErr } = await supabase
         .from('usuarios')
         .select('*')
@@ -418,7 +333,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', newUserId);
       if (rolesErr) throw rolesErr;
 
-      const roles = (rolesData?.map(r => r.role as PerfilUsuario) || []);
+      const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
       const primaryRole = roles[0] || profile;
       const escola_id = rolesData?.[0]?.escola_id || schoolId;
 
@@ -432,77 +347,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ativo: true,
       };
 
+      setOriginalAdmin(originalAdminUser);
       setUser(testUser);
       setIsImpersonating(true);
       setTestSchoolId(schoolId);
       setTestProfile(profile);
 
-      // Persistir no localStorage
-      localStorage.setItem('impersonating', 'true');
-      localStorage.setItem('originalAdmin', JSON.stringify(originalAdmin || user));
-      localStorage.setItem('testSchoolId', schoolId);
-      localStorage.setItem('testProfile', profile);
-      localStorage.setItem('testSchoolName', schoolName);
-      localStorage.setItem('testUserId', newUserId);
-
       toast.success(`Modo Teste: ${profile} em ${schoolName}`);
     } catch (error: any) {
       console.error('Erro ao iniciar modo teste:', error);
-      toast.error('Erro ao iniciar modo teste: ' + (error?.message || 'erro desconhecido'));
+      toast.error(error.message || 'Erro ao iniciar modo teste');
+      throw error;
     }
   };
 
   const stopTestMode = async () => {
-    if (!originalAdmin) return;
-
-    try {
-      const testUserId = localStorage.getItem('testUserId');
-
-      if (testUserId) {
-        // Deletar usuário real via função do backend (limpa auth + tabelas)
-        const { error: delErr, data: delResp } = await supabase.functions.invoke('admin-delete-user', {
-          body: { userId: testUserId },
-        });
-        if (delErr) {
-          console.error('Erro ao deletar usuário de teste:', delErr, delResp);
-          // Continua a restauração mesmo com erro
-        }
-      }
-
-      // Restaurar admin original
-      setUser(originalAdmin);
-      setIsImpersonating(false);
-      setOriginalAdmin(null);
-      setTestSchoolId(null);
-      setTestProfile(null);
-
-      // Limpar localStorage
-      localStorage.removeItem('impersonating');
-      localStorage.removeItem('originalAdmin');
-      localStorage.removeItem('testSchoolId');
-      localStorage.removeItem('testProfile');
-      localStorage.removeItem('testSchoolName');
-      localStorage.removeItem('testUserId');
-
-      toast.info('Saiu do modo teste');
-    } catch (error: any) {
-      console.error('Erro ao sair do modo teste:', error);
-      toast.error('Erro ao sair do modo teste');
-
-      // Mesmo com erro, restaurar o estado local
-      setUser(originalAdmin);
-      setIsImpersonating(false);
-      setOriginalAdmin(null);
-      setTestSchoolId(null);
-      setTestProfile(null);
-
-      localStorage.removeItem('impersonating');
-      localStorage.removeItem('originalAdmin');
-      localStorage.removeItem('testSchoolId');
-      localStorage.removeItem('testProfile');
-      localStorage.removeItem('testSchoolName');
-      localStorage.removeItem('testUserId');
-    }
+    await stopImpersonating();
   };
 
   const temPermissao = (funcionalidade: string, tipo: 'ler' | 'escrever' | 'aprovar'): boolean => {

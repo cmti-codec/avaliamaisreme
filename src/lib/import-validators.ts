@@ -87,13 +87,37 @@ export async function validateUniqueness(
 }
 
 export function validateEmail(email: string): boolean {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
+  const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return re.test(email) && email.length <= 255;
 }
 
 export function validateCPF(cpf: string): boolean {
   const cleaned = cpf.replace(/\D/g, '');
-  return cleaned.length === 11;
+  
+  if (cleaned.length !== 11) return false;
+  
+  // Check for known invalid CPFs (all same digits)
+  if (/^(\d)\1{10}$/.test(cleaned)) return false;
+  
+  // Validate first check digit
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleaned.charAt(i)) * (10 - i);
+  }
+  let checkDigit = 11 - (sum % 11);
+  if (checkDigit >= 10) checkDigit = 0;
+  if (checkDigit !== parseInt(cleaned.charAt(9))) return false;
+  
+  // Validate second check digit
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleaned.charAt(i)) * (11 - i);
+  }
+  checkDigit = 11 - (sum % 11);
+  if (checkDigit >= 10) checkDigit = 0;
+  if (checkDigit !== parseInt(cleaned.charAt(10))) return false;
+  
+  return true;
 }
 
 export function validateMatricula(matricula: string): boolean {
