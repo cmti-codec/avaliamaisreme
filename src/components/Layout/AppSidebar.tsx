@@ -57,12 +57,8 @@ const adminItems = [{
   url: "/admin/escolas",
   icon: Building2
 }, {
-  title: "Professores (REME)",
+  title: "Professores",
   url: "/admin/professores",
-  icon: Users
-}, {
-  title: "Pool de Professores",
-  url: "/admin/professores-pool",
   icon: Users
 }, {
   title: "Diretores e Secretários",

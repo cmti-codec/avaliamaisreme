@@ -24,8 +24,7 @@ import Matrizes from "./pages/admin/Matrizes";
 import EscolasMatrizes from "./pages/admin/EscolasMatrizes";
 import EscolasAdmin from "./pages/admin/EscolasAdmin";
 import Usuarios from "./pages/admin/Usuarios";
-import ProfessoresREME from "./pages/admin/ProfessoresREME";
-import ProfessoresPool from "./pages/admin/ProfessoresPool";
+import ProfessoresAdmin from "./pages/admin/Professores";
 import DiretoresSecretarios from "./pages/admin/DiretoresSecretarios";
 import ImportarLotacoes from "./pages/admin/ImportarLotacoes";
 import ConsultaHorarios from "./pages/horarios/Consulta";
@@ -106,8 +105,7 @@ const App = () => (
             
             {/* Admin Routes */}
             <Route path="/admin/usuarios" element={<LayoutWrapper><Usuarios /></LayoutWrapper>} />
-            <Route path="/admin/professores" element={<LayoutWrapper><ProfessoresREME /></LayoutWrapper>} />
-            <Route path="/admin/professores-pool" element={<LayoutWrapper><ProfessoresPool /></LayoutWrapper>} />
+            <Route path="/admin/professores" element={<LayoutWrapper><ProfessoresAdmin /></LayoutWrapper>} />
             <Route path="/admin/diretores-secretarios" element={<LayoutWrapper><DiretoresSecretarios /></LayoutWrapper>} />
             <Route path="/admin/importar-lotacoes" element={<LayoutWrapper><ImportarLotacoes /></LayoutWrapper>} />
             <Route path="/admin/escolas" element={<LayoutWrapper><EscolasAdmin /></LayoutWrapper>} />

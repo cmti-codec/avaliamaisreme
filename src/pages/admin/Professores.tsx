@@ -13,7 +13,7 @@ import { NovaLotacaoDialog } from "@/components/Admin/Pool/NovaLotacaoDialog";
 import { format } from "date-fns";
 import { useDebounce } from "@/hooks/useDebounce";
 
-export default function ProfessoresPool() {
+export default function ProfessoresAdmin() {
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<'todos' | 'ativos' | 'inativos'>('todos');
   const [lotacao, setLotacao] = useState<'todos' | 'com_lotacao' | 'sem_lotacao'>('todos');
@@ -47,9 +47,9 @@ export default function ProfessoresPool() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Pool de Professores</h1>
+        <h1 className="text-3xl font-bold">Professores</h1>
         <p className="text-muted-foreground mt-2">
-          Gerencie todos os professores da rede. Localize, lote em escolas e acompanhe cargas horárias.
+          Gerencie todos os professores da rede, suas lotações e cargas horárias.
         </p>
       </div>
 
