@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
       
-      if (currentSession?.user && !isLoadingProfile) {
+      if (currentSession?.user) {
         await fetchUserProfile(currentSession.user);
       } else if (!currentSession?.user) {
         setUser(null);
@@ -75,10 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isLoadingProfile]);
+  }, []);
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser, retryCount = 0) => {
-    if (isLoadingProfile) return;
+    if (isLoadingProfile) {
+      console.log('⏭️ Pulando fetchUserProfile - já está carregando');
+      return;
+    }
     
     setIsLoadingProfile(true);
     
