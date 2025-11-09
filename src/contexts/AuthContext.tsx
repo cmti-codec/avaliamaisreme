@@ -57,12 +57,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const testUserId = useRef<string | null>(null);
 
   useEffect(() => {
+    console.log('🔄 AuthContext: Setting up auth listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log('🔄 AuthContext: Auth state changed', { event, hasSession: !!currentSession });
       setSession(currentSession);
       
       if (currentSession?.user) {
+        console.log('🔄 AuthContext: User found, fetching profile');
         await fetchUserProfile(currentSession.user);
       } else if (!currentSession?.user) {
+        console.log('🔄 AuthContext: No user, clearing state and setting loading=false');
         setUser(null);
         setIsImpersonating(false);
         setOriginalAdmin(null);
@@ -79,10 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser, retryCount = 0) => {
     if (isLoadingProfile) {
-      console.log('⏭️ Pulando fetchUserProfile - já está carregando');
+      console.log('⏭️ AuthContext: Pulando fetchUserProfile - já está carregando');
       return;
     }
     
+    console.log('🔄 AuthContext: fetchUserProfile started', { userId: supabaseUser.id, retryCount });
     setIsLoadingProfile(true);
     
     try {
@@ -124,8 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(userProfile);
       profileLoadAttempts.current = 0;
+      console.log('✅ AuthContext: User profile loaded successfully', { userId: userProfile.id, roles: userProfile.roles });
     } catch (error) {
-      console.error('Erro ao buscar perfil:', error);
+      console.error('❌ AuthContext: Erro ao buscar perfil:', error);
       if (retryCount < 3) {
         profileLoadAttempts.current++;
         await new Promise(resolve => setTimeout(resolve, 1000 * profileLoadAttempts.current));
@@ -135,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoadingProfile(false);
       setLoading(false);
+      console.log('✅ AuthContext: fetchUserProfile finished, loading=false');
     }
   };
 

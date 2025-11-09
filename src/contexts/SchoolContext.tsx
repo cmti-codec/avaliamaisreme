@@ -38,9 +38,11 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   const [needsSchoolSelection, setNeedsSchoolSelection] = useState(false);
 
   useEffect(() => {
+    console.log('🔄 SchoolContext: useEffect triggered', { user: user?.id });
     if (user) {
       carregarLotacoes();
     } else {
+      console.log('🔄 SchoolContext: No user, setting loading=false');
       setEscolaAtual(null);
       setTodasLotacoes([]);
       setLoading(false);
@@ -49,10 +51,16 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const carregarLotacoes = async () => {
-    if (!user?.id) return;
+    console.log('🔄 SchoolContext: carregarLotacoes started', { userId: user?.id });
+    if (!user?.id) {
+      console.log('❌ SchoolContext: No user.id, returning early');
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log('🔄 SchoolContext: Loading set to true');
 
       // Buscar pessoa_id do usuário
       const { data: usuarioData, error: usuarioError } = await supabase
@@ -63,10 +71,12 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
 
       if (usuarioError) throw usuarioError;
       if (!usuarioData?.pessoa_id) {
-        console.error('Usuário sem pessoa_id vinculada');
+        console.error('❌ SchoolContext: Usuário sem pessoa_id vinculada');
         setLoading(false);
+        setNeedsSchoolSelection(false);
         return;
       }
+      console.log('✅ SchoolContext: pessoa_id found:', usuarioData.pessoa_id);
 
       // Buscar lotações ativas
       const { data: lotacoesData, error: lotacoesError } = await supabase
@@ -100,17 +110,21 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
 
       // Se não há lotações
       if (lotacoes.length === 0) {
+        console.log('⚠️ SchoolContext: No lotações found, setting loading=false');
         setEscolaAtual(null);
         setNeedsSchoolSelection(false);
         setLoading(false);
         return;
       }
+      console.log('✅ SchoolContext: Lotações found:', lotacoes.length);
 
       // Se há apenas 1 lotação, setar automaticamente
       if (lotacoes.length === 1) {
+        console.log('✅ SchoolContext: Single lotação, auto-selecting');
         await selecionarEscolaAutomaticamente(lotacoes[0]);
         setNeedsSchoolSelection(false);
         setLoading(false);
+        console.log('✅ SchoolContext: Single lotação selected, loading=false');
         return;
       }
 
@@ -133,12 +147,16 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       }
 
       // Precisa selecionar escola
+      console.log('⚠️ SchoolContext: Multiple lotações, needs selection');
       setNeedsSchoolSelection(true);
       setLoading(false);
+      console.log('✅ SchoolContext: loading=false after needs selection');
     } catch (error) {
-      console.error('Erro ao carregar lotações:', error);
+      console.error('❌ SchoolContext: Erro ao carregar lotações:', error);
       toast.error('Erro ao carregar suas lotações');
       setLoading(false);
+      setNeedsSchoolSelection(false);
+      console.log('✅ SchoolContext: Error handled, loading=false');
     }
   };
 
