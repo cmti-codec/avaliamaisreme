@@ -44,12 +44,16 @@ function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const { user, loading, isImpersonating } = useAuth();
   const { needsSchoolSelection, loading: schoolLoading } = useSchool();
 
-  if (loading || schoolLoading) {
+  if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (schoolLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
 
   // Se precisa selecionar escola, redirecionar

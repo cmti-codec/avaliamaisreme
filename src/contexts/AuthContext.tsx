@@ -58,14 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     console.log('🔄 AuthContext: Setting up auth listener');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       console.log('🔄 AuthContext: Auth state changed', { event, hasSession: !!currentSession });
       setSession(currentSession);
       
       if (currentSession?.user) {
-        console.log('🔄 AuthContext: User found, fetching profile');
-        await fetchUserProfile(currentSession.user);
-      } else if (!currentSession?.user) {
+        console.log('🔄 AuthContext: User found, deferring profile fetch');
+        setTimeout(() => {
+          fetchUserProfile(currentSession.user);
+        }, 0);
+      } else {
         console.log('🔄 AuthContext: No user, clearing state and setting loading=false');
         setUser(null);
         setIsImpersonating(false);
@@ -74,6 +76,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTestProfile(null);
         impersonationToken.current = null;
         testUserId.current = null;
+        setLoading(false);
+      }
+    });
+
+    // Initial session check to prevent deadlocks
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔄 AuthContext: Initial getSession', { hasSession: !!session });
+      setSession(session);
+      if (session?.user) {
+        setTimeout(() => {
+          fetchUserProfile(session.user);
+        }, 0);
+      } else {
         setLoading(false);
       }
     });
