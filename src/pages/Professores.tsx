@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,14 +18,29 @@ const Professores = () => {
   const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear().toString());
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const escolaId = user?.escola_id || "";
-  const { lotacoes, isLoading, criarLotacao, atualizarCarga, removerLotacao, isSaving } = useLotacoes(escolaId, anoLetivo);
+  // Buscar escola_saesc do usuário via SchoolContext
+  const [escolaSaesc, setEscolaSaesc] = useState<string>("");
 
-  const handleLotarProfessores = (professorIds: string[]) => {
-    professorIds.forEach(professorId => {
+  useEffect(() => {
+    const fetchEscolaSaesc = async () => {
+      if (!user?.escola_id) return;
+      const { data } = await supabase
+        .from("escolas")
+        .select("saesc")
+        .eq("id", user.escola_id)
+        .single();
+      if (data) setEscolaSaesc(data.saesc.toString());
+    };
+    fetchEscolaSaesc();
+  }, [user?.escola_id]);
+
+  const { lotacoes, isLoading, criarLotacao, atualizarCarga, removerLotacao, isSaving } = useLotacoes(escolaSaesc, anoLetivo);
+
+  const handleLotarProfessores = (pessoaIds: string[]) => {
+    pessoaIds.forEach(pessoaId => {
       criarLotacao({
-        professor_id: professorId,
-        escola_id: escolaId,
+        pessoa_id: pessoaId,
+        escola_saesc: escolaSaesc,
         ano_letivo: anoLetivo,
       });
     });
@@ -36,7 +52,7 @@ const Professores = () => {
   };
 
   const lotacoesFiltradas = lotacoes.filter(lot =>
-    lot.professor?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lot.pessoa?.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lot.professor?.matricula?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -124,7 +140,7 @@ const Professores = () => {
               key={lotacao.id}
               lotacao={lotacao}
               anoLetivo={anoLetivo}
-              escolaId={escolaId}
+              escolaId={escolaSaesc}
               onAtualizarCarga={handleAtualizarCarga}
               onRemover={removerLotacao}
               isSaving={isSaving}
@@ -136,7 +152,7 @@ const Professores = () => {
       <LotarProfessorDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        escolaId={escolaId}
+        escolaId={escolaSaesc}
         anoLetivo={anoLetivo}
         onLotar={handleLotarProfessores}
         isSaving={isSaving}

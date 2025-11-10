@@ -35,40 +35,44 @@ function ResumoDisponibilidade({
   const { data: resumo, isLoading } = useQuery({
     queryKey: ["resumo-disponibilidade", escolaId, anoLetivo],
     queryFn: async () => {
-      // Total no pool (escola_id = NULL)
-      const { count: totalPool } = await supabase
-        .from("professores")
-        .select("*", { count: "exact", head: true })
-        .is("escola_id", null);
+      // Total de usuários com perfil PROFESSOR
+      const { data: totalUsuarios } = await supabase
+        .from("user_roles")
+        .select("user_id", { count: "exact" })
+        .eq("role", "PROFESSOR");
 
-      // Ativos no pool
-      const { count: totalPoolAtivos } = await supabase
-        .from("professores")
+      // Usuários ativos com perfil PROFESSOR
+      const usuariosIds = totalUsuarios?.map(u => u.user_id) || [];
+      const { count: totalAtivos } = await supabase
+        .from("usuarios")
         .select("*", { count: "exact", head: true })
-        .is("escola_id", null)
+        .in("id", usuariosIds)
         .eq("ativo", true);
 
-      // Já lotados na escola/ano (do pool ativo)
-      const { data: professoresAtivosPool } = await supabase
-        .from("professores")
-        .select("id")
-        .is("escola_id", null)
+      // Buscar pessoa_ids dos usuários ativos
+      const { data: usuariosAtivos } = await supabase
+        .from("usuarios")
+        .select("pessoa_id")
+        .in("id", usuariosIds)
         .eq("ativo", true);
 
-      const idsPool = professoresAtivosPool?.map(p => p.id) || [];
+      const pessoasAtivas = usuariosAtivos?.map(u => u.pessoa_id).filter(Boolean) || [];
 
+      // Já lotados na escola/ano
       const { count: jaLotados } = await supabase
-        .from("lotacoes_professores")
+        .from("lotacoes")
         .select("*", { count: "exact", head: true })
-        .eq("escola_id", escolaId)
+        .eq("escola_saesc", escolaId)
+        .eq("perfil", "PROFESSOR")
         .eq("ano_letivo", anoLetivo)
-        .in("professor_id", idsPool);
+        .eq("ativo", true)
+        .in("pessoa_id", pessoasAtivas);
 
       return {
-        totalPool: totalPool || 0,
-        totalPoolAtivos: totalPoolAtivos || 0,
+        totalPool: totalUsuarios?.length || 0,
+        totalPoolAtivos: totalAtivos || 0,
         jaLotados: jaLotados || 0,
-        disponiveis: (totalPoolAtivos || 0) - (jaLotados || 0)
+        disponiveis: (totalAtivos || 0) - (jaLotados || 0)
       };
     },
     enabled: !!escolaId && !!anoLetivo,
@@ -312,16 +316,11 @@ export function LotarProfessorDialog({
                           <Badge variant={prof.tipo_vinculo === 'CONVOCADO' ? "outline" : "secondary"} className="text-xs">
                             {prof.tipo_vinculo === 'CONVOCADO' ? 'Convocado' : 'Efetivo'}
                           </Badge>
-                          {prof.escola_id === null ? (
+                           {prof.ativo ? (
                             <Badge variant="default" className="text-xs">
                               Pool (REME)
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-xs">
-                              Da escola
-                            </Badge>
-                          )}
-                          {!prof.ativo && (
                             <Badge variant="secondary" className="text-xs text-muted-foreground">
                               Inativo
                             </Badge>

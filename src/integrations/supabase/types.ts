@@ -482,45 +482,60 @@ export type Database = {
       }
       lotacoes: {
         Row: {
+          ano_letivo: string | null
           ativo: boolean
           carga_horaria: number | null
+          carga_total: number | null
           created_at: string
           created_by: string | null
           data_fim: string | null
           data_inicio: string
           escola_saesc: string
+          horas_aula: number | null
           id: string
           observacoes: string | null
           perfil: string
           pessoa_id: string
+          pl: number | null
+          status: string | null
           updated_at: string
         }
         Insert: {
+          ano_letivo?: string | null
           ativo?: boolean
           carga_horaria?: number | null
+          carga_total?: number | null
           created_at?: string
           created_by?: string | null
           data_fim?: string | null
           data_inicio?: string
           escola_saesc: string
+          horas_aula?: number | null
           id?: string
           observacoes?: string | null
           perfil: string
           pessoa_id: string
+          pl?: number | null
+          status?: string | null
           updated_at?: string
         }
         Update: {
+          ano_letivo?: string | null
           ativo?: boolean
           carga_horaria?: number | null
+          carga_total?: number | null
           created_at?: string
           created_by?: string | null
           data_fim?: string | null
           data_inicio?: string
           escola_saesc?: string
+          horas_aula?: number | null
           id?: string
           observacoes?: string | null
           perfil?: string
           pessoa_id?: string
+          pl?: number | null
+          status?: string | null
           updated_at?: string
         }
         Relationships: [

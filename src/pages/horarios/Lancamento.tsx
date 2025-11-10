@@ -88,6 +88,24 @@ const Lancamento = () => {
         return;
       }
 
+      // Buscar escola_saesc do escola_id
+      const { data: escolaData } = await supabase
+        .from("escolas")
+        .select("saesc")
+        .eq("id", escolaId)
+        .single();
+
+      if (!escolaData) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar informações da escola",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const escolaSaesc = escolaData.saesc.toString();
+
       const { data: turmasData, error: turmasError } = await supabase
         .from("turmas")
         .select("*")
@@ -101,26 +119,38 @@ const Lancamento = () => {
       }));
       setTurmas(sortTurmasPedagogica(turmasFormatadas));
 
+      // Buscar professores lotados via nova tabela lotacoes
       const { data: lotacoesData, error: lotacoesError } = await supabase
-        .from("lotacoes_professores")
-        .select("professor_id")
-        .eq("escola_id", escolaId)
-        .eq("status", "ATIVO");
+        .from("lotacoes")
+        .select("pessoa_id")
+        .eq("escola_saesc", escolaSaesc)
+        .eq("perfil", "PROFESSOR")
+        .eq("ativo", true);
 
       if (lotacoesError) throw lotacoesError;
 
-      const professorIds = (lotacoesData || []).map(l => l.professor_id);
+      const pessoaIds = (lotacoesData || []).map(l => l.pessoa_id);
 
-      if (professorIds.length === 0) {
+      if (pessoaIds.length === 0) {
         setProfessores([]);
         return;
       }
 
+      // Buscar usuários das pessoas
+      const { data: usuariosData } = await supabase
+        .from("usuarios")
+        .select("id, pessoa_id")
+        .in("pessoa_id", pessoaIds)
+        .eq("ativo", true);
+
+      const usuarioIds = usuariosData?.map(u => u.id) || [];
+
+      // Buscar dados de professores
       const { data: professoresData, error: professoresError } = await supabase
         .from("professores")
         .select("*")
         .eq("ativo", true)
-        .in("id", professorIds)
+        .in("usuario_id", usuarioIds)
         .order("nome", { ascending: true });
 
       if (professoresError) throw professoresError;

@@ -13,7 +13,7 @@ import type { Lotacao } from "@/hooks/useLotacoes";
 interface ProfessorLotadoCardProps {
   lotacao: Lotacao;
   anoLetivo: string;
-  escolaId: string;
+  escolaId: string; // escola_saesc
   onAtualizarCarga: (id: string, horas_aula: number, pl: number) => void;
   onRemover: (id: string) => void;
   isSaving: boolean;
@@ -30,7 +30,10 @@ export function ProfessorLotadoCard({
   const [isEditing, setIsEditing] = useState(false);
   const [showOutrasEscolas, setShowOutrasEscolas] = useState(false);
   
-  const { data: cargaProfessor } = useCargaTotalProfessor(lotacao.professor_id, anoLetivo);
+  const { data: cargaProfessor } = useCargaTotalProfessor(lotacao.pessoa_id, anoLetivo);
+
+  const professor = lotacao.professor;
+  const pessoa = lotacao.pessoa;
 
   const handleSave = (horas_aula: number, pl: number) => {
     onAtualizarCarga(lotacao.id, horas_aula, pl);
@@ -43,13 +46,12 @@ export function ProfessorLotadoCard({
     }
   };
 
-  const professor = lotacao.professor;
-  if (!professor) return null;
+  if (!pessoa) return null;
 
-  const isConvocado = professor.tipo_vinculo === 'CONVOCADO';
-  const cargaContratual = professor.carga_horaria_contratual || 40;
+  const isConvocado = professor?.tipo_vinculo === 'CONVOCADO';
+  const cargaContratual = professor?.carga_horaria_contratual || 40;
   const percentualAlocado = cargaProfessor ? (cargaProfessor.carga_alocada / cargaContratual) * 100 : 0;
-  const outrasEscolas = cargaProfessor?.lotacoes_ativas.filter(l => l.escola_id !== escolaId) || [];
+  const outrasEscolas = cargaProfessor?.lotacoes_ativas.filter(l => l.escola_saesc !== lotacao.escola_saesc) || [];
   const temMultiplasEscolas = outrasEscolas.length > 0;
   const percentualLimite = cargaProfessor ? (cargaProfessor.carga_alocada / 50) * 100 : 0;
 
@@ -62,12 +64,14 @@ export function ProfessorLotadoCard({
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center">
                   <span className="text-primary-foreground font-semibold text-lg">
-                    {professor.nome[0]?.toUpperCase()}
+                    {pessoa.nome_completo[0]?.toUpperCase()}
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground">{professor.nome}</h3>
-                  <p className="text-sm text-muted-foreground">Matrícula: {professor.matricula}</p>
+                  <h3 className="text-xl font-semibold text-foreground">{pessoa.nome_completo}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {professor?.matricula ? `Matrícula: ${professor.matricula}` : `CPF: ${pessoa.cpf}`}
+                  </p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
@@ -97,9 +101,9 @@ export function ProfessorLotadoCard({
             )}
 
             <EditarCargaForm
-              professorId={lotacao.professor_id}
+              professorId={lotacao.pessoa_id}
               anoLetivo={anoLetivo}
-              escolaAtualId={escolaId}
+              escolaAtualId={lotacao.escola_saesc}
               lotacaoId={lotacao.id}
               horasAulaInicial={lotacao.horas_aula}
               plInicial={lotacao.pl}
@@ -114,14 +118,14 @@ export function ProfessorLotadoCard({
               <div className="flex items-start gap-4 flex-1 min-w-0">
                 <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-primary-foreground font-semibold text-lg">
-                    {professor.nome[0]?.toUpperCase()}
+                    {pessoa.nome_completo[0]?.toUpperCase()}
                   </span>
                 </div>
                 
                 <div className="flex-1 min-w-0 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-xl font-semibold text-foreground truncate">
-                      {professor.nome}
+                      {pessoa.nome_completo}
                     </h3>
                     <Badge variant={isConvocado ? "outline" : "secondary"}>
                       {isConvocado ? '📋 Convocado' : '✓ Efetivo'}
@@ -129,16 +133,16 @@ export function ProfessorLotadoCard({
                   </div>
                   
                   <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
-                    {professor.email && (
+                    {pessoa.email && (
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{professor.email}</span>
+                        <span className="truncate">{pessoa.email}</span>
                       </div>
                     )}
-                    {professor.telefone && (
+                    {pessoa.telefone && (
                       <div className="flex items-center gap-2">
                         <Phone className="w-4 h-4 flex-shrink-0" />
-                        <span>{professor.telefone}</span>
+                        <span>{pessoa.telefone}</span>
                       </div>
                     )}
                   </div>
