@@ -81,25 +81,37 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
       // Buscar lotações ativas
       const { data: lotacoesData, error: lotacoesError } = await supabase
         .from('lotacoes')
-        .select(`
-          id,
-          escola_saesc,
-          perfil,
-          carga_horaria,
-          data_inicio,
-          data_fim,
-          escolas!inner(nome, saesc)
-        `)
+        .select('id, escola_saesc, perfil, carga_horaria, data_inicio, data_fim')
         .eq('pessoa_id', usuarioData.pessoa_id)
         .eq('ativo', true)
         .order('data_inicio', { ascending: false });
 
       if (lotacoesError) throw lotacoesError;
 
-      const lotacoes: Lotacao[] = (lotacoesData || []).map((l: any) => ({
+      if (!lotacoesData || lotacoesData.length === 0) {
+        console.log('⚠️ SchoolContext: No lotações found, setting loading=false');
+        setEscolaAtual(null);
+        setTodasLotacoes([]);
+        setNeedsSchoolSelection(false);
+        setLoading(false);
+        return;
+      }
+
+      // Buscar nomes das escolas
+      const escolasSaesc = [...new Set(lotacoesData.map(l => l.escola_saesc))];
+      const { data: escolasData } = await supabase
+        .from('escolas')
+        .select('saesc, nome')
+        .in('saesc', escolasSaesc);
+
+      const escolasMap = new Map(
+        escolasData?.map(e => [e.saesc.toString(), e.nome]) || []
+      );
+
+      const lotacoes: Lotacao[] = lotacoesData.map((l: any) => ({
         lotacao_id: l.id,
         escola_saesc: l.escola_saesc,
-        escola_nome: l.escolas?.nome || 'Escola não encontrada',
+        escola_nome: escolasMap.get(l.escola_saesc) || 'Escola não encontrada',
         perfil: l.perfil,
         carga_horaria: l.carga_horaria,
         data_inicio: l.data_inicio,

@@ -415,7 +415,7 @@ export type Database = {
             foreignKeyName: "horarios_professor_id_fkey"
             columns: ["professor_id"]
             isOneToOne: false
-            referencedRelation: "professores_deprecated"
+            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
           {
@@ -561,46 +561,7 @@ export type Database = {
           },
         ]
       }
-      lotacoes_professores_backup: {
-        Row: {
-          ano_letivo: string | null
-          carga_total: number | null
-          created_at: string | null
-          escola_id: string | null
-          horas_aula: number | null
-          id: string | null
-          pl: number | null
-          professor_id: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          ano_letivo?: string | null
-          carga_total?: number | null
-          created_at?: string | null
-          escola_id?: string | null
-          horas_aula?: number | null
-          id?: string | null
-          pl?: number | null
-          professor_id?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          ano_letivo?: string | null
-          carga_total?: number | null
-          created_at?: string | null
-          escola_id?: string | null
-          horas_aula?: number | null
-          id?: string | null
-          pl?: number | null
-          professor_id?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      lotacoes_professores_deprecated: {
+      lotacoes_professores: {
         Row: {
           ano_letivo: string
           carga_total: number | null
@@ -649,7 +610,7 @@ export type Database = {
             foreignKeyName: "lotacoes_professores_professor_id_fkey"
             columns: ["professor_id"]
             isOneToOne: false
-            referencedRelation: "professores_deprecated"
+            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
           {
@@ -660,6 +621,45 @@ export type Database = {
             referencedColumns: ["professor_id"]
           },
         ]
+      }
+      lotacoes_professores_backup: {
+        Row: {
+          ano_letivo: string | null
+          carga_total: number | null
+          created_at: string | null
+          escola_id: string | null
+          horas_aula: number | null
+          id: string | null
+          pl: number | null
+          professor_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ano_letivo?: string | null
+          carga_total?: number | null
+          created_at?: string | null
+          escola_id?: string | null
+          horas_aula?: number | null
+          id?: string | null
+          pl?: number | null
+          professor_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ano_letivo?: string | null
+          carga_total?: number | null
+          created_at?: string | null
+          escola_id?: string | null
+          horas_aula?: number | null
+          id?: string | null
+          pl?: number | null
+          professor_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       matriz_componentes: {
         Row: {
@@ -845,7 +845,7 @@ export type Database = {
             foreignKeyName: "professor_eventos_professor_id_fkey"
             columns: ["professor_id"]
             isOneToOne: false
-            referencedRelation: "professores_deprecated"
+            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
           {
@@ -857,64 +857,7 @@ export type Database = {
           },
         ]
       }
-      professores_backup: {
-        Row: {
-          ativo: boolean | null
-          carga_horaria_contratual: number | null
-          cargo: string | null
-          cpf: string | null
-          created_at: string | null
-          email: string | null
-          escola_id: string | null
-          formacoes: Json | null
-          funcao_atual: string | null
-          horas_pl: number | null
-          id: string | null
-          matricula: string | null
-          nome: string | null
-          telefone: string | null
-          tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"] | null
-          usuario_id: string | null
-        }
-        Insert: {
-          ativo?: boolean | null
-          carga_horaria_contratual?: number | null
-          cargo?: string | null
-          cpf?: string | null
-          created_at?: string | null
-          email?: string | null
-          escola_id?: string | null
-          formacoes?: Json | null
-          funcao_atual?: string | null
-          horas_pl?: number | null
-          id?: string | null
-          matricula?: string | null
-          nome?: string | null
-          telefone?: string | null
-          tipo_vinculo?: Database["public"]["Enums"]["tipo_vinculo"] | null
-          usuario_id?: string | null
-        }
-        Update: {
-          ativo?: boolean | null
-          carga_horaria_contratual?: number | null
-          cargo?: string | null
-          cpf?: string | null
-          created_at?: string | null
-          email?: string | null
-          escola_id?: string | null
-          formacoes?: Json | null
-          funcao_atual?: string | null
-          horas_pl?: number | null
-          id?: string | null
-          matricula?: string | null
-          nome?: string | null
-          telefone?: string | null
-          tipo_vinculo?: Database["public"]["Enums"]["tipo_vinculo"] | null
-          usuario_id?: string | null
-        }
-        Relationships: []
-      }
-      professores_deprecated: {
+      professores: {
         Row: {
           ativo: boolean | null
           carga_horaria_contratual: number | null
@@ -999,6 +942,63 @@ export type Database = {
             referencedColumns: ["usuario_id"]
           },
         ]
+      }
+      professores_backup: {
+        Row: {
+          ativo: boolean | null
+          carga_horaria_contratual: number | null
+          cargo: string | null
+          cpf: string | null
+          created_at: string | null
+          email: string | null
+          escola_id: string | null
+          formacoes: Json | null
+          funcao_atual: string | null
+          horas_pl: number | null
+          id: string | null
+          matricula: string | null
+          nome: string | null
+          telefone: string | null
+          tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"] | null
+          usuario_id: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          carga_horaria_contratual?: number | null
+          cargo?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          escola_id?: string | null
+          formacoes?: Json | null
+          funcao_atual?: string | null
+          horas_pl?: number | null
+          id?: string | null
+          matricula?: string | null
+          nome?: string | null
+          telefone?: string | null
+          tipo_vinculo?: Database["public"]["Enums"]["tipo_vinculo"] | null
+          usuario_id?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          carga_horaria_contratual?: number | null
+          cargo?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          escola_id?: string | null
+          formacoes?: Json | null
+          funcao_atual?: string | null
+          horas_pl?: number | null
+          id?: string | null
+          matricula?: string | null
+          nome?: string | null
+          telefone?: string | null
+          tipo_vinculo?: Database["public"]["Enums"]["tipo_vinculo"] | null
+          usuario_id?: string | null
+        }
+        Relationships: []
       }
       rate_limits: {
         Row: {
