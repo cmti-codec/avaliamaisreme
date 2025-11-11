@@ -912,6 +912,251 @@ export default function Importacao() {
     return errors;
   };
 
+  // 7. MATRIZES CURRICULARES
+  const handleImportMatrizes = async (data: any[], fileName: string) => {
+    const errors: ValidationError[] = [];
+    let sucessos = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        // Criar matriz curricular
+        const { data: matriz, error: matrizError } = await supabase
+          .from('matrizes_curriculares')
+          .insert({
+            codigo: row.codigo,
+            nome: row.nome,
+            etapa_modalidade: row.etapa_modalidade,
+            grupo_ano: row.grupo_ano,
+            tipo_jornada: row.tipo_jornada || null,
+            descricao: row.descricao || null,
+            total_horas_semanais: parseInt(row.total_horas_semanais || '0'),
+            ativa: true
+          })
+          .select('id')
+          .single();
+
+        if (matrizError) throw matrizError;
+
+        // Adicionar componentes da matriz (se fornecidos)
+        if (row.componentes && matriz) {
+          const componentesStr = row.componentes;
+          const componentesList = componentesStr.split(';').map((c: string) => c.trim());
+          
+          for (const compStr of componentesList) {
+            const [nome, cargaStr] = compStr.split(':').map((s: string) => s.trim());
+            const carga = parseInt(cargaStr);
+            
+            if (nome && !isNaN(carga)) {
+              await supabase
+                .from('matriz_componentes')
+                .insert({
+                  matriz_id: matriz.id,
+                  componente_nome: nome,
+                  grupo_ano: row.grupo_ano,
+                  carga_horaria_semanal: carga
+                });
+            }
+          }
+        }
+
+        sucessos++;
+      } catch (error: any) {
+        errors.push({
+          linha: i + 2,
+          campo: 'geral',
+          valor: row.nome,
+          erro: error.message || 'Erro ao inserir',
+          tipo: 'critico'
+        });
+      }
+    }
+
+    await logImportacao({
+      tipo: 'Matrizes Curriculares',
+      nomeArquivo: fileName,
+      totalLinhas: data.length,
+      linhasSucesso: sucessos,
+      linhasErro: errors.length,
+      detalhesErros: errors
+    });
+
+    toast({
+      title: errors.length === 0 ? "✅ Matrizes importadas com sucesso!" : "⚠️ Importação parcial",
+      description: `${sucessos} matrizes importadas${errors.length > 0 ? `, ${errors.length} erros` : ''}`,
+      variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
+    });
+
+    return { success: sucessos, errors };
+  };
+
+  const validateMatrizes = async (data: any[]) => {
+    const errors: ValidationError[] = [];
+    
+    // Validar unicidade de código
+    const uniqueErrors = await validateUniqueness(data, 'codigo', 'matrizes_curriculares', 'Código');
+    errors.push(...uniqueErrors);
+    
+    return errors;
+  };
+
+  // 8. LOTAÇÕES (Gestores: Diretores, Secretários, Coordenadores)
+  const handleImportLotacoes = async (data: any[], fileName: string) => {
+    const errors: ValidationError[] = [];
+    let sucessos = 0;
+    let pessoasCriadas = 0;
+    let usuariosCriados = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        // 1. Buscar/criar pessoa
+        let pessoa_id: string | null = null;
+        
+        if (row.cpf) {
+          const { data: pessoaExistente } = await supabase
+            .from('pessoas')
+            .select('id')
+            .eq('cpf', row.cpf)
+            .maybeSingle();
+          
+          if (pessoaExistente) {
+            pessoa_id = pessoaExistente.id;
+          }
+        }
+        
+        if (!pessoa_id) {
+          const { data: novaPessoa, error: pessoaError } = await supabase
+            .from('pessoas')
+            .insert({
+              nome_completo: row.nome_completo,
+              cpf: row.cpf,
+              email: row.email,
+              telefone: row.telefone || null,
+              ativo: true
+            })
+            .select('id')
+            .single();
+          
+          if (pessoaError) throw pessoaError;
+          pessoa_id = novaPessoa.id;
+          pessoasCriadas++;
+        }
+        
+        // 2. Criar usuário (se tiver email)
+        if (row.email && pessoa_id) {
+          try {
+            const suffix = row.cpf ? row.cpf.slice(-4) : '2025';
+            const senhaTemporaria = `REME${suffix}`;
+            
+            const { data: userData, error: userError } = await supabase.functions.invoke(
+              'admin-create-user',
+              {
+                body: {
+                  nome: row.nome_completo,
+                  email: row.email,
+                  senha: senhaTemporaria,
+                  roles: [row.perfil],
+                  escola_id: null,
+                  pessoa_id: pessoa_id
+                }
+              }
+            );
+
+            if (userError) throw userError;
+            if (userData?.userId) usuariosCriados++;
+          } catch (userError: any) {
+            console.warn(`Não foi possível criar usuário para ${row.email}:`, userError.message);
+          }
+        }
+        
+        // 3. Criar lotação
+        const { error: lotacaoError } = await supabase
+          .from('lotacoes')
+          .insert({
+            pessoa_id: pessoa_id,
+            perfil: row.perfil,
+            escola_saesc: row.escola_saesc,
+            ano_letivo: row.ano_letivo || new Date().getFullYear().toString(),
+            carga_horaria: row.carga_horaria ? parseInt(row.carga_horaria) : null,
+            data_inicio: row.data_inicio || new Date().toISOString().split('T')[0],
+            data_fim: row.data_fim || null,
+            status: 'ATIVO',
+            ativo: true,
+            observacoes: row.observacoes || null
+          });
+        
+        if (lotacaoError) throw lotacaoError;
+        sucessos++;
+      } catch (error: any) {
+        errors.push({
+          linha: i + 2,
+          campo: 'geral',
+          valor: row.nome_completo,
+          erro: error.message || 'Erro ao inserir',
+          tipo: 'critico'
+        });
+      }
+    }
+
+    await logImportacao({
+      tipo: 'Lotações (Gestores)',
+      nomeArquivo: fileName,
+      totalLinhas: data.length,
+      linhasSucesso: sucessos,
+      linhasErro: errors.length,
+      detalhesErros: errors
+    });
+
+    toast({
+      title: errors.length === 0 ? "✅ Lotações importadas com sucesso!" : "⚠️ Importação parcial",
+      description: `${pessoasCriadas} pessoas criadas, ${usuariosCriados} usuários criados, ${sucessos} lotações${errors.length > 0 ? `, ${errors.length} erros` : ''}`,
+      variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
+    });
+
+    return { success: sucessos, errors };
+  };
+
+  const validateLotacoes = async (data: any[]) => {
+    const errors: ValidationError[] = [];
+    
+    // Validar escola existe (ou é POOL_REME)
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      if (row.escola_saesc !== 'POOL_REME') {
+        const { data: escola } = await supabase
+          .from('escolas')
+          .select('id')
+          .eq('codigo_saesc', row.escola_saesc)
+          .maybeSingle();
+        
+        if (!escola) {
+          errors.push({
+            linha: i + 2,
+            campo: 'escola_saesc',
+            valor: row.escola_saesc,
+            erro: `Escola com código ${row.escola_saesc} não encontrada`,
+            tipo: 'critico'
+          });
+        }
+      }
+      
+      // Validar perfil
+      const perfisValidos = ['DIRETOR', 'SECRETARIO', 'COORDENADOR', 'PROFESSOR'];
+      if (!perfisValidos.includes(row.perfil)) {
+        errors.push({
+          linha: i + 2,
+          campo: 'perfil',
+          valor: row.perfil,
+          erro: `Perfil inválido. Valores aceitos: ${perfisValidos.join(', ')}`,
+          tipo: 'critico'
+        });
+      }
+    }
+    
+    return errors;
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div>
@@ -922,13 +1167,15 @@ export default function Importacao() {
       </div>
 
       <Tabs defaultValue="componentes" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
           <TabsTrigger value="componentes">Componentes</TabsTrigger>
           <TabsTrigger value="formacoes">Formações</TabsTrigger>
           <TabsTrigger value="professores">Professores</TabsTrigger>
           <TabsTrigger value="escolas">Escolas</TabsTrigger>
           <TabsTrigger value="alunos">Alunos</TabsTrigger>
           <TabsTrigger value="cargas">Cargas</TabsTrigger>
+          <TabsTrigger value="matrizes">Matrizes</TabsTrigger>
+          <TabsTrigger value="lotacoes">Lotações</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
 
@@ -1089,7 +1336,75 @@ export default function Importacao() {
           />
         </TabsContent>
 
-        {/* 7. LOGS */}
+        {/* 7. MATRIZES CURRICULARES */}
+        <TabsContent value="matrizes">
+          <CSVUploaderAdvanced
+            title="Importar Matrizes Curriculares"
+            description="Importe matrizes curriculares completas com seus componentes"
+            expectedHeaders={[
+              { name: 'codigo', required: true, type: 'text' },
+              { name: 'nome', required: true, type: 'text' },
+              { name: 'etapa_modalidade', required: true, type: 'text' },
+              { name: 'grupo_ano', required: true, type: 'text' },
+              { name: 'tipo_jornada', required: false, type: 'text' },
+              { name: 'descricao', required: false, type: 'text' },
+              { name: 'total_horas_semanais', required: true, type: 'number' },
+              { name: 'componentes', required: false, type: 'text' }
+            ]}
+            onImport={handleImportMatrizes}
+            onValidate={validateMatrizes}
+            warningMessage="💡 No campo 'componentes', use formato: NomeComponente1:CargaHorária1;NomeComponente2:CargaHorária2"
+            templateData={[{
+              codigo: 'MAT-EFI-1ANO',
+              nome: 'Matriz 1º Ano - Anos Iniciais',
+              etapa_modalidade: 'Ensino Fundamental I - Anos Iniciais',
+              grupo_ano: '1º Ano',
+              tipo_jornada: 'Integral',
+              descricao: 'Matriz para turmas de 1º ano',
+              total_horas_semanais: '25',
+              componentes: 'MATEMÁTICA:5;LÍNGUA PORTUGUESA:7;CIÊNCIAS:3'
+            }]}
+          />
+        </TabsContent>
+
+        {/* 8. LOTAÇÕES (GESTORES) */}
+        <TabsContent value="lotacoes">
+          <CSVUploaderAdvanced
+            title="Importar Lotações (Diretores, Secretários, Coordenadores)"
+            description="Importe lotações de gestores escolares"
+            expectedHeaders={[
+              { name: 'nome_completo', required: true, type: 'text' },
+              { name: 'cpf', required: true, type: 'text' },
+              { name: 'email', required: true, type: 'email' },
+              { name: 'telefone', required: false, type: 'text' },
+              { name: 'perfil', required: true, type: 'text' },
+              { name: 'escola_saesc', required: true, type: 'text' },
+              { name: 'ano_letivo', required: false, type: 'text' },
+              { name: 'carga_horaria', required: false, type: 'number' },
+              { name: 'data_inicio', required: false, type: 'date' },
+              { name: 'data_fim', required: false, type: 'date' },
+              { name: 'observacoes', required: false, type: 'text' }
+            ]}
+            onImport={handleImportLotacoes}
+            onValidate={validateLotacoes}
+            warningMessage="⚠️ Perfis aceitos: DIRETOR, SECRETARIO, COORDENADOR, PROFESSOR. Use 'POOL_REME' no escola_saesc para pool geral."
+            templateData={[{
+              nome_completo: 'João Silva',
+              cpf: '123.456.789-00',
+              email: 'joao@escola.com',
+              telefone: '(67) 99999-9999',
+              perfil: 'DIRETOR',
+              escola_saesc: '5001',
+              ano_letivo: '2025',
+              carga_horaria: '40',
+              data_inicio: '2025-02-01',
+              data_fim: '',
+              observacoes: 'Diretor titular'
+            }]}
+          />
+        </TabsContent>
+
+        {/* 9. LOGS */}
         <TabsContent value="logs">
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Histórico de Importações</h2>

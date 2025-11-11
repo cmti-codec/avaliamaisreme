@@ -154,18 +154,32 @@ export default function ImportarLotacoes() {
           pessoaId = novaPessoa.id;
         }
 
-        // 2. Verificar/criar usuário
+        // 2. Criar/verificar usuário
         const { data: usuarioExistente } = await supabase
           .from("usuarios")
           .select("id")
           .eq("pessoa_id", pessoaId)
           .maybeSingle();
 
-        if (!usuarioExistente) {
-          // Criar usuário - precisa criar no auth primeiro
-          // Por simplicidade, vamos apenas lotar pessoas que já têm usuário
-          // OU usar a função edge admin-create-user se disponível
-          throw new Error("Pessoa sem usuário vinculado. Configure o usuário antes de importar lotações.");
+        if (!usuarioExistente && row.email) {
+          // Criar usuário via edge function
+          try {
+            const suffix = cpfLimpo.slice(-4);
+            const senhaTemporaria = `REME${suffix}`;
+            
+            await supabase.functions.invoke('admin-create-user', {
+              body: {
+                nome: row.nome_completo,
+                email: row.email,
+                senha: senhaTemporaria,
+                roles: [row.perfil],
+                escola_id: null,
+                pessoa_id: pessoaId
+              }
+            });
+          } catch (userError: any) {
+            console.warn(`Aviso: Não foi possível criar usuário para ${row.email}`);
+          }
         }
 
         // 3. Criar lotação
@@ -177,6 +191,8 @@ export default function ImportarLotacoes() {
             perfil: row.perfil,
             carga_horaria: row.carga_horaria ? Number(row.carga_horaria) : null,
             data_inicio: row.data_inicio,
+            ano_letivo: new Date().getFullYear().toString(),
+            status: 'ATIVO',
             ativo: true,
           });
 
