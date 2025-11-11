@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Loader2, Plus, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface Usuario {
   id: string;
@@ -48,15 +48,7 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Campos extras para professores
-  const [cpf, setCpf] = useState('');
-  const [matricula, setMatricula] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [formacoes, setFormacoes] = useState<string[]>([]);
-  const [novaFormacao, setNovaFormacao] = useState('');
-  const [professorId, setProfessorId] = useState<string | null>(null);
   const [isProfessor, setIsProfessor] = useState(false);
-  const [professorAtivo, setProfessorAtivo] = useState(true);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -73,46 +65,9 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
         const roles = rolesData?.map(r => r.role) || [];
         setSelectedRoles(roles);
         
-        // Verificar se é professor e buscar dados extras
+        // Verificar se é professor
         const hasProfessorRole = roles.includes('PROFESSOR');
         setIsProfessor(hasProfessorRole);
-        
-        if (hasProfessorRole) {
-          const { data: professorData } = await supabase
-            .from('professores')
-            .select('id, cpf, matricula, telefone, formacoes, ativo')
-            .eq('usuario_id', usuario.id)
-            .maybeSingle();
-          
-          if (professorData) {
-            setProfessorId(professorData.id);
-            setCpf(professorData.cpf || '');
-            setMatricula(professorData.matricula || '');
-            setTelefone(professorData.telefone || '');
-            setProfessorAtivo(professorData.ativo ?? true);
-            setFormacoes(
-              Array.isArray(professorData.formacoes) 
-                ? (professorData.formacoes as string[]) 
-                : []
-            );
-          } else {
-            // Sem registro de professor ainda: garantir reset total para evitar "replicação" visual
-            setProfessorId(null);
-            setCpf('');
-            setMatricula('');
-            setTelefone('');
-            setProfessorAtivo(true);
-            setFormacoes([]);
-          }
-        } else {
-          // Reset campos de professor
-          setProfessorId(null);
-          setCpf('');
-          setMatricula('');
-          setTelefone('');
-          setFormacoes([]);
-          setProfessorAtivo(true);
-        }
       }
     };
     
@@ -142,16 +97,6 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
     setIsProfessor(newRoles.includes('PROFESSOR'));
   };
 
-  const handleAddFormacao = () => {
-    if (novaFormacao.trim()) {
-      setFormacoes([...formacoes, novaFormacao.trim()]);
-      setNovaFormacao('');
-    }
-  };
-
-  const handleRemoveFormacao = (index: number) => {
-    setFormacoes(formacoes.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,50 +165,10 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
         if (deleteError) throw deleteError;
       }
 
-      // Atualizar dados do professor se for PROFESSOR
-      if (selectedRoles.includes('PROFESSOR')) {
-        if (professorId) {
-          // Atualizar professor existente
-          const { error: profError } = await supabase
-            .from('professores')
-            .update({
-              nome: nome,
-              email: email,
-              cpf: cpf || null,
-              matricula: matricula || null,
-              telefone: telefone || null,
-              formacoes: formacoes.length > 0 ? formacoes : null,
-              ativo: professorAtivo
-            })
-            .eq('id', professorId);
-
-          if (profError) throw profError;
-        } else {
-          // Criar registro de professor se não existir
-          const { data: newProfessor, error: profError } = await supabase
-            .from('professores')
-            .insert({
-              usuario_id: usuario.id,
-              nome: nome,
-              email: email,
-              cpf: cpf || null,
-              matricula: matricula || null,
-              telefone: telefone || null,
-              formacoes: formacoes.length > 0 ? formacoes : null,
-              escola_id: null,
-              ativo: professorAtivo
-            })
-            .select('id')
-            .single();
-
-          if (profError) throw profError;
-          setProfessorId(newProfessor?.id || null);
-        }
-      }
 
       toast.success('Usuário atualizado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-      queryClient.invalidateQueries({ queryKey: ['professores-disponiveis'] });
+      queryClient.invalidateQueries({ queryKey: ['pessoas-pool'] });
       onOpenChange(false);
     } catch (error: any) {
       console.error('Erro ao atualizar usuário:', error);
@@ -325,105 +230,13 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
             </div>
           </div>
 
-          {/* Campos extras para Professores */}
+          {/* Info sobre perfil Professor */}
           {isProfessor && (
-            <>
-              <div className="border-t pt-4 mt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold">Dados do Professor</h3>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="professor-ativo"
-                      checked={professorAtivo}
-                      onCheckedChange={(checked) => setProfessorAtivo(checked as boolean)}
-                    />
-                    <Label
-                      htmlFor="professor-ativo"
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      Professor Ativo (REME)
-                    </Label>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="cpf">CPF</Label>
-                    <Input
-                      id="cpf"
-                      value={cpf}
-                      onChange={(e) => setCpf(e.target.value)}
-                      placeholder="000.000.000-00"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="matricula">Matrícula</Label>
-                    <Input
-                      id="matricula"
-                      value={matricula}
-                      onChange={(e) => setMatricula(e.target.value)}
-                      placeholder="000000"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input
-                    id="telefone"
-                    value={telefone}
-                    onChange={(e) => setTelefone(e.target.value)}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-
-                <div className="mt-4">
-                  <Label>Formações</Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      value={novaFormacao}
-                      onChange={(e) => setNovaFormacao(e.target.value)}
-                      placeholder="Ex: Pedagogia"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddFormacao();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleAddFormacao}
-                      size="icon"
-                      variant="outline"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  
-                  {formacoes.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {formacoes.map((formacao, index) => (
-                        <div
-                          key={`${usuario?.id}-formacao-${index}`}
-                          className="flex items-center gap-2 bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm"
-                        >
-                          {formacao}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFormacao(index)}
-                            className="hover:text-destructive"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
+            <div className="border-t pt-4 mt-4">
+              <p className="text-sm text-muted-foreground">
+                💡 <strong>Dados complementares de professor</strong> (CPF, matrícula, telefone, formações) são gerenciados na página <strong>Pool de Professores</strong>.
+              </p>
+            </div>
           )}
 
           <DialogFooter>

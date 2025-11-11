@@ -189,20 +189,54 @@ export default function Importacao() {
     return [...errors, ...uniqueErrors];
   };
 
-  // 3. PROFESSORES (com criação automática de usuário)
+  // 3. PROFESSORES (criar pessoa + usuário + lotação PROFESSOR no pool REME)
   const handleImportProfessores = async (data: any[], fileName: string) => {
     const errors: ValidationError[] = [];
     let sucessos = 0;
     let usuariosCriados = 0;
+    let pessoasCriadas = 0;
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       try {
-        const formacoes = row.formacao ? [row.formacao] : [];
+        // 1. Criar/buscar pessoa
+        let pessoa_id: string | null = null;
         
-        // 1. Criar usuário via edge function (se tiver email)
+        // Tentar buscar pessoa existente por CPF
+        if (row.cpf) {
+          const { data: pessoaExistente } = await supabase
+            .from('pessoas')
+            .select('id')
+            .eq('cpf', row.cpf)
+            .maybeSingle();
+          
+          if (pessoaExistente) {
+            pessoa_id = pessoaExistente.id;
+          }
+        }
+        
+        // Se não encontrou, criar nova pessoa
+        if (!pessoa_id) {
+          const { data: novaPessoa, error: pessoaError } = await supabase
+            .from('pessoas')
+            .insert({
+              nome_completo: row.full_name,
+              cpf: row.cpf,
+              email: row.email,
+              telefone: row.telefone || null,
+              ativo: row.ativo.toLowerCase() === 'true' || row.ativo === '1'
+            })
+            .select('id')
+            .single();
+          
+          if (pessoaError) throw pessoaError;
+          pessoa_id = novaPessoa.id;
+          pessoasCriadas++;
+        }
+        
+        // 2. Criar usuário via edge function (se tiver email)
         let usuario_id: string | null = null;
-        if (row.email) {
+        if (row.email && pessoa_id) {
           try {
             // Gerar senha temporária: ProfREME + últimos 4 dígitos CPF ou matrícula
             const suffix = row.cpf ? row.cpf.slice(-4) : row.matricula?.slice(-4) || '2025';
@@ -216,7 +250,8 @@ export default function Importacao() {
                   email: row.email,
                   senha: senhaTemporaria,
                   roles: ['PROFESSOR'],
-                  escola_id: null // Pool REME
+                  escola_id: null, // Pool REME
+                  pessoa_id: pessoa_id
                 }
               }
             );
@@ -233,25 +268,22 @@ export default function Importacao() {
           }
         }
         
-        // 2. Inserir professor
-        const { error } = await supabase
-          .from('professores')
+        // 3. Criar lotação no pool REME (sem escola específica)
+        // Será atribuída a escolas via interface de lotação
+        const { error: lotacaoError } = await supabase
+          .from('lotacoes')
           .insert({
-            nome: row.full_name,
-            email: row.email,
-            cargo: row.cargo,
-            cpf: row.cpf,
-            matricula: row.matricula,
-            telefone: row.telefone,
-            formacoes: formacoes,
-            escola_id: null, // Pool da REME
-            funcao_atual: 'PROFESSOR',
+            pessoa_id: pessoa_id,
+            perfil: 'PROFESSOR',
+            escola_saesc: 'POOL_REME', // Identificador especial para pool
+            ano_letivo: new Date().getFullYear().toString(),
+            status: 'DISPONIVEL',
             ativo: row.ativo.toLowerCase() === 'true' || row.ativo === '1',
-            carga_horaria_contratual: 40,
-            usuario_id: usuario_id
+            data_inicio: new Date().toISOString().split('T')[0],
+            observacoes: `Importado via CSV. Matrícula: ${row.matricula || 'N/A'}. Formação: ${row.formacao || 'N/A'}`
           });
-
-        if (error) throw error;
+        
+        if (lotacaoError) throw lotacaoError;
         sucessos++;
       } catch (error: any) {
         errors.push({
@@ -265,7 +297,7 @@ export default function Importacao() {
     }
 
     await logImportacao({
-      tipo: 'Professores',
+      tipo: 'Professores (Pessoas)',
       nomeArquivo: fileName,
       totalLinhas: data.length,
       linhasSucesso: sucessos,
@@ -275,7 +307,7 @@ export default function Importacao() {
 
     toast({
       title: errors.length === 0 ? "✅ Professores importados com sucesso!" : "⚠️ Importação parcial",
-      description: `${sucessos} professores importados${usuariosCriados > 0 ? `, ${usuariosCriados} usuários criados` : ''}${errors.length > 0 ? `, ${errors.length} erros` : ''}`,
+      description: `${pessoasCriadas} pessoas criadas, ${usuariosCriados} usuários criados, ${sucessos} lotações pool${errors.length > 0 ? `, ${errors.length} erros` : ''}`,
       variant: errors.length > 0 && sucessos === 0 ? "destructive" : "default",
     });
 
@@ -299,20 +331,6 @@ export default function Importacao() {
           });
         }
       }
-
-      // Validar tipo_vinculo
-      if (row.tipo_vinculo) {
-        const tipoVinculoUpper = row.tipo_vinculo.toUpperCase();
-        if (tipoVinculoUpper !== 'EFETIVO' && tipoVinculoUpper !== 'CONVOCADO') {
-          errors.push({
-            linha: index + 2,
-            campo: 'tipo_vinculo',
-            valor: row.tipo_vinculo,
-            erro: 'Tipo de vínculo deve ser "EFETIVO" ou "CONVOCADO"',
-            tipo: 'critico'
-          });
-        }
-      }
     });
     
     // Validar formação existe
@@ -331,17 +349,16 @@ export default function Importacao() {
             campo: 'formacao',
             valor: row.formacao,
             erro: `Formação "${row.formacao}" não cadastrada`,
-            tipo: 'critico'
+            tipo: 'aviso'
           });
         }
       }
     }
     
-    const emailErrors = await validateUniqueness(data, 'email', 'professores', 'Email');
-    const cpfErrors = await validateUniqueness(data, 'cpf', 'professores', 'CPF');
-    const matriculaErrors = await validateUniqueness(data, 'matricula', 'professores', 'Matrícula');
+    const emailErrors = await validateUniqueness(data, 'email', 'pessoas', 'Email');
+    const cpfErrors = await validateUniqueness(data, 'cpf', 'pessoas', 'CPF');
     
-    return [...errors, ...emailErrors, ...cpfErrors, ...matriculaErrors];
+    return [...errors, ...emailErrors, ...cpfErrors];
   };
 
   // 4. ESCOLAS

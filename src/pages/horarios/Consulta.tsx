@@ -110,14 +110,20 @@ const Consulta = () => {
   };
 
   const carregarProfessores = async () => {
-    // Buscar professores
-    const { data: professores, error: professoresError } = await supabase
-      .from("professores")
-      .select("*")
-      .eq("ativo", true)
-      .order("nome", { ascending: true });
+    // Buscar usuários com perfil PROFESSOR via view
+    const { data: usuarios, error: usuariosError } = await supabase
+      .from("usuarios_contextualizados")
+      .select("*");
 
-    if (professoresError) throw professoresError;
+    if (usuariosError) throw usuariosError;
+
+    // Filtrar professores ativos com lotações
+    const professoresData = (usuarios || []).filter(u => {
+      const lotacoes = Array.isArray(u.lotacoes_ativas) 
+        ? u.lotacoes_ativas 
+        : (u.lotacoes_ativas ? JSON.parse(JSON.stringify(u.lotacoes_ativas)) : []);
+      return lotacoes.some((l: any) => l.perfil === 'PROFESSOR') && u.usuario_ativo;
+    });
 
     // Buscar horários
     const { data: horarios, error: horariosError } = await supabase
@@ -130,8 +136,8 @@ const Consulta = () => {
     if (horariosError) throw horariosError;
 
     // Consolidar dados
-    const consolidados: ProfessorConsolidado[] = (professores || []).map((prof) => {
-      const horariosProfessor = (horarios || []).filter((h) => h.professor_id === prof.id);
+    const consolidados: ProfessorConsolidado[] = professoresData.map((prof) => {
+      const horariosProfessor = (horarios || []).filter((h) => h.professor_id === prof.usuario_id);
       
       const turmasSet = new Set<string>();
       const componentesSet = new Set<string>();
@@ -144,13 +150,22 @@ const Consulta = () => {
         if (h.componente_curricular) componentesSet.add(h.componente_curricular);
       });
 
+      // Calcular carga total do professor (soma das lotações)
+      const lotacoes = Array.isArray(prof.lotacoes_ativas) 
+        ? prof.lotacoes_ativas 
+        : (prof.lotacoes_ativas ? JSON.parse(JSON.stringify(prof.lotacoes_ativas)) : []);
+      
+      const cargaTotal = lotacoes
+        .filter((l: any) => l.perfil === 'PROFESSOR')
+        .reduce((acc: number, l: any) => acc + (l.carga_horaria || 0), 0) || 40;
+
       return {
-        id: prof.id,
-        nome: prof.nome,
+        id: prof.usuario_id,
+        nome: prof.nome_completo,
         turmas: Array.from(turmasSet).sort(),
         componentes: Array.from(componentesSet).sort(),
         cargaAlocada: horariosProfessor.length,
-        cargaTotal: prof.carga_horaria_contratual,
+        cargaTotal: cargaTotal,
       };
     });
 
