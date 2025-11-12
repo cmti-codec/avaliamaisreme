@@ -65,6 +65,10 @@ const adminItems = [{
   url: "/admin/gestores",
   icon: Users
 }, {
+  title: "Pool de Professores",
+  url: "/admin/pool-professores",
+  icon: Users
+}, {
   title: "Matrizes Curriculares",
   url: "/admin/matrizes",
   icon: BookOpen
