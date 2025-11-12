@@ -76,10 +76,6 @@ const adminItems = [{
   title: "Importar Dados",
   url: "/admin/importacao",
   icon: Download
-}, {
-  title: "Importar Lotações",
-  url: "/admin/importar-lotacoes",
-  icon: Download
 }];
 export function AppSidebar() {
   const {
