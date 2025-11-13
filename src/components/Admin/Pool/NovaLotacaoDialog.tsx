@@ -32,7 +32,7 @@ export function NovaLotacaoDialog({ open, onOpenChange, pessoa, perfil }: NovaLo
   const escolas = escolasQuery.data || [];
   const { criarLotacao, isSaving } = useLotacoesGestao();
 
-  const cargaAtual = pessoa.carga_horaria_total || 0;
+  const cargaAtual = pessoa?.carga_horaria_total || 0;
   const novaCarga = parseInt(cargaHoraria) || 0;
   const cargaTotal = cargaAtual + novaCarga;
   const excedeCarga = cargaTotal > 60;
