@@ -68,7 +68,7 @@ export default function PoolProfessores() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Pool de Professores</h1>
+          <h1 className="text-3xl font-bold">Professores (REME)</h1>
           <p className="text-muted-foreground mt-2">
             Gerencie professores da REME e suas lotações nas escolas da rede
           </p>

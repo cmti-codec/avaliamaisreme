@@ -65,7 +65,7 @@ const adminItems = [{
   url: "/admin/gestores",
   icon: Users
 }, {
-  title: "Pool de Professores",
+  title: "Professores (REME)",
   url: "/admin/pool-professores",
   icon: Users
 }, {
