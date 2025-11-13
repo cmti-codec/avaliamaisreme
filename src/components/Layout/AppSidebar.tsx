@@ -57,10 +57,6 @@ const adminItems = [{
   url: "/admin/escolas",
   icon: Building2
 }, {
-  title: "Professores",
-  url: "/admin/professores",
-  icon: Users
-}, {
   title: "Gestores Escolares",
   url: "/admin/gestores",
   icon: Users
