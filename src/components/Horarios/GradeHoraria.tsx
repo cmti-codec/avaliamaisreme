@@ -42,6 +42,7 @@ interface GradeHorariaProps {
   onHorarioRemove: (key: string) => void;
   aulasGeminadas: boolean;
   conflitos: { dia: string; tempo: number }[];
+  quotasComponentes?: Record<string, { atual: number; total: number; percentual: number }>;
 }
 
 export const GradeHoraria = ({
@@ -53,11 +54,12 @@ export const GradeHoraria = ({
   onHorarioRemove,
   aulasGeminadas,
   conflitos,
+  quotasComponentes = {},
 }: GradeHorariaProps) => {
   const [professorTravado, setProfessorTravado] = useState<string | null>(null);
   const tempos = TURNOS_TEMPOS[turma.turno] || [];
   
-  // Usar componentes da matriz atribuída à turma e filtrar por validade
+  // Usar componentes da matriz atribuída à turma e filtrar por validade e quota
   const componentesDisponiveis = useMemo(() => {
     if (!turmaComMatriz?.componentes) return [];
     
@@ -65,8 +67,16 @@ export const GradeHoraria = ({
       .filter((comp) => 
         isComponenteValidoParaTurma(comp, turma.etapa_modalidade, turma.grupo_ano)
       )
-      .sort();
-  }, [turmaComMatriz, turma.etapa_modalidade, turma.grupo_ano]);
+      .map((comp) => {
+        const quota = quotasComponentes[comp];
+        const quotaAtingida = quota && quota.atual >= quota.total;
+        return {
+          nome: comp,
+          desabilitado: quotaAtingida || false,
+        };
+      })
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [turmaComMatriz, turma.etapa_modalidade, turma.grupo_ano, quotasComponentes]);
 
   useEffect(() => {
     // Detectar professor travado
@@ -107,7 +117,15 @@ export const GradeHoraria = ({
   }, [professores, turma.etapa_modalidade, turma.grupo_ano]);
 
   const handleComponenteChange = useCallback((dia: string, tempo: number, componente: string) => {
+    // Verificar se já atingiu a quota (permitir trocar se já existir horário nesse slot)
     const key = getSlotKey(dia, tempo);
+    const horarioExistente = horarios[key];
+    const quota = quotasComponentes[componente];
+    
+    if (!horarioExistente && quota && quota.atual >= quota.total) {
+      return; // Bloquear se quota atingida e não for alteração de slot existente
+    }
+    
     const profsFiltrados = getProfessoresFiltrados(componente);
 
     // Auto-selecionar se houver apenas 1 professor
@@ -243,8 +261,16 @@ export const GradeHoraria = ({
                         </SelectTrigger>
                         <SelectContent>
                           {componentesDisponiveis.map((comp) => (
-                            <SelectItem key={comp} value={comp}>
-                              {comp}
+                            <SelectItem 
+                              key={comp.nome} 
+                              value={comp.nome}
+                              disabled={comp.desabilitado && slot?.componente !== comp.nome}
+                              className={comp.desabilitado && slot?.componente !== comp.nome ? 'opacity-50 cursor-not-allowed' : ''}
+                            >
+                              {comp.nome}
+                              {comp.desabilitado && slot?.componente !== comp.nome && (
+                                <span className="ml-2 text-xs text-muted-foreground">(quota atingida)</span>
+                              )}
                             </SelectItem>
                           ))}
                         </SelectContent>

@@ -30,8 +30,10 @@ import PainelCargas from "@/components/Horarios/PainelCargas";
 import { GradeHorariaLoading } from "@/components/Horarios/GradeHorariaLoading";
 import HorarioProfessor from "@/components/Horarios/HorarioProfessor";
 import { useTurmaComMatriz, type TurmaComMatriz } from "@/hooks/useTurmasComMatriz";
+import { useCargasHorarias, getCargaHoraria } from "@/hooks/useCargasHorarias";
 import {
   detectarConflitos,
+  calcularQuota,
   TURNOS_TEMPOS,
   type HorarioSlot,
   type Professor,
@@ -57,6 +59,29 @@ const Lancamento = () => {
   const { data: turmaComMatriz, isLoading: loadingMatriz } = useTurmaComMatriz(
     turmaSelecionada?.id || null
   );
+
+  // Buscar cargas horárias configuradas
+  const { data: cargasHorarias } = useCargasHorarias();
+
+  // Calcular quotas dos componentes
+  const quotasComponentes = useMemo(() => {
+    if (!turmaComMatriz?.componentes || !cargasHorarias) return {};
+    
+    const quotas: Record<string, { atual: number; total: number; percentual: number }> = {};
+    
+    Object.entries(turmaComMatriz.componentes).forEach(([componenteNome, componenteInfo]) => {
+      const cargaTotal = getCargaHoraria(
+        cargasHorarias,
+        componenteNome,
+        turmaComMatriz.etapa_modalidade,
+        turmaComMatriz.grupo_ano
+      ) || (componenteInfo as any).carga_horaria_semanal || 0;
+      
+      quotas[componenteNome] = calcularQuota(horarios, componenteNome, cargaTotal);
+    });
+    
+    return quotas;
+  }, [horarios, turmaComMatriz, cargasHorarias]);
 
   useEffect(() => {
     carregarDados();
@@ -430,6 +455,7 @@ const Lancamento = () => {
                     onHorarioRemove={handleHorarioRemove}
                     aulasGeminadas={aulasGeminadas}
                     conflitos={conflitos}
+                    quotasComponentes={quotasComponentes}
                   />
                 )}
               </TabsContent>
