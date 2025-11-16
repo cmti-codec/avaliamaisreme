@@ -96,6 +96,39 @@ export type Database = {
           },
         ]
       }
+      audit_impersonation: {
+        Row: {
+          action: string
+          admin_user_id: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          session_token: string
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          session_token: string
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          session_token?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           acao: string
@@ -441,6 +474,36 @@ export type Database = {
           },
         ]
       }
+      impersonation_sessions: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          ended_at: string | null
+          expires_at: string
+          id: string
+          session_token: string
+          target_user_id: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          ended_at?: string | null
+          expires_at: string
+          id?: string
+          session_token: string
+          target_user_id: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          session_token?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       import_logs: {
         Row: {
           created_at: string | null
@@ -576,7 +639,46 @@ export type Database = {
           },
         ]
       }
-      lotacoes_professores: {
+      lotacoes_professores_backup: {
+        Row: {
+          ano_letivo: string | null
+          carga_total: number | null
+          created_at: string | null
+          escola_id: string | null
+          horas_aula: number | null
+          id: string | null
+          pl: number | null
+          professor_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ano_letivo?: string | null
+          carga_total?: number | null
+          created_at?: string | null
+          escola_id?: string | null
+          horas_aula?: number | null
+          id?: string | null
+          pl?: number | null
+          professor_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ano_letivo?: string | null
+          carga_total?: number | null
+          created_at?: string | null
+          escola_id?: string | null
+          horas_aula?: number | null
+          id?: string | null
+          pl?: number | null
+          professor_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      lotacoes_professores_deprecated: {
         Row: {
           ano_letivo: string
           carga_total: number | null
@@ -636,45 +738,6 @@ export type Database = {
             referencedColumns: ["professor_id"]
           },
         ]
-      }
-      lotacoes_professores_backup: {
-        Row: {
-          ano_letivo: string | null
-          carga_total: number | null
-          created_at: string | null
-          escola_id: string | null
-          horas_aula: number | null
-          id: string | null
-          pl: number | null
-          professor_id: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          ano_letivo?: string | null
-          carga_total?: number | null
-          created_at?: string | null
-          escola_id?: string | null
-          horas_aula?: number | null
-          id?: string | null
-          pl?: number | null
-          professor_id?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          ano_letivo?: string | null
-          carga_total?: number | null
-          created_at?: string | null
-          escola_id?: string | null
-          horas_aula?: number | null
-          id?: string | null
-          pl?: number | null
-          professor_id?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       matriz_componentes: {
         Row: {
@@ -1179,7 +1242,6 @@ export type Database = {
           ativo: boolean | null
           created_at: string | null
           email: string
-          escola_id: string | null
           id: string
           impersonated_by: string | null
           nome: string
@@ -1190,7 +1252,6 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           email: string
-          escola_id?: string | null
           id?: string
           impersonated_by?: string | null
           nome: string
@@ -1201,7 +1262,6 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           email?: string
-          escola_id?: string | null
           id?: string
           impersonated_by?: string | null
           nome?: string
@@ -1209,13 +1269,6 @@ export type Database = {
           ultimo_acesso?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "usuarios_escola_id_fkey"
-            columns: ["escola_id"]
-            isOneToOne: false
-            referencedRelation: "escolas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "usuarios_impersonated_by_fkey"
             columns: ["impersonated_by"]
@@ -1324,7 +1377,6 @@ export type Database = {
           cpf: string | null
           created_at: string | null
           email: string | null
-          escola_id: string | null
           formacoes: Json | null
           funcao_atual: string | null
           horas_pl: number | null
@@ -1338,13 +1390,6 @@ export type Database = {
           tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"] | null
         }
         Relationships: [
-          {
-            foreignKeyName: "usuarios_escola_id_fkey"
-            columns: ["escola_id"]
-            isOneToOne: false
-            referencedRelation: "escolas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "usuarios_impersonated_by_fkey"
             columns: ["impersonated_by"]

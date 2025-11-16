@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSchool } from "@/contexts/SchoolContext";
 import { useAlunos, useAlunosPorEscola, Aluno } from "@/hooks/useAlunos";
 import { AlunosTable } from "@/components/Alunos/AlunosTable";
 import { AlunoViewDialog } from "@/components/Alunos/AlunoViewDialog";
@@ -9,13 +10,15 @@ const Alunos = () => {
   const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
+  const { escolaAtual } = useSchool();
+
   const isAdmin = user?.roles.includes("ADMIN") || 
                   user?.roles.includes("GESTOR_SEMED") || 
                   user?.roles.includes("TECNICO_SEMED");
 
   const { data: alunosAdmin, isLoading: isLoadingAdmin } = useAlunos();
   const { data: alunosEscola, isLoading: isLoadingEscola } = useAlunosPorEscola(
-    !isAdmin ? user?.escola_id || null : null
+    !isAdmin ? escolaAtual?.saesc || null : null
   );
 
   const alunos = isAdmin ? alunosAdmin : alunosEscola;

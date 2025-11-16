@@ -18,7 +18,6 @@ interface Usuario {
   email: string;
   roles: PerfilUsuario[];
   primaryRole: PerfilUsuario;
-  escola_id: string | null;
   ativo: boolean;
 }
 
@@ -123,14 +122,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
-        .select('role, escola_id')
+        .select('role')
         .eq('user_id', supabaseUser.id);
 
       if (rolesError) throw rolesError;
 
       const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
       const primaryRole = roles[0] || 'PROFESSOR';
-      const escola_id = rolesData?.[0]?.escola_id || null;
 
       const userProfile: Usuario = {
         id: userData.id,
@@ -138,7 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: userData.email,
         roles,
         primaryRole,
-        escola_id,
         ativo: userData.ativo,
       };
 
@@ -246,7 +243,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: targetUserData.email,
         roles,
         primaryRole,
-        escola_id,
         ativo: targetUserData.ativo,
       };
 
@@ -360,15 +356,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const roles = rolesData?.map(r => r.role as PerfilUsuario) || [];
       const primaryRole = roles[0] || profile;
-      const escola_id = rolesData?.[0]?.escola_id || schoolId;
-
       const testUser: Usuario = {
         id: newUserId,
         nome: `Teste - ${profile} (${schoolName})`,
         email,
         roles,
         primaryRole,
-        escola_id,
         ativo: true,
       };
 

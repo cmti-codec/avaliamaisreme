@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Search, UserPlus, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSchool } from "@/contexts/SchoolContext";
 import { useLotacoes } from "@/hooks/useLotacoes";
 import { LotarProfessorDialog } from "@/components/Professores/LotarProfessorDialog";
 import { ProfessorLotadoCard } from "@/components/Professores/ProfessorLotadoCard";
@@ -18,21 +19,16 @@ const Professores = () => {
   const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear().toString());
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const { escolaAtual } = useSchool();
+
   // Buscar escola_saesc do usuário via SchoolContext
   const [escolaSaesc, setEscolaSaesc] = useState<string>("");
 
   useEffect(() => {
-    const fetchEscolaSaesc = async () => {
-      if (!user?.escola_id) return;
-      const { data } = await supabase
-        .from("escolas")
-        .select("saesc")
-        .eq("id", user.escola_id)
-        .single();
-      if (data) setEscolaSaesc(data.saesc.toString());
-    };
-    fetchEscolaSaesc();
-  }, [user?.escola_id]);
+    if (escolaAtual?.saesc) {
+      setEscolaSaesc(escolaAtual.saesc);
+    }
+  }, [escolaAtual]);
 
   const { lotacoes, isLoading, criarLotacao, atualizarCarga, removerLotacao, isSaving } = useLotacoes(escolaSaesc, anoLetivo);
 
