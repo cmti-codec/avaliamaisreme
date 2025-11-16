@@ -41,10 +41,12 @@ import {
 } from "@/lib/horarios-utils";
 import { sortTurmasPedagogica } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSchool } from "@/contexts/SchoolContext";
 
 const Lancamento = () => {
   const { toast } = useToast();
   const { user: authUser } = useAuth();
+  const { escolaAtual } = useSchool();
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [turmaSelecionada, setTurmaSelecionada] = useState<Turma | null>(null);
@@ -102,7 +104,7 @@ const Lancamento = () => {
 
   const carregarDados = useCallback(async () => {
     try {
-      const escolaId = authUser?.escola_id || null;
+      const escolaId = escolaAtual?.saesc || null;
 
       if (!escolaId) {
         toast({

@@ -144,7 +144,6 @@ export default function Usuarios() {
             email: u.email,
             roles,
             primaryRole,
-            escola_id: u.escola_id,
             ativo: u.ativo,
             created_at: u.created_at,
             professor_id,
