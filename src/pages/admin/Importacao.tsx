@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CSVUploaderAdvanced } from "@/components/Import/CSVUploaderAdvanced";
 import { ImportLogsList } from "@/components/Import/ImportLogsList";
+import { PessoasUploader } from "@/components/Import/PessoasUploader";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logImportacao } from "@/lib/import-logger";
@@ -1167,9 +1168,10 @@ export default function Importacao() {
       </div>
 
       <Tabs defaultValue="componentes" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-10">
           <TabsTrigger value="componentes">Componentes</TabsTrigger>
           <TabsTrigger value="formacoes">Formações</TabsTrigger>
+          <TabsTrigger value="pessoas">Pessoas</TabsTrigger>
           <TabsTrigger value="professores">Professores</TabsTrigger>
           <TabsTrigger value="escolas">Escolas</TabsTrigger>
           <TabsTrigger value="alunos">Alunos</TabsTrigger>
@@ -1219,7 +1221,12 @@ export default function Importacao() {
           />
         </TabsContent>
 
-        {/* 3. PROFESSORES */}
+        {/* 3. PESSOAS (NOVO - FASE 3) */}
+        <TabsContent value="pessoas">
+          <PessoasUploader />
+        </TabsContent>
+
+        {/* 4. PROFESSORES (LEGADO) */}
         <TabsContent value="professores">
           <CSVUploaderAdvanced
             title="Importar Professores"
