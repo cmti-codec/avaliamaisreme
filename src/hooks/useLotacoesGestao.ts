@@ -28,6 +28,21 @@ export interface Lotacao {
 export const useLotacoesGestao = (pessoaId?: string) => {
   const queryClient = useQueryClient();
 
+  // Função auxiliar para calcular carga total na rede
+  const calcularCargaTotalRede = async (pessoaId: string, lotacaoExcluir?: string): Promise<number> => {
+    const { data, error } = await supabase
+      .from("lotacoes")
+      .select("carga_horaria")
+      .eq("pessoa_id", pessoaId)
+      .eq("perfil", "PROFESSOR")
+      .eq("ativo", true)
+      .neq("id", lotacaoExcluir || "");
+
+    if (error) throw error;
+
+    return (data || []).reduce((total, lot) => total + (lot.carga_horaria || 0), 0);
+  };
+
   const lotacoesQuery = useQuery({
     queryKey: ["lotacoes-gestao", pessoaId],
     queryFn: async () => {
@@ -60,6 +75,18 @@ export const useLotacoesGestao = (pessoaId?: string) => {
         throw new Error("Carga horária não pode exceder 60h");
       }
 
+      // Validar carga total na rede (máximo 50h)
+      if (dados.perfil === 'PROFESSOR') {
+        const cargaAtualRede = await calcularCargaTotalRede(dados.pessoa_id);
+        const novaCargaTotal = cargaAtualRede + (dados.carga_horaria || 0);
+        
+        if (novaCargaTotal > 50) {
+          throw new Error(
+            `Carga total na rede excede 50h. Atual: ${cargaAtualRede}h + Nova: ${dados.carga_horaria}h = ${novaCargaTotal}h`
+          );
+        }
+      }
+
       const { data, error } = await supabase
         .from("lotacoes")
         .insert({
@@ -90,6 +117,29 @@ export const useLotacoesGestao = (pessoaId?: string) => {
 
   const atualizarLotacaoMutation = useMutation({
     mutationFn: async ({ id, dados }: { id: string; dados: Partial<Lotacao> }) => {
+      // Se estiver atualizando carga_horaria de professor, validar total na rede
+      if (dados.carga_horaria !== undefined) {
+        const { data: lotacaoAtual } = await supabase
+          .from("lotacoes")
+          .select("perfil, pessoa_id")
+          .eq("id", id)
+          .single();
+
+        if (lotacaoAtual?.perfil === 'PROFESSOR') {
+          const cargaAtualRede = await calcularCargaTotalRede(
+            lotacaoAtual.pessoa_id,
+            id // Excluir a lotação atual do cálculo
+          );
+          const novaCargaTotal = cargaAtualRede + (dados.carga_horaria || 0);
+          
+          if (novaCargaTotal > 50) {
+            throw new Error(
+              `Carga total na rede excederia 50h. Outras lotações: ${cargaAtualRede}h + Esta: ${dados.carga_horaria}h = ${novaCargaTotal}h`
+            );
+          }
+        }
+      }
+
       const { error } = await supabase
         .from("lotacoes")
         .update(dados)

@@ -35,7 +35,7 @@ export function NovaLotacaoDialog({ open, onOpenChange, pessoa, perfil }: NovaLo
   const cargaAtual = pessoa?.carga_horaria_total || 0;
   const novaCarga = parseInt(cargaHoraria) || 0;
   const cargaTotal = cargaAtual + novaCarga;
-  const excedeCarga = cargaTotal > 60;
+  const excedeCarga = cargaTotal > 50;
 
   const handleSubmit = () => {
     if (!escolaSaesc) {
@@ -100,7 +100,7 @@ export function NovaLotacaoDialog({ open, onOpenChange, pessoa, perfil }: NovaLo
                 id="carga"
                 type="number"
                 min={1}
-                max={60}
+                max={50}
                 value={cargaHoraria}
                 onChange={(e) => setCargaHoraria(e.target.value)}
                 placeholder="Ex: 20"
@@ -186,7 +186,7 @@ export function NovaLotacaoDialog({ open, onOpenChange, pessoa, perfil }: NovaLo
                   {excedeCarga && (
                     <div className="pt-2">
                       <p className="text-sm text-destructive font-semibold flex items-center gap-2">
-                        🔴 ATENÇÃO: Carga horária total excederá 60h/semana.
+                        🔴 ATENÇÃO: Carga horária total excederá 50h/semana na rede.
                       </p>
                     </div>
                   )}
