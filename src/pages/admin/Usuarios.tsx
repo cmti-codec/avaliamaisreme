@@ -38,6 +38,7 @@ import { UsuarioViewDialog } from '@/components/Admin/UsuarioViewDialog';
 import { UsuarioEditDialog } from '@/components/Admin/UsuarioEditDialog';
 import { UsuarioCreateDialog } from '@/components/Admin/UsuarioCreateDialog';
 import { ImpersonateDialog } from '@/components/Admin/ImpersonateDialog';
+import { useEscolas } from '@/hooks/useEscolas';
 
 interface Usuario {
   id: string;
@@ -50,12 +51,21 @@ interface Usuario {
   created_at: string;
   professor_id?: string | null;
   professor_ativo?: boolean | null;
+  lotacoes_ativas?: Array<{
+    id: string;
+    escola_saesc: string;
+    escola_nome: string;
+    perfil: string;
+    carga_horaria: number | null;
+    data_inicio: string;
+  }>;
 }
 
 export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState('');
   const [perfilFilter, setPerfilFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [escolaFilter, setEscolaFilter] = useState<string>('all');
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -69,6 +79,7 @@ export default function Usuarios() {
 
   const queryClient = useQueryClient();
   const { user: currentUser, impersonate } = useAuth();
+  const { data: escolas = [] } = useEscolas();
 
   // Capturar ID do usuário logado
   useEffect(() => {
@@ -138,6 +149,39 @@ export default function Usuarios() {
             }
           }
 
+          // Buscar lotações ativas da pessoa
+          let lotacoes_ativas: any[] = [];
+          if (u.pessoa_id) {
+            const { data: lotacoesData } = await supabase
+              .from('lotacoes')
+              .select(`
+                id,
+                escola_saesc,
+                perfil,
+                carga_horaria,
+                data_inicio
+              `)
+              .eq('pessoa_id', u.pessoa_id)
+              .eq('ativo', true)
+              .order('data_inicio', { ascending: false });
+
+            if (lotacoesData && lotacoesData.length > 0) {
+              // Buscar nomes das escolas
+              const escolaIds = lotacoesData.map(l => l.escola_saesc);
+              const { data: escolasData } = await supabase
+                .from('escolas')
+                .select('id, nome')
+                .in('id', escolaIds);
+
+              const escolasMap = new Map(escolasData?.map(e => [e.id, e.nome]) || []);
+              
+              lotacoes_ativas = lotacoesData.map(lot => ({
+                ...lot,
+                escola_nome: escolasMap.get(lot.escola_saesc) || 'Escola desconhecida'
+              }));
+            }
+          }
+
           return {
             id: u.id,
             nome: u.nome,
@@ -148,6 +192,7 @@ export default function Usuarios() {
             created_at: u.created_at,
             professor_id,
             professor_ativo,
+            lotacoes_ativas,
           };
         })
       );
@@ -355,8 +400,11 @@ export default function Usuarios() {
       statusFilter === 'all' ||
       (statusFilter === 'ativo' && usuario.ativo) ||
       (statusFilter === 'inativo' && !usuario.ativo);
+    const matchesEscola = 
+      escolaFilter === 'all' || 
+      usuario.lotacoes_ativas?.some(lot => lot.escola_saesc === escolaFilter);
 
-    return matchesSearch && matchesPerfil && matchesStatus;
+    return matchesSearch && matchesPerfil && matchesStatus && matchesEscola;
   });
 
   return (
@@ -412,6 +460,20 @@ export default function Usuarios() {
               <SelectItem value="inativo">Inativos</SelectItem>
             </SelectContent>
           </Select>
+
+          <Select value={escolaFilter} onValueChange={setEscolaFilter}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Todas as escolas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as escolas</SelectItem>
+              {escolas.map((escola) => (
+                <SelectItem key={escola.id} value={escola.id}>
+                  {escola.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
@@ -422,6 +484,7 @@ export default function Usuarios() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Perfil</TableHead>
+                <TableHead>Lotações Ativas</TableHead>
                 <TableHead>Status Usuário</TableHead>
                 <TableHead>Status Professor</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -434,6 +497,7 @@ export default function Usuarios() {
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
@@ -441,7 +505,7 @@ export default function Usuarios() {
                 ))
               ) : filteredUsuarios.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Nenhum usuário encontrado
                   </TableCell>
                 </TableRow>
@@ -462,6 +526,29 @@ export default function Usuarios() {
                           <Badge variant="outline">Sem perfil</Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {usuario.lotacoes_ativas && usuario.lotacoes_ativas.length > 0 ? (
+                        <div className="space-y-1">
+                          {usuario.lotacoes_ativas.map((lot, idx) => (
+                            <div key={lot.id} className="flex items-center gap-2 text-sm">
+                              <Badge variant="outline" className="text-xs">
+                                {getPerfilLabel(lot.perfil)}
+                              </Badge>
+                              <span className="text-muted-foreground truncate max-w-[200px]" title={lot.escola_nome}>
+                                {lot.escola_nome}
+                              </span>
+                              {lot.carga_horaria && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({lot.carga_horaria}h)
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Sem lotações</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={usuario.ativo ? 'default' : 'secondary'}>
