@@ -34,6 +34,8 @@ const perfisDisponiveis = [
 export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogProps) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [senha, setSenha] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +51,7 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!nome.trim() || !email.trim() || !senha.trim()) {
+    if (!nome.trim() || !email.trim() || !cpf.trim() || !senha.trim()) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -64,17 +66,26 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
       return;
     }
 
+    // Validar CPF (formato simples: apenas dígitos)
+    const cpfDigits = cpf.replace(/\D/g, '');
+    if (cpfDigits.length !== 11) {
+      toast.error('CPF deve ter 11 dígitos');
+      return;
+    }
+
     setLoading(true);
 
     try {
       console.log('🔵 Iniciando criação de usuário:', email.trim());
       console.log('🔵 Roles selecionadas:', selectedRoles);
 
-      // Criar usuário via função de backend para evitar troca de sessão e respeitar RLS
+      // Criar usuário via função de backend
       const { data: result, error: fnError } = await supabase.functions.invoke('admin-create-user', {
         body: {
           nome: nome.trim(),
           email: email.trim(),
+          cpf: cpfDigits,
+          telefone: telefone.trim() || null,
           senha,
           roles: selectedRoles,
           escola_id: null,
@@ -97,6 +108,8 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
       // Limpar formulário e fechar
       setNome('');
       setEmail('');
+      setCpf('');
+      setTelefone('');
       setSenha('');
       setSelectedRoles([]);
       onOpenChange(false);
@@ -120,7 +133,7 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nome">Nome *</Label>
+            <Label htmlFor="nome">Nome Completo *</Label>
             <Input
               id="nome"
               value={nome}
@@ -128,6 +141,30 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
               placeholder="Nome completo"
               disabled={loading}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="cpf">CPF *</Label>
+              <Input
+                id="cpf"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+                placeholder="000.000.000-00"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="telefone">Telefone</Label>
+              <Input
+                id="telefone"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                placeholder="(00) 00000-0000"
+                disabled={loading}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
