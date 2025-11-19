@@ -18,11 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, RefreshCw, Eye, AlertTriangle, UserPlus } from "lucide-react";
+import { Search, Plus, RefreshCw, Eye, AlertTriangle, UserPlus, Edit } from "lucide-react";
 import { usePessoasPool } from "@/hooks/usePessoasPool";
 import { NovaLotacaoDialog } from "@/components/Admin/Pool/NovaLotacaoDialog";
 import { TransferirProfessorDialog } from "@/components/Admin/Pool/TransferirProfessorDialog";
 import { NovoProfessorDialog } from "@/components/Admin/Pool/NovoProfessorDialog";
+import { ProfessorDetalhesDialog } from "@/components/Admin/Pool/ProfessorDetalhesDialog";
+import { EditarProfessorDialog } from "@/components/Admin/Pool/EditarProfessorDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -34,6 +36,8 @@ export default function PoolProfessores() {
   const [showNovaLotacaoDialog, setShowNovaLotacaoDialog] = useState(false);
   const [showTransferirDialog, setShowTransferirDialog] = useState(false);
   const [showNovoProfessorDialog, setShowNovoProfessorDialog] = useState(false);
+  const [showDetalhesDialog, setShowDetalhesDialog] = useState(false);
+  const [showEditarDialog, setShowEditarDialog] = useState(false);
   const [pessoaSelecionada, setPessoaSelecionada] = useState<any>(null);
 
   const { pessoas, isLoading } = usePessoasPool({
@@ -51,6 +55,16 @@ export default function PoolProfessores() {
   const handleTransferir = (pessoa: any) => {
     setPessoaSelecionada(pessoa);
     setShowTransferirDialog(true);
+  };
+
+  const handleVerDetalhes = (pessoa: any) => {
+    setPessoaSelecionada(pessoa);
+    setShowDetalhesDialog(true);
+  };
+
+  const handleEditar = (pessoa: any) => {
+    setPessoaSelecionada(pessoa);
+    setShowEditarDialog(true);
   };
 
   const formatCPF = (cpf: string) => {
@@ -187,14 +201,14 @@ export default function PoolProfessores() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{cargaTotal}h</span>
-                            {cargaTotal > 60 && (
+                            {cargaTotal > 50 && (
                               <Badge variant="destructive" className="text-xs">
-                                Excede 60h
+                                Excede 50h
                               </Badge>
                             )}
-                            {cargaTotal > 0 && cargaTotal <= 60 && (
+                            {cargaTotal > 0 && cargaTotal <= 50 && (
                               <span className="text-xs text-muted-foreground">
-                                / 60h
+                                / 50h
                               </span>
                             )}
                           </div>
@@ -206,7 +220,23 @@ export default function PoolProfessores() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {temLotacao && cargaTotal < 60 && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleVerDetalhes(pessoa)}
+                              title="Ver detalhes e histórico"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditar(pessoa)}
+                              title="Editar dados pessoais"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            {temLotacao && cargaTotal < 50 && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -265,6 +295,18 @@ export default function PoolProfessores() {
       <NovoProfessorDialog
         open={showNovoProfessorDialog}
         onOpenChange={setShowNovoProfessorDialog}
+      />
+
+      <ProfessorDetalhesDialog
+        open={showDetalhesDialog}
+        onOpenChange={setShowDetalhesDialog}
+        pessoa={pessoaSelecionada}
+      />
+
+      <EditarProfessorDialog
+        open={showEditarDialog}
+        onOpenChange={setShowEditarDialog}
+        pessoa={pessoaSelecionada}
       />
     </div>
   );
