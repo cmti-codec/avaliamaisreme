@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock, UserCheck, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock, UserCheck, Trash2, BriefcaseBusiness } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,7 +38,9 @@ import { UsuarioViewDialog } from '@/components/Admin/UsuarioViewDialog';
 import { UsuarioEditDialog } from '@/components/Admin/UsuarioEditDialog';
 import { UsuarioCreateDialog } from '@/components/Admin/UsuarioCreateDialog';
 import { ImpersonateDialog } from '@/components/Admin/ImpersonateDialog';
+import { LotarUsuarioDialog } from '@/components/Admin/LotarUsuarioDialog';
 import { useEscolas } from '@/hooks/useEscolas';
+import { useLotacoesGestao } from '@/hooks/useLotacoesGestao';
 
 interface Usuario {
   id: string;
@@ -51,6 +53,7 @@ interface Usuario {
   created_at: string;
   professor_id?: string | null;
   professor_ativo?: boolean | null;
+  pessoa_id?: string | null;
   lotacoes_ativas?: Array<{
     id: string;
     escola_saesc: string;
@@ -76,10 +79,13 @@ export default function Usuarios() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [impersonateUser, setImpersonateUser] = useState<Usuario | null>(null);
   const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
+  const [lotarUsuario, setLotarUsuario] = useState<Usuario | null>(null);
+  const [lotarDialogOpen, setLotarDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
   const { user: currentUser, impersonate } = useAuth();
   const { data: escolas = [] } = useEscolas();
+  const { criarLotacao } = useLotacoesGestao();
 
   // Capturar ID do usuário logado
   useEffect(() => {
@@ -391,6 +397,40 @@ export default function Usuarios() {
     }
   };
 
+  const handleConfirmLotacao = async (data: {
+    pessoa_id: string;
+    perfil: string;
+    escola_saesc: string;
+    data_inicio: string;
+    carga_horaria?: number | null;
+    observacoes?: string;
+  }) => {
+    try {
+      // Validar que o perfil é válido para lotação
+      const perfisValidos = ['PROFESSOR', 'COORDENADOR', 'DIRETOR', 'SECRETARIO'];
+      if (!perfisValidos.includes(data.perfil)) {
+        toast.error('Perfil inválido para lotação');
+        return;
+      }
+
+      await criarLotacao({
+        pessoa_id: data.pessoa_id,
+        perfil: data.perfil as 'PROFESSOR' | 'COORDENADOR' | 'DIRETOR' | 'SECRETARIO',
+        escola_saesc: data.escola_saesc,
+        data_inicio: data.data_inicio,
+        carga_horaria: data.carga_horaria || undefined,
+        observacoes: data.observacoes,
+      });
+      toast.success('Lotação criada com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      setLotarDialogOpen(false);
+      setLotarUsuario(null);
+    } catch (error: any) {
+      console.error('Erro ao criar lotação:', error);
+      toast.error(error.message || 'Erro ao criar lotação');
+    }
+  };
+
   const filteredUsuarios = usuarios.filter((usuario) => {
     const matchesSearch =
       usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -602,6 +642,22 @@ export default function Usuarios() {
                         >
                           <RotateCw className="w-4 h-4" />
                         </Button>
+
+                        {/* Botão Lotar - só mostra se usuário tem pessoa_id */}
+                        {usuario.pessoa_id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setLotarUsuario(usuario);
+                              setLotarDialogOpen(true);
+                            }}
+                            title="Criar nova lotação"
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <BriefcaseBusiness className="w-4 h-4" />
+                          </Button>
+                        )}
                         
                         {/* Botão Testar Perfil - apenas para não-admins */}
                         {!usuario.roles?.includes('ADMIN') && currentUser?.roles?.includes('ADMIN') && (
@@ -764,6 +820,14 @@ export default function Usuarios() {
           usuario={impersonateUser}
           escola={impersonateEscola}
           onConfirm={handleImpersonate}
+        />
+
+        {/* Lotar Dialog */}
+        <LotarUsuarioDialog
+          open={lotarDialogOpen}
+          onOpenChange={setLotarDialogOpen}
+          usuario={lotarUsuario}
+          onConfirm={handleConfirmLotacao}
         />
       </div>
     </ProtectedRoute>

@@ -104,13 +104,15 @@ serve(async (req) => {
     const body = await req.json();
     const nome: string = (body?.nome || "").trim();
     const email: string = (body?.email || "").trim();
+    const cpf: string = (body?.cpf || "").trim();
+    const telefone: string = (body?.telefone || "").trim();
     const senha: string = body?.senha || "";
     const roles: string[] = Array.isArray(body?.roles) ? body.roles : [];
     const escola_id: string | null = body?.escola_id ?? null;
 
-    if (!nome || !email || !senha || roles.length === 0) {
+    if (!nome || !email || !cpf || !senha || roles.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Campos obrigatórios ausentes" }),
+        JSON.stringify({ error: "Campos obrigatórios ausentes: nome, email, CPF, senha e perfis" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -161,16 +163,43 @@ serve(async (req) => {
     const newUserId = createdUser.user.id;
 
     try {
-      // Insert in usuarios
+      // 1. Create pessoa record first
+      const { data: pessoaData, error: pessoaErr } = await supabaseAdmin
+        .from("pessoas")
+        .insert({
+          cpf,
+          nome_completo: nome,
+          email,
+          telefone: telefone || null,
+          ativo: true,
+        })
+        .select()
+        .single();
+
+      if (pessoaErr || !pessoaData) {
+        console.error("Error creating pessoa:", pessoaErr);
+        throw new Error("Falha ao criar registro de pessoa");
+      }
+
+      const pessoaId = pessoaData.id;
+
+      // 2. Create usuario linked to pessoa
       const { error: usuarioErr } = await supabaseAdmin
         .from("usuarios")
-        .insert({ id: newUserId, nome, email, ativo: true, escola_id });
+        .insert({
+          id: newUserId,
+          pessoa_id: pessoaId,
+          nome,
+          email,
+          ativo: true,
+        });
 
       if (usuarioErr) {
+        console.error("Error creating usuario:", usuarioErr);
         throw usuarioErr;
       }
 
-      // Insert roles (com escola_id se fornecido)
+      // 3. Insert roles
       const rolesToInsert = roles.map((role) => ({
         user_id: newUserId,
         role,
@@ -182,26 +211,37 @@ serve(async (req) => {
         .insert(rolesToInsert);
 
       if (rolesErr) {
+        console.error("Error creating roles:", rolesErr);
         throw rolesErr;
       }
 
+      console.log("✅ User created successfully:", { newUserId, pessoaId, roles });
+
       return new Response(
-        JSON.stringify({ success: true, user_id: newUserId }),
+        JSON.stringify({ ok: true, user_id: newUserId, pessoa_id: pessoaId }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    } catch (e) {
+    } catch (e: any) {
       console.error("DB insert error, rolling back", e);
-      // Cleanup DB and auth user
+      // Cleanup: delete in reverse order
+      try {
+        await supabaseAdmin.from("user_roles").delete().eq("user_id", newUserId);
+      } catch (_) {}
       try {
         await supabaseAdmin.from("usuarios").delete().eq("id", newUserId);
+      } catch (_) {}
+      try {
+        await supabaseAdmin.from("pessoas").delete().eq("email", email);
       } catch (_) {}
       try {
         await supabaseAdmin.auth.admin.deleteUser(newUserId);
       } catch (delErr) {
         console.error("Failed to delete auth user on rollback", delErr);
       }
+      
+      const errorMsg = e?.message || "Falha ao salvar dados do usuário";
       return new Response(
-        JSON.stringify({ error: "Falha ao salvar dados do usuário" }),
+        JSON.stringify({ ok: false, error: errorMsg }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
