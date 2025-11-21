@@ -65,6 +65,10 @@ const adminItems = [{
   url: "/admin/pool-professores",
   icon: Users
 }, {
+  title: "Coordenadores (REME)",
+  url: "/admin/coordenadores",
+  icon: Users
+}, {
   title: "Matrizes Curriculares",
   url: "/admin/matrizes",
   icon: BookOpen
