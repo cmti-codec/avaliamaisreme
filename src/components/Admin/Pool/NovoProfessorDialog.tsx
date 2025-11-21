@@ -21,9 +21,10 @@ import { cn } from "@/lib/utils";
 interface NovoProfessorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  perfilPadrao?: 'PROFESSOR' | 'COORDENADOR';
 }
 
-export function NovoProfessorDialog({ open, onOpenChange }: NovoProfessorDialogProps) {
+export function NovoProfessorDialog({ open, onOpenChange, perfilPadrao = 'PROFESSOR' }: NovoProfessorDialogProps) {
   // Dados da Pessoa
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [cpf, setCpf] = useState("");
@@ -37,7 +38,7 @@ export function NovoProfessorDialog({ open, onOpenChange }: NovoProfessorDialogP
   const [cargaHoraria, setCargaHoraria] = useState<string>("20");
   const [dataInicio, setDataInicio] = useState<Date>(new Date());
 
-  const { criarPessoa, isSaving: salvandoPessoa } = usePessoasPool({ perfil: 'PROFESSOR' });
+  const { criarPessoa, isSaving: salvandoPessoa } = usePessoasPool({ perfil: perfilPadrao });
   const { criarLotacao: criarLotacaoFn, isSaving: salvandoLotacao } = useLotacoesGestao();
   const { data: escolas = [] } = useEscolas();
 
@@ -101,12 +102,12 @@ export function NovoProfessorDialog({ open, onOpenChange }: NovoProfessorDialogP
 
       if (usuarioError) throw usuarioError;
 
-      // 4. Criar ROLE (PROFESSOR)
+      // 4. Criar ROLE
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
           user_id: authData.user.id,
-          role: 'PROFESSOR',
+          role: perfilPadrao,
         });
 
       if (roleError) throw roleError;
@@ -116,13 +117,14 @@ export function NovoProfessorDialog({ open, onOpenChange }: NovoProfessorDialogP
         await criarLotacaoFn({
           pessoa_id: pessoaData.id,
           escola_saesc: escolaSaesc,
-          perfil: 'PROFESSOR',
+          perfil: perfilPadrao,
           carga_horaria: parseInt(cargaHoraria),
           data_inicio: format(dataInicio, 'yyyy-MM-dd'),
         });
       }
 
-      toast.success(`Professor cadastrado com sucesso!${criarLotacao ? ' Lotação criada.' : ''}`);
+      const tipoPessoa = perfilPadrao === 'PROFESSOR' ? 'Professor' : 'Coordenador';
+      toast.success(`${tipoPessoa} cadastrado com sucesso!${criarLotacao ? ' Lotação criada.' : ''}`);
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
@@ -147,7 +149,7 @@ export function NovoProfessorDialog({ open, onOpenChange }: NovoProfessorDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Cadastrar Novo Professor</DialogTitle>
+          <DialogTitle>Cadastrar Novo {perfilPadrao === 'PROFESSOR' ? 'Professor' : 'Coordenador'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -312,12 +314,12 @@ export function NovoProfessorDialog({ open, onOpenChange }: NovoProfessorDialogP
                   <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                     <li>Registro de <strong>Pessoa</strong> com dados pessoais</li>
                     <li>Conta de <strong>Usuário</strong> com email e senha gerada</li>
-                    <li>Perfil de <strong>PROFESSOR</strong> no sistema</li>
+                    <li>Perfil de <strong>{perfilPadrao}</strong> no sistema</li>
                     {criarLotacao && <li>Lotação na escola selecionada</li>}
                   </ul>
                   {!criarLotacao && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      💡 Você poderá criar lotações posteriormente no Pool de Professores
+                      💡 Você poderá criar lotações posteriormente no Pool de {perfilPadrao === 'PROFESSOR' ? 'Professores' : 'Coordenadores'}
                     </p>
                   )}
                 </div>
@@ -331,7 +333,7 @@ export function NovoProfessorDialog({ open, onOpenChange }: NovoProfessorDialogP
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={isSaving}>
-            {isSaving ? "Cadastrando..." : "Cadastrar Professor"}
+            {isSaving ? "Cadastrando..." : `Cadastrar ${perfilPadrao === 'PROFESSOR' ? 'Professor' : 'Coordenador'}`}
           </Button>
         </DialogFooter>
       </DialogContent>
