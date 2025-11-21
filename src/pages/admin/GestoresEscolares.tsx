@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useGestoresEscolares } from "@/hooks/useGestoresEscolares";
 import { TransferirDialog } from "@/components/Admin/DiretoresSecretarios/TransferirDialog";
 import { LotarDialog } from "@/components/Admin/DiretoresSecretarios/LotarDialog";
+import { HistoricoLotacoesDialog } from "@/components/Admin/DiretoresSecretarios/HistoricoLotacoesDialog";
 import { RefreshCw, Plus, Edit, Eye, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -22,6 +23,7 @@ export default function GestoresEscolares() {
   const [activeTab, setActiveTab] = useState<'DIRETOR' | 'SECRETARIO' | 'COORDENADOR'>('DIRETOR');
   const [showTransferirDialog, setShowTransferirDialog] = useState(false);
   const [showLotarDialog, setShowLotarDialog] = useState(false);
+  const [showHistoricoDialog, setShowHistoricoDialog] = useState(false);
   const [pessoaSelecionada, setPessoaSelecionada] = useState<any>(null);
 
   const { pessoas, isLoading, transferir, lotar, isTransferindo } = useGestoresEscolares(activeTab);
@@ -34,6 +36,11 @@ export default function GestoresEscolares() {
   const handleLotar = (pessoa: any) => {
     setPessoaSelecionada(pessoa);
     setShowLotarDialog(true);
+  };
+
+  const handleVerHistorico = (pessoa: any) => {
+    setPessoaSelecionada(pessoa);
+    setShowHistoricoDialog(true);
   };
 
   const formatCPF = (cpf: string) => {
@@ -139,7 +146,8 @@ export default function GestoresEscolares() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => {}}
+                              onClick={() => handleVerHistorico(pessoa)}
+                              title="Ver histórico de lotações"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -169,6 +177,12 @@ export default function GestoresEscolares() {
         pessoa={pessoaSelecionada}
         perfil={activeTab}
         onConfirm={lotar}
+      />
+
+      <HistoricoLotacoesDialog
+        open={showHistoricoDialog}
+        onOpenChange={setShowHistoricoDialog}
+        pessoa={pessoaSelecionada}
       />
     </div>
   );
