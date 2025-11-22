@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, School, Building2, GraduationCap, Calendar as CalendarIcon, FileText, Download, Settings, BookOpen, Link2, Clock, Search, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, School, Building2, GraduationCap, Calendar as CalendarIcon, FileText, Download, Settings, BookOpen, Link2, Clock, Search, BarChart3, Activity } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
@@ -68,6 +68,10 @@ const adminItems = [{
   title: "Coordenadores (REME)",
   url: "/admin/coordenadores",
   icon: Users
+}, {
+  title: "Diagnóstico do Sistema",
+  url: "/admin/diagnostico",
+  icon: Activity
 }, {
   title: "Matrizes Curriculares",
   url: "/admin/matrizes",
