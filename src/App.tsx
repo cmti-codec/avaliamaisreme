@@ -28,6 +28,7 @@ import ProfessoresAdmin from "./pages/admin/Professores";
 import GestoresEscolares from "./pages/admin/GestoresEscolares";
 import PoolProfessores from "./pages/admin/PoolProfessores";
 import Coordenadores from "./pages/admin/Coordenadores";
+import Diagnostico from "./pages/admin/Diagnostico";
 import ConsultaHorarios from "./pages/horarios/Consulta";
 import LancamentoHorarios from "./pages/horarios/Lancamento";
 import NotFound from "./pages/NotFound";
@@ -114,6 +115,7 @@ const App = () => (
             <Route path="/admin/gestores" element={<LayoutWrapper><GestoresEscolares /></LayoutWrapper>} />
             <Route path="/admin/pool-professores" element={<LayoutWrapper><PoolProfessores /></LayoutWrapper>} />
             <Route path="/admin/coordenadores" element={<LayoutWrapper><Coordenadores /></LayoutWrapper>} />
+            <Route path="/admin/diagnostico" element={<LayoutWrapper><Diagnostico /></LayoutWrapper>} />
             <Route path="/admin/escolas" element={<LayoutWrapper><EscolasAdmin /></LayoutWrapper>} />
             <Route path="/admin/importacao" element={<LayoutWrapper><Importacao /></LayoutWrapper>} />
             <Route path="/admin/matrizes" element={<LayoutWrapper><Matrizes /></LayoutWrapper>} />
