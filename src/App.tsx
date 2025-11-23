@@ -32,6 +32,7 @@ import Diagnostico from "./pages/admin/Diagnostico";
 import ConsultaHorarios from "./pages/horarios/Consulta";
 import LancamentoHorarios from "./pages/horarios/Lancamento";
 import DiarioClasse from "./pages/DiarioClasse";
+import DiarioAtividadesDiversas from "./pages/DiarioAtividadesDiversas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -128,6 +129,13 @@ const App = () => (
 
             {/* Diário de Classe */}
             <Route path="/diario" element={<LayoutWrapper><DiarioClasse /></LayoutWrapper>} />
+            <Route path="/diario/atividades-diversas" element={
+              <LayoutWrapper>
+                <ProtectedRoute perfisPermitidos={['SECRETARIO']}>
+                  <DiarioAtividadesDiversas />
+                </ProtectedRoute>
+              </LayoutWrapper>
+            } />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

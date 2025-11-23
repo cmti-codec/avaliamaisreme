@@ -8,6 +8,8 @@ export interface DiarioClasse {
   componente_curricular: string;
   ano_letivo: string;
   ativo: boolean;
+  turno_diario: string | null; // MATUTINO, VESPERTINO ou null
+  tipo_diario: string; // REGULAR ou ATIVIDADES_DIVERSAS
   turma?: {
     id: string;
     turma: string;

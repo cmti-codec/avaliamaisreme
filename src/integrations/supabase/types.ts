@@ -341,7 +341,9 @@ export type Database = {
           created_at: string | null
           id: string
           professor_id: string
+          tipo_diario: string | null
           turma_id: string
+          turno_diario: string | null
           updated_at: string | null
         }
         Insert: {
@@ -351,7 +353,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           professor_id: string
+          tipo_diario?: string | null
           turma_id: string
+          turno_diario?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -361,7 +365,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           professor_id?: string
+          tipo_diario?: string | null
           turma_id?: string
+          turno_diario?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1666,6 +1672,21 @@ export type Database = {
           p_turno: string
         }
         Returns: string
+      }
+      calcular_frequencia_total_aluno: {
+        Args: {
+          p_aluno_id: string
+          p_componente: string
+          p_data_fim: string
+          p_data_inicio: string
+          p_turma_id: string
+        }
+        Returns: {
+          percentual_presenca: number
+          total_aulas: number
+          total_faltas: number
+          total_presencas: number
+        }[]
       }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       clear_impersonations_for: { Args: { _user_id: string }; Returns: number }

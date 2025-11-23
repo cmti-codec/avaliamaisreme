@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useDiariosComHorarios, useAlunosDaTurma, type DiarioComHorarios } from "@/hooks/useDiariosClasse";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InfoTurmasIntegrais } from "@/components/DiarioClasse/InfoTurmasIntegrais";
 
 const DiarioClasse = () => {
   const [diarioSelecionado, setDiarioSelecionado] = useState<DiarioComHorarios | null>(null);
@@ -125,12 +126,15 @@ const DiarioClasse = () => {
                   <SelectValue placeholder="Selecione um diário..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {diarios.map((diario) => (
-                    <SelectItem key={diario.id} value={diario.id}>
-                      {diario.turma?.turma} - {diario.turma?.etapa_modalidade} (
-                      {diario.turma?.grupo_ano}) - {diario.componente_curricular}
-                    </SelectItem>
-                  ))}
+                  {diarios
+                    .filter((d) => d.tipo_diario === "REGULAR") // Apenas diários regulares
+                    .map((diario) => (
+                      <SelectItem key={diario.id} value={diario.id}>
+                        {diario.turma?.turma} - {diario.turma?.etapa_modalidade} (
+                        {diario.turma?.grupo_ano}) - {diario.componente_curricular}
+                        {diario.turno_diario ? ` - ${diario.turno_diario === "MATUTINO" ? "Manhã" : "Tarde"}` : ""}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -152,9 +156,16 @@ const DiarioClasse = () => {
                 <Calendar className="w-3 h-3" />
                 {format(dataSelecionada, "EEEE, dd 'de' MMMM", { locale: ptBR })}
               </Badge>
-              <Badge variant="outline">
-                Turno: {diarioSelecionado.turma?.turno}
-              </Badge>
+              {diarioSelecionado.turno_diario && (
+                <Badge variant="secondary">
+                  Turno: {diarioSelecionado.turno_diario === "MATUTINO" ? "Manhã" : "Tarde"}
+                </Badge>
+              )}
+              {!diarioSelecionado.turno_diario && (
+                <Badge variant="outline">
+                  Turno: {diarioSelecionado.turma?.turno}
+                </Badge>
+              )}
               <Badge variant="outline">
                 {horariosDisponiveis.length} tempo(s) disponível(is)
               </Badge>
@@ -162,6 +173,11 @@ const DiarioClasse = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Informativo sobre Turmas Integrais */}
+      {diarioSelecionado?.turma?.turno === "INTEGRAL" && (
+        <InfoTurmasIntegrais />
+      )}
 
       {/* Lista de Alunos / Lançamento de Frequência */}
       {diarioSelecionado && horariosDisponiveis.length > 0 && (

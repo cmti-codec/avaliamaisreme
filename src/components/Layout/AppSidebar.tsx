@@ -11,6 +11,11 @@ const menuItems = [{
   url: "/diario",
   icon: ClipboardList
 }, {
+  title: "Atividades Diversas",
+  url: "/diario/atividades-diversas",
+  icon: ClipboardList,
+  secretarioOnly: true
+}, {
   title: "Professores",
   url: "/professores",
   icon: Users
@@ -99,6 +104,7 @@ export function AppSidebar() {
   const isGestaoEscolar = usuario?.roles.some(r => 
     ['DIRETOR', 'SECRETARIO', 'COORDENADOR'].includes(r)
   );
+  const isSecretario = usuario?.roles.includes("SECRETARIO");
   
   // Obter nome da escola do localStorage quando em modo teste
   const testSchoolName = testSchoolId ? localStorage.getItem('testSchoolName') : null;
@@ -128,6 +134,9 @@ export function AppSidebar() {
                 .filter(item => {
                   if (item.url === '/professores') {
                     return isGestaoEscolar;
+                  }
+                  if ((item as any).secretarioOnly) {
+                    return isSecretario;
                   }
                   return true;
                 })
