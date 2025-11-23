@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { useCriarAnoLetivo } from "@/hooks/useAnosLetivos";
+import { useCriarAnoLetivo, useAtualizarAnoLetivo } from "@/hooks/useAnosLetivos";
 import { useEscolas } from "@/hooks/useEscolas";
 
 const formSchema = z.object({

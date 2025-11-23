@@ -120,6 +120,39 @@ export const useCriarAnoLetivo = () => {
   });
 };
 
+export const useAtualizarAnoLetivo = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      id: string;
+      updates: {
+        ano?: number;
+        data_inicio?: string;
+        data_fim?: string;
+      };
+    }) => {
+      const { data: result, error } = await supabase
+        .from("anos_letivos")
+        .update(data.updates)
+        .eq("id", data.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["anos_letivos"] });
+      queryClient.invalidateQueries({ queryKey: ["bimestres"] });
+      toast.success("Ano letivo atualizado!");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao atualizar ano letivo: " + error.message);
+    },
+  });
+};
+
 export const useAtualizarBimestre = () => {
   const queryClient = useQueryClient();
 

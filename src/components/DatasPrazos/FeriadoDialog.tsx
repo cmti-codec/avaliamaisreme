@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { useCriarFeriado } from "@/hooks/useFeriados";
+import { useCriarFeriado, useAtualizarFeriado } from "@/hooks/useFeriados";
 
 const formSchema = z.object({
   data: z.date({ message: "Data é obrigatória" }),
@@ -24,6 +24,14 @@ const formSchema = z.object({
 interface FeriadoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  feriado?: {
+    id: string;
+    data: string;
+    descricao: string;
+    tipo: string;
+    abrangencia: string;
+    ano: number;
+  };
 }
 
 export function FeriadoDialog({ open, onOpenChange }: FeriadoDialogProps) {

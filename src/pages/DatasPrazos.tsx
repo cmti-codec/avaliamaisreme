@@ -12,6 +12,7 @@ import { useFeriados, useDeletarFeriado } from "@/hooks/useFeriados";
 import { useSabadosLetivos, useDeletarSabadoLetivo } from "@/hooks/useSabadosLetivos";
 import { useConselhos, useDeletarConselho } from "@/hooks/useConselhos";
 import { useEntregasDiarios, useDeletarEntregaDiarios } from "@/hooks/useEntregasDiarios";
+import { useEventosInstitucionais, useDeletarEventoInstitucional } from "@/hooks/useEventosInstitucionais";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useUsuario } from "@/hooks/useUsuario";
 import { AnoLetivoDialog } from "@/components/DatasPrazos/AnoLetivoDialog";
@@ -19,6 +20,7 @@ import { FeriadoDialog } from "@/components/DatasPrazos/FeriadoDialog";
 import { SabadoLetivoDialog } from "@/components/DatasPrazos/SabadoLetivoDialog";
 import { ConselhoDialog } from "@/components/DatasPrazos/ConselhoDialog";
 import { EntregaDiariosDialog } from "@/components/DatasPrazos/EntregaDiariosDialog";
+import { EventoDialog } from "@/components/DatasPrazos/EventoDialog";
 import { CalendarioVisual } from "@/components/DatasPrazos/CalendarioVisual";
 import { ConfirmarExclusaoDialog } from "@/components/DatasPrazos/ConfirmarExclusaoDialog";
 
@@ -35,6 +37,7 @@ export default function DatasPrazos() {
   const [sabadoLetivoDialogOpen, setSabadoLetivoDialogOpen] = useState(false);
   const [conselhoDialogOpen, setConselhoDialogOpen] = useState(false);
   const [entregaDiariosDialogOpen, setEntregaDiariosDialogOpen] = useState(false);
+  const [eventoDialogOpen, setEventoDialogOpen] = useState(false);
   
   // Estado para exclusão
   const [itemExclusao, setItemExclusao] = useState<{ id: string; tipo: string; nome: string } | null>(null);
@@ -44,6 +47,7 @@ export default function DatasPrazos() {
   const deletarSabadoLetivo = useDeletarSabadoLetivo();
   const deletarConselho = useDeletarConselho();
   const deletarEntrega = useDeletarEntregaDiarios();
+  const deletarEvento = useDeletarEventoInstitucional();
   
   const handleConfirmarExclusao = async () => {
     if (!itemExclusao) return;
@@ -62,6 +66,9 @@ export default function DatasPrazos() {
         case "entrega":
           await deletarEntrega.mutateAsync(itemExclusao.id);
           break;
+        case "evento":
+          await deletarEvento.mutateAsync(itemExclusao.id);
+          break;
       }
       setItemExclusao(null);
     } catch (error) {
@@ -77,6 +84,7 @@ export default function DatasPrazos() {
   const { data: sabadosLetivos } = useSabadosLetivos(escolaSelecionada || undefined, anoSelecionado);
   const { data: conselhos } = useConselhos(escolaSelecionada || undefined, anoLetivoSelecionado || undefined);
   const { data: entregas } = useEntregasDiarios(escolaSelecionada || undefined, anoLetivoSelecionado || undefined);
+  const { data: eventos } = useEventosInstitucionais(escolaSelecionada || undefined, anoSelecionado);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -557,7 +565,7 @@ export default function DatasPrazos() {
         <TabsContent value="eventos" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Eventos Institucionais {anoSelecionado}</h2>
-            <Button>
+            <Button onClick={() => setEventoDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Evento
             </Button>
@@ -565,9 +573,57 @@ export default function DatasPrazos() {
           
           <Card>
             <CardContent className="pt-6">
-              <div className="text-center py-12 text-muted-foreground">
-                <p>Nenhum evento institucional cadastrado</p>
-              </div>
+              {eventos && eventos.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Bloqueia Letivo</TableHead>
+                      <TableHead className="w-[100px]">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {eventos.map((evento) => (
+                      <TableRow key={evento.id}>
+                        <TableCell>{format(new Date(evento.data), "dd/MM/yyyy")}</TableCell>
+                        <TableCell className="font-medium">{evento.descricao}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{evento.tipo}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {evento.bloqueia_letivo ? (
+                            <Badge variant="destructive">Sim</Badge>
+                          ) : (
+                            <Badge variant="outline">Não</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => setItemExclusao({ id: evento.id, tipo: "evento", nome: evento.descricao })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>Nenhum evento institucional cadastrado para {anoSelecionado}</p>
+                  <Button className="mt-4" onClick={() => setEventoDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar Evento
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -593,6 +649,11 @@ export default function DatasPrazos() {
         escolaId={escolaSelecionada}
         anoLetivoId={anoLetivoSelecionado}
       />
+      <EventoDialog
+        open={eventoDialogOpen}
+        onOpenChange={setEventoDialogOpen}
+        escolaId={escolaSelecionada}
+      />
       
       {/* Dialog de Confirmação de Exclusão */}
       <ConfirmarExclusaoDialog
@@ -601,7 +662,7 @@ export default function DatasPrazos() {
         onConfirm={handleConfirmarExclusao}
         titulo="Confirmar Exclusão"
         descricao={`Tem certeza que deseja excluir "${itemExclusao?.nome}"? Esta ação não pode ser desfeita.`}
-        isLoading={deletarFeriado.isPending || deletarSabadoLetivo.isPending || deletarConselho.isPending || deletarEntrega.isPending}
+        isLoading={deletarFeriado.isPending || deletarSabadoLetivo.isPending || deletarConselho.isPending || deletarEntrega.isPending || deletarEvento.isPending}
       />
     </div>
   );

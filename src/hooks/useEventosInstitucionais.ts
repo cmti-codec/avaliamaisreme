@@ -43,7 +43,7 @@ export const useEventosInstitucionais = (escolaId?: string, ano?: number) => {
   });
 };
 
-export const useCriarEvento = () => {
+export const useCriarEventoInstitucional = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -67,7 +67,7 @@ export const useCriarEvento = () => {
   });
 };
 
-export const useAtualizarEvento = () => {
+export const useAtualizarEventoInstitucional = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -92,7 +92,7 @@ export const useAtualizarEvento = () => {
   });
 };
 
-export const useDeletarEvento = () => {
+export const useDeletarEventoInstitucional = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
