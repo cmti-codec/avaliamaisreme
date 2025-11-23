@@ -1,22 +1,47 @@
 import { useState } from "react";
-import { Calendar, CalendarDays, Plus } from "lucide-react";
+import { Calendar, CalendarDays, Plus, Edit, Trash2 } from "lucide-react";
+import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAnosLetivos } from "@/hooks/useAnosLetivos";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAnosLetivos, useBimestres } from "@/hooks/useAnosLetivos";
+import { useFeriados } from "@/hooks/useFeriados";
+import { useSabadosLetivos } from "@/hooks/useSabadosLetivos";
+import { useConselhos } from "@/hooks/useConselhos";
+import { useEntregasDiarios } from "@/hooks/useEntregasDiarios";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useUsuario } from "@/hooks/useUsuario";
+import { AnoLetivoDialog } from "@/components/DatasPrazos/AnoLetivoDialog";
+import { FeriadoDialog } from "@/components/DatasPrazos/FeriadoDialog";
+import { SabadoLetivoDialog } from "@/components/DatasPrazos/SabadoLetivoDialog";
+import { ConselhoDialog } from "@/components/DatasPrazos/ConselhoDialog";
+import { EntregaDiariosDialog } from "@/components/DatasPrazos/EntregaDiariosDialog";
 
 export default function DatasPrazos() {
   const { data: usuario } = useUsuario();
   const { data: escolas } = useEscolas();
   const [escolaSelecionada, setEscolaSelecionada] = useState<string>("");
   const [anoSelecionado, setAnoSelecionado] = useState<number>(new Date().getFullYear());
+  const [anoLetivoSelecionado, setAnoLetivoSelecionado] = useState<string>("");
+  
+  // Dialogs
+  const [anoLetivoDialogOpen, setAnoLetivoDialogOpen] = useState(false);
+  const [feriadoDialogOpen, setFeriadoDialogOpen] = useState(false);
+  const [sabadoLetivoDialogOpen, setSabadoLetivoDialogOpen] = useState(false);
+  const [conselhoDialogOpen, setConselhoDialogOpen] = useState(false);
+  const [entregaDiariosDialogOpen, setEntregaDiariosDialogOpen] = useState(false);
   
   const isAdmin = usuario?.roles.includes("ADMIN") || usuario?.roles.includes("GESTOR_SEMED");
   
   const { data: anosLetivos } = useAnosLetivos(escolaSelecionada || undefined);
+  const { data: bimestres } = useBimestres(anoLetivoSelecionado || null);
+  const { data: feriados } = useFeriados(anoSelecionado);
+  const { data: sabadosLetivos } = useSabadosLetivos(escolaSelecionada || undefined, anoSelecionado);
+  const { data: conselhos } = useConselhos(escolaSelecionada || undefined, anoLetivoSelecionado || undefined);
+  const { data: entregas } = useEntregasDiarios(escolaSelecionada || undefined, anoLetivoSelecionado || undefined);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -110,10 +135,12 @@ export default function DatasPrazos() {
         <TabsContent value="ano-letivo" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Anos Letivos</h2>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Ano Letivo
-            </Button>
+            {isAdmin && (
+              <Button onClick={() => setAnoLetivoDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Ano Letivo
+              </Button>
+            )}
           </div>
           
           <Card>
@@ -123,31 +150,58 @@ export default function DatasPrazos() {
                   {anosLetivos.map((ano) => (
                     <div key={ano.id} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-lg">Ano Letivo {ano.ano}</h3>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold text-lg">Ano Letivo {ano.ano}</h3>
+                            {ano.ativo && <Badge variant="default">Ativo</Badge>}
+                          </div>
                           <p className="text-sm text-muted-foreground">
-                            {new Date(ano.data_inicio).toLocaleDateString()} a {new Date(ano.data_fim).toLocaleDateString()}
+                            {format(new Date(ano.data_inicio), "dd/MM/yyyy")} a {format(new Date(ano.data_fim), "dd/MM/yyyy")}
                           </p>
                           {ano.escola && (
                             <p className="text-sm text-muted-foreground mt-1">
                               Escola: {ano.escola.nome}
                             </p>
                           )}
+                          
+                          {/* Bimestres */}
+                          <Button 
+                            variant="link" 
+                            className="p-0 h-auto mt-2"
+                            onClick={() => setAnoLetivoSelecionado(ano.id)}
+                          >
+                            Ver bimestres
+                          </Button>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Ver Detalhes
-                        </Button>
                       </div>
+                      
+                      {anoLetivoSelecionado === ano.id && bimestres && (
+                        <div className="mt-4 pt-4 border-t">
+                          <h4 className="font-medium mb-3">Bimestres</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {bimestres.map((bimestre) => (
+                              <div key={bimestre.id} className="border rounded p-3">
+                                <div className="font-medium">{bimestre.numero}º Bimestre</div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {format(new Date(bimestre.data_inicio), "dd/MM")} a {format(new Date(bimestre.data_fim), "dd/MM")}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <p>Nenhum ano letivo cadastrado</p>
-                  <Button className="mt-4">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Primeiro Ano Letivo
-                  </Button>
+                  {isAdmin && (
+                    <Button className="mt-4" onClick={() => setAnoLetivoDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Primeiro Ano Letivo
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -158,7 +212,7 @@ export default function DatasPrazos() {
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Feriados {anoSelecionado}</h2>
             {isAdmin && (
-              <Button>
+              <Button onClick={() => setFeriadoDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Feriado
               </Button>
@@ -167,15 +221,44 @@ export default function DatasPrazos() {
           
           <Card>
             <CardContent className="pt-6">
-              <div className="text-center py-12 text-muted-foreground">
-                <p>Nenhum feriado cadastrado para {anoSelecionado}</p>
-                {isAdmin && (
-                  <Button className="mt-4">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar Feriados
-                  </Button>
-                )}
-              </div>
+              {feriados && feriados.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Abrangência</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {feriados.map((feriado) => (
+                      <TableRow key={feriado.id}>
+                        <TableCell>{format(new Date(feriado.data), "dd/MM/yyyy")}</TableCell>
+                        <TableCell className="font-medium">{feriado.descricao}</TableCell>
+                        <TableCell>
+                          <Badge variant={feriado.tipo === "FERIADO" ? "default" : "secondary"}>
+                            {feriado.tipo === "FERIADO" ? "Feriado" : "Ponto Facultativo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{feriado.abrangencia}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>Nenhum feriado cadastrado para {anoSelecionado}</p>
+                  {isAdmin && (
+                    <Button className="mt-4" onClick={() => setFeriadoDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Cadastrar Feriados
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -183,7 +266,7 @@ export default function DatasPrazos() {
         <TabsContent value="sabados" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Sábados Letivos {anoSelecionado}</h2>
-            <Button>
+            <Button onClick={() => setSabadoLetivoDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Sábado Letivo
             </Button>
@@ -191,17 +274,60 @@ export default function DatasPrazos() {
           
           <Card>
             <CardContent className="pt-6">
-              <div className="text-center py-12 text-muted-foreground">
-                <p>Nenhum sábado letivo cadastrado</p>
-              </div>
+              {sabadosLetivos && sabadosLetivos.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Detalhes</TableHead>
+                      <TableHead>Chamada</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sabadosLetivos.map((sabado) => (
+                      <TableRow key={sabado.id}>
+                        <TableCell>{format(new Date(sabado.data), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>
+                          <Badge variant={sabado.tipo === "REPLICA_DIA_SEMANA" ? "default" : "secondary"}>
+                            {sabado.tipo === "REPLICA_DIA_SEMANA" ? "Réplica" : "Evento"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {sabado.tipo === "REPLICA_DIA_SEMANA" ? (
+                            <span className="text-sm">Replica {sabado.dia_replica}</span>
+                          ) : (
+                            <span className="text-sm">{sabado.descricao}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {sabado.exige_chamada ? (
+                            <Badge variant="outline" className="bg-green-50">Sim</Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-gray-50">Não</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>Nenhum sábado letivo cadastrado</p>
+                  <Button className="mt-4" onClick={() => setSabadoLetivoDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar Sábado Letivo
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="conselhos" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Conselhos de Classe {anoSelecionado}</h2>
-            <Button>
+            <h2 className="text-xl font-semibold">Conselhos de Classe</h2>
+            <Button onClick={() => setConselhoDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Conselho
             </Button>
@@ -209,17 +335,52 @@ export default function DatasPrazos() {
           
           <Card>
             <CardContent className="pt-6">
-              <div className="text-center py-12 text-muted-foreground">
-                <p>Nenhum conselho de classe cadastrado</p>
-              </div>
+              {conselhos && conselhos.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Bimestre</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Bloqueia Edição</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {conselhos.map((conselho) => (
+                      <TableRow key={conselho.id}>
+                        <TableCell>{format(new Date(conselho.data), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>
+                          <Badge>Bimestre</Badge>
+                        </TableCell>
+                        <TableCell>{conselho.descricao || "—"}</TableCell>
+                        <TableCell>
+                          {conselho.bloqueia_edicao_avaliacoes ? (
+                            <Badge variant="destructive">Sim</Badge>
+                          ) : (
+                            <Badge variant="outline">Não</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>Nenhum conselho de classe cadastrado</p>
+                  <Button className="mt-4" onClick={() => setConselhoDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar Conselho
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="entregas" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Entregas de Diários {anoSelecionado}</h2>
-            <Button>
+            <h2 className="text-xl font-semibold">Entregas de Diários</h2>
+            <Button onClick={() => setEntregaDiariosDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Entrega
             </Button>
@@ -227,9 +388,42 @@ export default function DatasPrazos() {
           
           <Card>
             <CardContent className="pt-6">
-              <div className="text-center py-12 text-muted-foreground">
-                <p>Nenhuma entrega de diários cadastrada</p>
-              </div>
+              {entregas && entregas.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data Limite</TableHead>
+                      <TableHead>Bimestre</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Entregas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entregas.map((entrega) => (
+                      <TableRow key={entrega.id}>
+                        <TableCell>{format(new Date(entrega.data), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>
+                          <Badge>Bimestre</Badge>
+                        </TableCell>
+                        <TableCell>{entrega.descricao || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {entrega.professores_entregaram.length} professor(es)
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>Nenhuma entrega de diários cadastrada</p>
+                  <Button className="mt-4" onClick={() => setEntregaDiariosDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar Entrega
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -252,6 +446,27 @@ export default function DatasPrazos() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      <AnoLetivoDialog open={anoLetivoDialogOpen} onOpenChange={setAnoLetivoDialogOpen} />
+      <FeriadoDialog open={feriadoDialogOpen} onOpenChange={setFeriadoDialogOpen} />
+      <SabadoLetivoDialog 
+        open={sabadoLetivoDialogOpen} 
+        onOpenChange={setSabadoLetivoDialogOpen}
+        escolaId={escolaSelecionada}
+      />
+      <ConselhoDialog 
+        open={conselhoDialogOpen} 
+        onOpenChange={setConselhoDialogOpen}
+        escolaId={escolaSelecionada}
+        anoLetivoId={anoLetivoSelecionado}
+      />
+      <EntregaDiariosDialog 
+        open={entregaDiariosDialogOpen} 
+        onOpenChange={setEntregaDiariosDialogOpen}
+        escolaId={escolaSelecionada}
+        anoLetivoId={anoLetivoSelecionado}
+      />
     </div>
   );
 }
