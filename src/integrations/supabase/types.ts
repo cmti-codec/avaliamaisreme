@@ -96,6 +96,68 @@ export type Database = {
           },
         ]
       }
+      anos_letivos: {
+        Row: {
+          ano: number
+          ativo: boolean | null
+          created_at: string | null
+          created_by: string | null
+          data_fim: string
+          data_inicio: string
+          escola_id: string
+          id: string
+        }
+        Insert: {
+          ano: number
+          ativo?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          data_fim: string
+          data_inicio: string
+          escola_id: string
+          id?: string
+        }
+        Update: {
+          ano?: number
+          ativo?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          data_fim?: string
+          data_inicio?: string
+          escola_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anos_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anos_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anos_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
+            foreignKeyName: "anos_letivos_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_impersonation: {
         Row: {
           action: string
@@ -276,6 +338,41 @@ export type Database = {
           },
         ]
       }
+      bimestres: {
+        Row: {
+          ano_letivo_id: string
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
+          id: string
+          numero: number
+        }
+        Insert: {
+          ano_letivo_id: string
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
+          id?: string
+          numero: number
+        }
+        Update: {
+          ano_letivo_id?: string
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          numero?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bimestres_ano_letivo_id_fkey"
+            columns: ["ano_letivo_id"]
+            isOneToOne: false
+            referencedRelation: "anos_letivos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargas_horarias_componentes: {
         Row: {
           carga_horaria_semanal: number
@@ -332,6 +429,91 @@ export type Database = {
           sigla?: string | null
         }
         Relationships: []
+      }
+      conselhos_classe: {
+        Row: {
+          ano_letivo_id: string
+          bimestre_id: string
+          bloqueia_edicao_avaliacoes: boolean | null
+          created_at: string | null
+          created_by: string | null
+          data: string
+          descricao: string | null
+          escola_id: string
+          id: string
+          segmentos: Json | null
+          turmas_ids: Json | null
+        }
+        Insert: {
+          ano_letivo_id: string
+          bimestre_id: string
+          bloqueia_edicao_avaliacoes?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          data: string
+          descricao?: string | null
+          escola_id: string
+          id?: string
+          segmentos?: Json | null
+          turmas_ids?: Json | null
+        }
+        Update: {
+          ano_letivo_id?: string
+          bimestre_id?: string
+          bloqueia_edicao_avaliacoes?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          data?: string
+          descricao?: string | null
+          escola_id?: string
+          id?: string
+          segmentos?: Json | null
+          turmas_ids?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conselhos_classe_ano_letivo_id_fkey"
+            columns: ["ano_letivo_id"]
+            isOneToOne: false
+            referencedRelation: "anos_letivos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conselhos_classe_bimestre_id_fkey"
+            columns: ["bimestre_id"]
+            isOneToOne: false
+            referencedRelation: "bimestres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conselhos_classe_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conselhos_classe_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conselhos_classe_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
+            foreignKeyName: "conselhos_classe_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       diarios_classe: {
         Row: {
@@ -398,6 +580,156 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "turmas_com_matriz"
             referencedColumns: ["turma_id"]
+          },
+        ]
+      }
+      dias_nao_letivos: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          data: string
+          descricao: string
+          escola_id: string | null
+          id: string
+          justificativa: string
+          origem: string
+          precisa_compensacao: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          data: string
+          descricao: string
+          escola_id?: string | null
+          id?: string
+          justificativa: string
+          origem: string
+          precisa_compensacao?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          data?: string
+          descricao?: string
+          escola_id?: string | null
+          id?: string
+          justificativa?: string
+          origem?: string
+          precisa_compensacao?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dias_nao_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dias_nao_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dias_nao_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
+            foreignKeyName: "dias_nao_letivos_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entregas_diarios: {
+        Row: {
+          ano_letivo_id: string
+          bimestre_id: string
+          created_at: string | null
+          created_by: string | null
+          data: string
+          descricao: string | null
+          escola_id: string
+          id: string
+          professores_entregaram: Json | null
+          segmentos: Json | null
+          turmas_ids: Json | null
+        }
+        Insert: {
+          ano_letivo_id: string
+          bimestre_id: string
+          created_at?: string | null
+          created_by?: string | null
+          data: string
+          descricao?: string | null
+          escola_id: string
+          id?: string
+          professores_entregaram?: Json | null
+          segmentos?: Json | null
+          turmas_ids?: Json | null
+        }
+        Update: {
+          ano_letivo_id?: string
+          bimestre_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          data?: string
+          descricao?: string | null
+          escola_id?: string
+          id?: string
+          professores_entregaram?: Json | null
+          segmentos?: Json | null
+          turmas_ids?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregas_diarios_ano_letivo_id_fkey"
+            columns: ["ano_letivo_id"]
+            isOneToOne: false
+            referencedRelation: "anos_letivos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_diarios_bimestre_id_fkey"
+            columns: ["bimestre_id"]
+            isOneToOne: false
+            referencedRelation: "bimestres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_diarios_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_diarios_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_diarios_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
+            foreignKeyName: "entregas_diarios_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -510,6 +842,195 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "turmas_com_matriz"
             referencedColumns: ["matriz_id"]
+          },
+        ]
+      }
+      eventos_institucionais: {
+        Row: {
+          bloqueia_letivo: boolean | null
+          created_at: string | null
+          created_by: string | null
+          data: string
+          descricao: string
+          escola_id: string
+          id: string
+          observacoes: string | null
+          participantes: Json | null
+          tipo: string
+        }
+        Insert: {
+          bloqueia_letivo?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          data: string
+          descricao: string
+          escola_id: string
+          id?: string
+          observacoes?: string | null
+          participantes?: Json | null
+          tipo: string
+        }
+        Update: {
+          bloqueia_letivo?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          data?: string
+          descricao?: string
+          escola_id?: string
+          id?: string
+          observacoes?: string | null
+          participantes?: Json | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_institucionais_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_institucionais_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_institucionais_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
+            foreignKeyName: "eventos_institucionais_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exames_finais: {
+        Row: {
+          ano_letivo_id: string
+          created_at: string | null
+          created_by: string | null
+          data: string
+          descricao: string | null
+          id: string
+        }
+        Insert: {
+          ano_letivo_id: string
+          created_at?: string | null
+          created_by?: string | null
+          data: string
+          descricao?: string | null
+          id?: string
+        }
+        Update: {
+          ano_letivo_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          data?: string
+          descricao?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exames_finais_ano_letivo_id_fkey"
+            columns: ["ano_letivo_id"]
+            isOneToOne: true
+            referencedRelation: "anos_letivos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exames_finais_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exames_finais_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exames_finais_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+        ]
+      }
+      feriados: {
+        Row: {
+          abrangencia: string
+          ano: number
+          compensacao_sabado_id: string | null
+          created_at: string | null
+          created_by: string | null
+          data: string
+          descricao: string
+          id: string
+          tipo: string
+        }
+        Insert: {
+          abrangencia: string
+          ano: number
+          compensacao_sabado_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data: string
+          descricao: string
+          id?: string
+          tipo: string
+        }
+        Update: {
+          abrangencia?: string
+          ano?: number
+          compensacao_sabado_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data?: string
+          descricao?: string
+          id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feriados_compensacao_sabado_id_fkey"
+            columns: ["compensacao_sabado_id"]
+            isOneToOne: false
+            referencedRelation: "sabados_letivos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feriados_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feriados_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feriados_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
           },
         ]
       }
@@ -1334,6 +1855,77 @@ export type Database = {
           key?: string
         }
         Relationships: []
+      }
+      sabados_letivos: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          data: string
+          descricao: string | null
+          dia_replica: string | null
+          escola_id: string
+          exige_chamada: boolean | null
+          id: string
+          segmentos: Json | null
+          tipo: string
+          turnos: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          data: string
+          descricao?: string | null
+          dia_replica?: string | null
+          escola_id: string
+          exige_chamada?: boolean | null
+          id?: string
+          segmentos?: Json | null
+          tipo: string
+          turnos?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          data?: string
+          descricao?: string | null
+          dia_replica?: string | null
+          escola_id?: string
+          exige_chamada?: boolean | null
+          id?: string
+          segmentos?: Json | null
+          tipo?: string
+          turnos?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sabados_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sabados_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sabados_letivos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+          {
+            foreignKeyName: "sabados_letivos_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "escolas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sessoes_contexto: {
         Row: {
