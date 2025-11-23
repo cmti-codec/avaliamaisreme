@@ -108,6 +108,31 @@ export const useRegistrarEntrega = () => {
   });
 };
 
+export const useAtualizarEntregaDiarios = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { id: string; updates: Partial<Omit<EntregaDiarios, "id" | "created_at" | "created_by" | "professores_entregaram">> }) => {
+      const { data: result, error } = await supabase
+        .from("entregas_diarios")
+        .update(data.updates)
+        .eq("id", data.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entregas_diarios"] });
+      toast.success("Entrega atualizada com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao atualizar entrega: " + error.message);
+    },
+  });
+};
+
 export const useDeletarEntregaDiarios = () => {
   const queryClient = useQueryClient();
 

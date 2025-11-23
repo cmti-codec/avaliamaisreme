@@ -63,7 +63,7 @@ export const useAtualizarFeriado = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { id: string; updates: Partial<Feriado> }) => {
+    mutationFn: async (data: { id: string; updates: Partial<Omit<Feriado, "id" | "created_at" | "created_by">> }) => {
       const { data: result, error } = await supabase
         .from("feriados")
         .update(data.updates)
