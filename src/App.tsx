@@ -33,6 +33,7 @@ import ConsultaHorarios from "./pages/horarios/Consulta";
 import LancamentoHorarios from "./pages/horarios/Lancamento";
 import DiarioClasse from "./pages/DiarioClasse";
 import DiarioAtividadesDiversas from "./pages/DiarioAtividadesDiversas";
+import DatasPrazos from "./pages/DatasPrazos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -136,6 +137,9 @@ const App = () => (
                 </ProtectedRoute>
               </LayoutWrapper>
             } />
+
+            {/* Datas & Prazos */}
+            <Route path="/datas" element={<LayoutWrapper><DatasPrazos /></LayoutWrapper>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
