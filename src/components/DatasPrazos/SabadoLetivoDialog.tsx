@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { useCriarSabadoLetivo } from "@/hooks/useSabadosLetivos";
+import { useCriarSabadoLetivo, useAtualizarSabadoLetivo } from "@/hooks/useSabadosLetivos";
 
 const formSchema = z.object({
   escola_id: z.string().min(1, "Escola é obrigatória"),

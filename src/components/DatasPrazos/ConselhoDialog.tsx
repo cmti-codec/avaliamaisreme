@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { useCriarConselho } from "@/hooks/useConselhos";
+import { useCriarConselho, useAtualizarConselho } from "@/hooks/useConselhos";
 import { useBimestres } from "@/hooks/useAnosLetivos";
 
 const formSchema = z.object({
