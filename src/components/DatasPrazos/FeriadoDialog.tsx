@@ -2,16 +2,20 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { CalendarIcon, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useCriarFeriado, useAtualizarFeriado } from "@/hooks/useFeriados";
+import { verificarSobreposicao, formatarMensagemSobreposicao } from "@/lib/validacao-sobreposicao";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const formSchema = z.object({
   data: z.date({ message: "Data é obrigatória" }),
@@ -34,12 +38,20 @@ interface FeriadoDialogProps {
   };
 }
 
-export function FeriadoDialog({ open, onOpenChange }: FeriadoDialogProps) {
+export function FeriadoDialog({ open, onOpenChange, feriado }: FeriadoDialogProps) {
+  const [sobreposicaoInfo, setSobreposicaoInfo] = useState<string | null>(null);
   const criarFeriado = useCriarFeriado();
+  const atualizarFeriado = useAtualizarFeriado();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: feriado ? {
+      data: new Date(feriado.data),
+      descricao: feriado.descricao,
+      tipo: feriado.tipo as "FERIADO" | "PONTO_FACULTATIVO",
+      abrangencia: feriado.abrangencia as "NACIONAL" | "ESTADUAL" | "MUNICIPAL",
+      ano: feriado.ano,
+    } : {
       tipo: "FERIADO",
       abrangencia: "MUNICIPAL",
       ano: new Date().getFullYear(),
@@ -47,22 +59,89 @@ export function FeriadoDialog({ open, onOpenChange }: FeriadoDialogProps) {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    await criarFeriado.mutateAsync({
-      data: format(values.data, "yyyy-MM-dd"),
-      descricao: values.descricao,
-      tipo: values.tipo,
-      abrangencia: values.abrangencia,
-      ano: values.ano,
-    });
+    const dataStr = format(values.data, "yyyy-MM-dd");
+    
+    // Verificar sobreposição (sem escolaId pois feriados são gerais)
+    const { temSobreposicao, eventos } = await verificarSobreposicao(
+      dataStr,
+      "00000000-0000-0000-0000-000000000000", // ID genérico para feriados
+      feriado?.id,
+      "FERIADO"
+    );
+    
+    if (temSobreposicao) {
+      const mensagem = formatarMensagemSobreposicao(eventos);
+      setSobreposicaoInfo(mensagem);
+      toast.warning("Atenção: Há eventos sobrepostos nesta data", {
+        description: "Verifique o aviso abaixo antes de confirmar.",
+      });
+      return; // Não submete automaticamente, permite usuário decidir
+    }
+    
+    if (feriado) {
+      await atualizarFeriado.mutateAsync({
+        id: feriado.id,
+        updates: {
+          data: dataStr,
+          descricao: values.descricao,
+          tipo: values.tipo,
+          abrangencia: values.abrangencia,
+          ano: values.ano,
+        },
+      });
+    } else {
+      await criarFeriado.mutateAsync({
+        data: dataStr,
+        descricao: values.descricao,
+        tipo: values.tipo,
+        abrangencia: values.abrangencia,
+        ano: values.ano,
+      });
+    }
+    
     onOpenChange(false);
     form.reset();
+    setSobreposicaoInfo(null);
+  };
+  
+  const handleForcarCriacao = async () => {
+    const values = form.getValues();
+    const dataStr = format(values.data, "yyyy-MM-dd");
+    
+    if (feriado) {
+      await atualizarFeriado.mutateAsync({
+        id: feriado.id,
+        updates: {
+          data: dataStr,
+          descricao: values.descricao,
+          tipo: values.tipo,
+          abrangencia: values.abrangencia,
+          ano: values.ano,
+        },
+      });
+    } else {
+      await criarFeriado.mutateAsync({
+        data: dataStr,
+        descricao: values.descricao,
+        tipo: values.tipo,
+        abrangencia: values.abrangencia,
+        ano: values.ano,
+      });
+    }
+    
+    onOpenChange(false);
+    form.reset();
+    setSobreposicaoInfo(null);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Cadastrar Feriado</DialogTitle>
+          <DialogTitle>{feriado ? "Editar Feriado" : "Cadastrar Feriado"}</DialogTitle>
+          <DialogDescription>
+            {feriado ? "Atualize as informações do feriado" : "Cadastre um novo feriado nacional, estadual ou municipal"}
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -167,13 +246,41 @@ export function FeriadoDialog({ open, onOpenChange }: FeriadoDialogProps) {
               )}
             />
 
+            {sobreposicaoInfo && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Eventos sobrepostos nesta data:</strong>
+                  <pre className="text-xs mt-1 whitespace-pre-wrap">{sobreposicaoInfo}</pre>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => {
+                onOpenChange(false);
+                setSobreposicaoInfo(null);
+                form.reset();
+              }}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={criarFeriado.isPending}>
-                {criarFeriado.isPending ? "Cadastrando..." : "Cadastrar"}
-              </Button>
+              {sobreposicaoInfo ? (
+                <Button 
+                  type="button" 
+                  onClick={handleForcarCriacao}
+                  disabled={criarFeriado.isPending || atualizarFeriado.isPending}
+                  variant="destructive"
+                >
+                  {(criarFeriado.isPending || atualizarFeriado.isPending) ? "Processando..." : "Cadastrar Mesmo Assim"}
+                </Button>
+              ) : (
+                <Button 
+                  type="submit" 
+                  disabled={criarFeriado.isPending || atualizarFeriado.isPending}
+                >
+                  {(criarFeriado.isPending || atualizarFeriado.isPending) ? "Processando..." : (feriado ? "Atualizar" : "Cadastrar")}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </Form>
