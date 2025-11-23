@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, BookOpen, Users, AlertCircle } from "lucide-react";
+import { Calendar, BookOpen, Users, AlertCircle, Lock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,15 +16,80 @@ import {
 import { useDiariosComHorarios, useAlunosDaTurma, type DiarioComHorarios } from "@/hooks/useDiariosClasse";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InfoTurmasIntegrais } from "@/components/DiarioClasse/InfoTurmasIntegrais";
+import { useSchool } from "@/contexts/SchoolContext";
+import { useAnosLetivos } from "@/hooks/useAnosLetivos";
+import { 
+  isDiaLetivo, 
+  getBimestreAtual, 
+  isEdicaoBloqueadaPorConselho,
+  getBimestresDoAno
+} from "@/lib/calendario-utils";
+import { toast } from "sonner";
 
 const DiarioClasse = () => {
   const [diarioSelecionado, setDiarioSelecionado] = useState<DiarioComHorarios | null>(null);
   const [dataSelecionada, setDataSelecionada] = useState<Date>(new Date());
+  const [bimestreSelecionado, setBimestreSelecionado] = useState<string>("");
+  const [bimestres, setBimestres] = useState<Array<{ id: string; numero: number; data_inicio: string; data_fim: string }>>([]);
+  const [ehDiaLetivo, setEhDiaLetivo] = useState<boolean>(true);
+  const [edicaoBloqueada, setEdicaoBloqueada] = useState<{ bloqueado: boolean; conselho?: any }>({ bloqueado: false });
+  const [validandoData, setValidandoData] = useState(false);
+
+  const { escolaAtual } = useSchool();
+  const { data: anosLetivos } = useAnosLetivos(escolaAtual?.saesc);
+  const anoLetivoAtivo = anosLetivos?.find(ano => ano.ativo);
 
   const { data: diarios, isLoading: loadingDiarios } = useDiariosComHorarios();
   const { data: alunos, isLoading: loadingAlunos } = useAlunosDaTurma(
     diarioSelecionado?.turma_id || null
   );
+
+  // Carregar bimestres quando o ano letivo estiver disponível
+  useEffect(() => {
+    if (anoLetivoAtivo?.id) {
+      getBimestresDoAno(anoLetivoAtivo.id).then(setBimestres);
+    }
+  }, [anoLetivoAtivo]);
+
+  // Validar data selecionada
+  useEffect(() => {
+    const validarData = async () => {
+      if (!escolaAtual?.saesc) return;
+      
+      setValidandoData(true);
+      
+      // Verificar se é dia letivo
+      const letivo = await isDiaLetivo(dataSelecionada, escolaAtual.saesc);
+      setEhDiaLetivo(letivo);
+      
+      if (!letivo) {
+        toast.warning("Atenção: Data selecionada não é dia letivo", {
+          description: "Pode ser feriado, fim de semana ou evento institucional que bloqueia.",
+        });
+      }
+      
+      // Verificar se edição está bloqueada por conselho
+      const bimestreAtual = await getBimestreAtual(escolaAtual.saesc, anoLetivoAtivo?.id, dataSelecionada);
+      if (bimestreAtual) {
+        const bloqueio = await isEdicaoBloqueadaPorConselho(
+          dataSelecionada, 
+          escolaAtual.saesc, 
+          bimestreAtual.id
+        );
+        setEdicaoBloqueada(bloqueio);
+        
+        if (bloqueio.bloqueado && bloqueio.conselho) {
+          toast.error("Edição bloqueada", {
+            description: `Conselho de classe realizado em ${format(new Date(bloqueio.conselho.data), "dd/MM/yyyy")}. Não é possível editar avaliações deste período.`,
+          });
+        }
+      }
+      
+      setValidandoData(false);
+    };
+    
+    validarData();
+  }, [dataSelecionada, escolaAtual?.saesc, anoLetivoAtivo?.id]);
 
   const handleDiarioChange = (diarioId: string) => {
     const diario = diarios?.find((d) => d.id === diarioId);
@@ -115,7 +180,26 @@ const DiarioClasse = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Bimestre</label>
+              <Select
+                value={bimestreSelecionado}
+                onValueChange={setBimestreSelecionado}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um bimestre..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {bimestres.map((bimestre) => (
+                    <SelectItem key={bimestre.id} value={bimestre.id}>
+                      {bimestre.numero}º Bimestre ({format(new Date(bimestre.data_inicio), "dd/MM")} - {format(new Date(bimestre.data_fim), "dd/MM")})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Turma / Componente</label>
               <Select
@@ -146,6 +230,7 @@ const DiarioClasse = () => {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={format(dataSelecionada, "yyyy-MM-dd")}
                 onChange={(e) => setDataSelecionada(new Date(e.target.value))}
+                disabled={validandoData}
               />
             </div>
           </div>
@@ -156,6 +241,21 @@ const DiarioClasse = () => {
                 <Calendar className="w-3 h-3" />
                 {format(dataSelecionada, "EEEE, dd 'de' MMMM", { locale: ptBR })}
               </Badge>
+              
+              {!ehDiaLetivo && (
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Não é dia letivo
+                </Badge>
+              )}
+              
+              {edicaoBloqueada.bloqueado && (
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Edição bloqueada por conselho
+                </Badge>
+              )}
+              
               {diarioSelecionado.turno_diario && (
                 <Badge variant="secondary">
                   Turno: {diarioSelecionado.turno_diario === "MATUTINO" ? "Manhã" : "Tarde"}
@@ -179,8 +279,36 @@ const DiarioClasse = () => {
         <InfoTurmasIntegrais />
       )}
 
+      {/* Alertas de validação */}
+      {!ehDiaLetivo && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Data não é dia letivo</AlertTitle>
+          <AlertDescription>
+            A data selecionada pode ser feriado, fim de semana ou evento institucional que bloqueia o dia letivo.
+            Você ainda pode visualizar, mas recomenda-se selecionar uma data letiva para lançamento de frequências.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {edicaoBloqueada.bloqueado && edicaoBloqueada.conselho && (
+        <Alert variant="destructive">
+          <Lock className="h-4 w-4" />
+          <AlertTitle>Edição bloqueada</AlertTitle>
+          <AlertDescription>
+            O Conselho de Classe foi realizado em{" "}
+            {format(new Date(edicaoBloqueada.conselho.data), "dd/MM/yyyy", { locale: ptBR })}.
+            {edicaoBloqueada.conselho.descricao && (
+              <> - {edicaoBloqueada.conselho.descricao}</>
+            )}
+            <br />
+            <strong>Não é possível editar avaliações deste período.</strong>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Lista de Alunos / Lançamento de Frequência */}
-      {diarioSelecionado && horariosDisponiveis.length > 0 && (
+      {diarioSelecionado && horariosDisponiveis.length > 0 && !edicaoBloqueada.bloqueado && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
