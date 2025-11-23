@@ -192,6 +192,90 @@ export type Database = {
         }
         Relationships: []
       }
+      avaliacoes: {
+        Row: {
+          aluno_id: string
+          created_at: string | null
+          data_avaliacao: string
+          diario_id: string
+          id: string
+          lancado_em: string | null
+          lancado_por: string | null
+          nota: number | null
+          nota_maxima: number | null
+          observacao: string | null
+          tipo_avaliacao: string
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string | null
+          data_avaliacao: string
+          diario_id: string
+          id?: string
+          lancado_em?: string | null
+          lancado_por?: string | null
+          nota?: number | null
+          nota_maxima?: number | null
+          observacao?: string | null
+          tipo_avaliacao: string
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string | null
+          data_avaliacao?: string
+          diario_id?: string
+          id?: string
+          lancado_em?: string | null
+          lancado_por?: string | null
+          nota?: number | null
+          nota_maxima?: number | null
+          observacao?: string | null
+          tipo_avaliacao?: string
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_diario_id_fkey"
+            columns: ["diario_id"]
+            isOneToOne: false
+            referencedRelation: "diarios_classe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_lancado_por_fkey"
+            columns: ["lancado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_lancado_por_fkey"
+            columns: ["lancado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_lancado_por_fkey"
+            columns: ["lancado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+        ]
+      }
       cargas_horarias_componentes: {
         Row: {
           carga_horaria_semanal: number
@@ -248,6 +332,68 @@ export type Database = {
           sigla?: string | null
         }
         Relationships: []
+      }
+      diarios_classe: {
+        Row: {
+          ano_letivo: string
+          ativo: boolean | null
+          componente_curricular: string
+          created_at: string | null
+          id: string
+          professor_id: string
+          turma_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          ano_letivo?: string
+          ativo?: boolean | null
+          componente_curricular: string
+          created_at?: string | null
+          id?: string
+          professor_id: string
+          turma_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          ano_letivo?: string
+          ativo?: boolean | null
+          componente_curricular?: string
+          created_at?: string | null
+          id?: string
+          professor_id?: string
+          turma_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diarios_classe_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diarios_classe_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["professor_id"]
+          },
+          {
+            foreignKeyName: "diarios_classe_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diarios_classe_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas_com_matriz"
+            referencedColumns: ["turma_id"]
+          },
+        ]
       }
       escola_matrizes: {
         Row: {
@@ -387,6 +533,87 @@ export type Database = {
           segmentos?: Json | null
         }
         Relationships: []
+      }
+      frequencias: {
+        Row: {
+          aluno_id: string
+          created_at: string | null
+          data_aula: string
+          diario_id: string
+          id: string
+          justificativa: string | null
+          lancado_em: string | null
+          lancado_por: string | null
+          observacao: string | null
+          presente: boolean
+          tempo: number
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string | null
+          data_aula: string
+          diario_id: string
+          id?: string
+          justificativa?: string | null
+          lancado_em?: string | null
+          lancado_por?: string | null
+          observacao?: string | null
+          presente?: boolean
+          tempo: number
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string | null
+          data_aula?: string
+          diario_id?: string
+          id?: string
+          justificativa?: string | null
+          lancado_em?: string | null
+          lancado_por?: string | null
+          observacao?: string | null
+          presente?: boolean
+          tempo?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "frequencias_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "frequencias_diario_id_fkey"
+            columns: ["diario_id"]
+            isOneToOne: false
+            referencedRelation: "diarios_classe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "frequencias_lancado_por_fkey"
+            columns: ["lancado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "frequencias_lancado_por_fkey"
+            columns: ["lancado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_completos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "frequencias_lancado_por_fkey"
+            columns: ["lancado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios_contextualizados"
+            referencedColumns: ["usuario_id"]
+          },
+        ]
       }
       horarios: {
         Row: {
@@ -1456,6 +1683,7 @@ export type Database = {
         Returns: boolean
       }
       sanitize_audit_data: { Args: { data: Json }; Returns: Json }
+      sincronizar_diarios_com_horarios: { Args: never; Returns: undefined }
       tem_permissao: { Args: { func: string; tipo: string }; Returns: boolean }
       validar_horario: {
         Args: {
