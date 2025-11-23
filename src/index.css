@@ -61,6 +61,22 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 40px hsla(225, 73%, 57%, 0.15);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Event colors */
+    --event-ano-letivo: 220 85% 55%;
+    --event-ano-letivo-bg: 220 95% 95%;
+    --event-bimestre: 142 71% 45%;
+    --event-bimestre-bg: 142 71% 95%;
+    --event-recesso: 271 76% 53%;
+    --event-recesso-bg: 271 76% 95%;
+    --event-feriado: 25 95% 53%;
+    --event-feriado-bg: 25 95% 95%;
+    --event-sabado: 48 96% 53%;
+    --event-sabado-bg: 48 96% 95%;
+    --event-conselho: 189 94% 43%;
+    --event-conselho-bg: 189 94% 95%;
+    --event-entrega: 322 79% 52%;
+    --event-entrega-bg: 322 79% 95%;
   }
 
   .dark {

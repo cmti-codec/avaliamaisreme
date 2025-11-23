@@ -1,12 +1,11 @@
-import { useState } from "react";
-import { CalendarDays, Plus, Edit, Trash2, Upload, Printer } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CalendarDays, Plus, ChevronDown, ChevronUp, Edit2, Trash2, Save, X, Info, Upload, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAnosLetivos, useBimestres } from "@/hooks/useAnosLetivos";
 import { useFeriados, useDeletarFeriado } from "@/hooks/useFeriados";
 import { useSabadosLetivos, useDeletarSabadoLetivo } from "@/hooks/useSabadosLetivos";
@@ -21,7 +20,6 @@ import { SabadoLetivoDialog } from "@/components/DatasPrazos/SabadoLetivoDialog"
 import { ConselhoDialog } from "@/components/DatasPrazos/ConselhoDialog";
 import { EntregaDiariosDialog } from "@/components/DatasPrazos/EntregaDiariosDialog";
 import { EventoDialog } from "@/components/DatasPrazos/EventoDialog";
-import { CalendarioVisual } from "@/components/DatasPrazos/CalendarioVisual";
 import { ConfirmarExclusaoDialog } from "@/components/DatasPrazos/ConfirmarExclusaoDialog";
 import { ImportarFeriadosDialog } from "@/components/DatasPrazos/ImportarFeriadosDialog";
 import { exportarCalendarioParaImpressao } from "@/lib/exportar-calendario-pdf";
@@ -33,6 +31,15 @@ export default function DatasPrazos() {
   const [anoSelecionado, setAnoSelecionado] = useState<number>(new Date().getFullYear());
   const [anoLetivoSelecionado, setAnoLetivoSelecionado] = useState<string>("");
   
+  // Estados de expansão
+  const [anoLetivoExpandido, setAnoLetivoExpandido] = useState(false);
+  const [bimestresExpandidos, setBimestresExpandidos] = useState<Record<number, boolean>>({});
+  const [feriadosExpandido, setFeriadosExpandido] = useState(false);
+  const [sabadosExpandido, setSabadosExpandido] = useState(false);
+  const [conselhosExpandido, setConselhosExpandido] = useState(false);
+  const [entregasExpandido, setEntregasExpandido] = useState(false);
+  const [eventosExpandido, setEventosExpandido] = useState(false);
+  
   // Dialogs
   const [anoLetivoDialogOpen, setAnoLetivoDialogOpen] = useState(false);
   const [feriadoDialogOpen, setFeriadoDialogOpen] = useState(false);
@@ -42,11 +49,9 @@ export default function DatasPrazos() {
   const [eventoDialogOpen, setEventoDialogOpen] = useState(false);
   const [importarFeriadosDialogOpen, setImportarFeriadosDialogOpen] = useState(false);
   
-  // Estado para exclusão e edição
   const [itemExclusao, setItemExclusao] = useState<{ id: string; tipo: string; nome: string } | null>(null);
   const [itemEditando, setItemEditando] = useState<any>(null);
   
-  // Mutations para exclusão
   const deletarFeriado = useDeletarFeriado();
   const deletarSabadoLetivo = useDeletarSabadoLetivo();
   const deletarConselho = useDeletarConselho();
@@ -90,7 +95,14 @@ export default function DatasPrazos() {
   const { data: entregas } = useEntregasDiarios(escolaSelecionada || undefined, anoLetivoSelecionado || undefined);
   const { data: eventos } = useEventosInstitucionais(escolaSelecionada || undefined, anoSelecionado);
   
-  // Preparar eventos para exportação
+  // Auto-selecionar primeiro ano letivo
+  useEffect(() => {
+    if (anosLetivos && anosLetivos.length > 0 && !anoLetivoSelecionado) {
+      const anoAtivo = anosLetivos.find(a => a.ativo) || anosLetivos[0];
+      setAnoLetivoSelecionado(anoAtivo.id);
+    }
+  }, [anosLetivos, anoLetivoSelecionado]);
+
   const eventosParaExportar = [
     ...(feriados || []).map(f => ({ data: f.data, tipo: "FERIADO", descricao: f.descricao })),
     ...(sabadosLetivos || []).map(s => ({ data: s.data, tipo: "SABADO_LETIVO", descricao: s.descricao || "Sábado Letivo" })),
@@ -98,572 +110,637 @@ export default function DatasPrazos() {
     ...(entregas || []).map(e => ({ data: e.data, tipo: "ENTREGA", descricao: e.descricao || "Entrega de Diários" })),
     ...(eventos || []).map(ev => ({ data: ev.data, tipo: "EVENTO", descricao: ev.descricao })),
   ];
-  
-  const handleExportarCalendario = () => {
-    const escolaNome = escolas?.find(e => e.id === escolaSelecionada)?.nome || "Todas as Escolas";
-    const mesAtual = new Date().getMonth();
-    exportarCalendarioParaImpressao(eventosParaExportar, mesAtual, anoSelecionado, escolaNome);
-  };
+
+  const anoAtivo = anosLetivos?.find(a => a.id === anoLetivoSelecionado);
+  const feriadosOrdenados = [...(feriados || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  const sabadosOrdenados = [...(sabadosLetivos || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  const conselhosOrdenados = [...(conselhos || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  const entregasOrdenadas = [...(entregas || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  const eventosOrdenados = [...(eventos || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <CalendarDays className="h-8 w-8" />
-            Datas & Prazos
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie o calendário letivo, feriados, eventos e prazos institucionais
-          </p>
+    <div className="p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">Datas & Prazos</h1>
+              <p className="text-lg text-muted-foreground">
+                Configure o calendário letivo da rede municipal de ensino
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              {isAdmin && (
+                <Button variant="outline" onClick={() => setImportarFeriadosDialogOpen(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Importar Feriados
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => {
+                const escolaNome = escolas?.find(e => e.id === escolaSelecionada)?.nome || "Todas as Escolas";
+                exportarCalendarioParaImpressao(eventosParaExportar, new Date().getMonth(), anoSelecionado, escolaNome);
+              }}>
+                <Printer className="w-4 h-4 mr-2" />
+                Imprimir
+              </Button>
+            </div>
+          </div>
         </div>
-        
-        <div className="flex gap-2">
-          {isAdmin && (
-            <Button variant="outline" onClick={() => setImportarFeriadosDialogOpen(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar Feriados
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleExportarCalendario}>
-            <Printer className="w-4 h-4 mr-2" />
-            Imprimir Calendário
-          </Button>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Coluna Principal - Formulários */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Filtros */}
+            <Card className="border-none shadow-lg">
+              <CardContent className="pt-6">
+                <div className="flex gap-4">
+                  {isAdmin && (
+                    <div className="flex-1">
+                      <label className="text-sm font-medium mb-2 block">Escola</label>
+                      <Select value={escolaSelecionada} onValueChange={setEscolaSelecionada}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todas as escolas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todas">Todas as escolas</SelectItem>
+                          {escolas?.map((escola) => (
+                            <SelectItem key={escola.id} value={escola.id}>
+                              {escola.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  <div className="flex-1">
+                    <label className="text-sm font-medium mb-2 block">Ano</label>
+                    <Select 
+                      value={anoSelecionado.toString()} 
+                      onValueChange={(v) => setAnoSelecionado(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[2024, 2025, 2026, 2027].map((ano) => (
+                          <SelectItem key={ano} value={ano.toString()}>
+                            {ano}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Ano Letivo */}
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-[hsl(var(--event-ano-letivo))]" />
+                    Ano Letivo
+                  </CardTitle>
+                  {!anoLetivoExpandido && anoAtivo && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAnoLetivoExpandido(true)}
+                      className="hover:bg-[hsl(var(--event-ano-letivo-bg))]"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!anoLetivoExpandido ? (
+                  <div>
+                    {anoAtivo ? (
+                      <div className="bg-[hsl(var(--event-ano-letivo-bg))] p-4 rounded-lg border border-[hsl(var(--event-ano-letivo)_/_20%)]">
+                        <p className="text-sm text-[hsl(var(--event-ano-letivo))]">
+                          <span className="font-medium">Ano {anoAtivo.ano}:</span> {format(new Date(anoAtivo.data_inicio), "dd/MM/yyyy")} até {format(new Date(anoAtivo.data_fim), "dd/MM/yyyy")}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <p className="text-muted-foreground mb-3">Ano letivo ainda não configurado</p>
+                        {isAdmin && (
+                          <Button
+                            onClick={() => setAnoLetivoDialogOpen(true)}
+                            variant="outline"
+                            className="border-[hsl(var(--event-ano-letivo)_/_30%)] text-[hsl(var(--event-ano-letivo))] hover:bg-[hsl(var(--event-ano-letivo-bg))]"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Configurar Ano Letivo
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-[hsl(var(--event-ano-letivo-bg))] p-4 rounded-lg border border-[hsl(var(--event-ano-letivo)_/_20%)]">
+                      <p className="text-sm text-[hsl(var(--event-ano-letivo))]">
+                        Configure o ano letivo usando o botão abaixo
+                      </p>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      {isAdmin && (
+                        <Button
+                          size="sm"
+                          onClick={() => setAnoLetivoDialogOpen(true)}
+                          className="bg-[hsl(var(--event-ano-letivo))] hover:bg-[hsl(var(--event-ano-letivo)_/_90%)]"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Novo Ano
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAnoLetivoExpandido(false)}
+                      >
+                        Fechar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Bimestres */}
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-[hsl(var(--event-bimestre))]" />
+                  Bimestres
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {bimestres && bimestres.length > 0 ? (
+                  bimestres.map((bimestre) => {
+                    const isExpandido = bimestresExpandidos[bimestre.numero];
+                    
+                    return (
+                      <div key={bimestre.id} className="border rounded-lg overflow-hidden">
+                        <button
+                          onClick={() => setBimestresExpandidos({ ...bimestresExpandidos, [bimestre.numero]: !isExpandido })}
+                          className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-[hsl(var(--event-bimestre-bg))] text-[hsl(var(--event-bimestre))] rounded-full flex items-center justify-center">
+                              <span className="text-sm font-bold">{bimestre.numero}º</span>
+                            </div>
+                            <div className="text-left">
+                              <h4 className="font-semibold">{bimestre.numero}º Bimestre</h4>
+                              {!isExpandido && (
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(bimestre.data_inicio), "dd/MM/yyyy")} até {format(new Date(bimestre.data_fim), "dd/MM/yyyy")}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {isExpandido ? (
+                            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                          )}
+                        </button>
+
+                        {isExpandido && (
+                          <div className="p-4 bg-[hsl(var(--event-bimestre-bg))] border-t">
+                            <div className="text-sm space-y-2">
+                              <p>
+                                <span className="font-medium">Início:</span> {format(new Date(bimestre.data_inicio), "dd/MM/yyyy")}
+                              </p>
+                              <p>
+                                <span className="font-medium">Término:</span> {format(new Date(bimestre.data_fim), "dd/MM/yyyy")}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <p>Configure um ano letivo para gerar os bimestres automaticamente</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Feriados */}
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-[hsl(var(--event-feriado))]" />
+                    Feriados ({feriadosOrdenados.length})
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFeriadosExpandido(!feriadosExpandido)}
+                  >
+                    {feriadosExpandido ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </CardHeader>
+              {feriadosExpandido && (
+                <CardContent>
+                  {isAdmin && (
+                    <Button
+                      onClick={() => setFeriadoDialogOpen(true)}
+                      className="w-full mb-4 bg-[hsl(var(--event-feriado))] hover:bg-[hsl(var(--event-feriado)_/_90%)]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Novo Feriado
+                    </Button>
+                  )}
+                  
+                  {feriadosOrdenados.length > 0 ? (
+                    <div className="space-y-2">
+                      {feriadosOrdenados.map((feriado) => (
+                        <div key={feriado.id} className="bg-[hsl(var(--event-feriado-bg))] p-3 rounded border border-[hsl(var(--event-feriado)_/_20%)] group hover:border-[hsl(var(--event-feriado)_/_40%)] transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-[hsl(var(--event-feriado))]">
+                                {format(new Date(feriado.data), "dd/MM/yyyy")}
+                              </p>
+                              <p className="text-sm">{feriado.descricao}</p>
+                              <div className="flex gap-2 mt-1">
+                                <Badge variant={feriado.tipo === "FERIADO" ? "default" : "secondary"} className="text-xs">
+                                  {feriado.tipo === "FERIADO" ? "Feriado" : "Facultativo"}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">{feriado.abrangencia}</Badge>
+                              </div>
+                            </div>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setItemExclusao({ id: feriado.id, tipo: "feriado", nome: feriado.descricao })}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground py-4">Nenhum feriado cadastrado</p>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Sábados Letivos */}
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-[hsl(var(--event-sabado))]" />
+                    Sábados Letivos ({sabadosOrdenados.length})
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSabadosExpandido(!sabadosExpandido)}
+                  >
+                    {sabadosExpandido ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </CardHeader>
+              {sabadosExpandido && (
+                <CardContent>
+                  <Button
+                    onClick={() => setSabadoLetivoDialogOpen(true)}
+                    className="w-full mb-4 bg-[hsl(var(--event-sabado))] hover:bg-[hsl(var(--event-sabado)_/_90%)]"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Novo Sábado Letivo
+                  </Button>
+                  
+                  {sabadosOrdenados.length > 0 ? (
+                    <div className="space-y-2">
+                      {sabadosOrdenados.map((sabado) => (
+                        <div key={sabado.id} className="bg-[hsl(var(--event-sabado-bg))] p-3 rounded border border-[hsl(var(--event-sabado)_/_20%)] group hover:border-[hsl(var(--event-sabado)_/_40%)] transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-[hsl(var(--event-sabado))]">
+                                {format(new Date(sabado.data), "dd/MM/yyyy")}
+                              </p>
+                              <p className="text-sm">
+                                {sabado.tipo === "REPLICA_DIA_SEMANA" ? `Réplica ${sabado.dia_replica}` : sabado.descricao}
+                              </p>
+                              <Badge variant="outline" className="text-xs mt-1">
+                                {sabado.exige_chamada ? "Exige chamada" : "Não exige chamada"}
+                              </Badge>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setItemExclusao({ id: sabado.id, tipo: "sabado_letivo", nome: sabado.descricao || "Sábado Letivo" })}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground py-4">Nenhum sábado letivo cadastrado</p>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Conselhos de Classe */}
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-[hsl(var(--event-conselho))]" />
+                    Conselhos de Classe ({conselhosOrdenados.length})
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConselhosExpandido(!conselhosExpandido)}
+                  >
+                    {conselhosExpandido ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </CardHeader>
+              {conselhosExpandido && (
+                <CardContent>
+                  <Button
+                    onClick={() => setConselhoDialogOpen(true)}
+                    className="w-full mb-4 bg-[hsl(var(--event-conselho))] hover:bg-[hsl(var(--event-conselho)_/_90%)]"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Novo Conselho
+                  </Button>
+                  
+                  {conselhosOrdenados.length > 0 ? (
+                    <div className="space-y-2">
+                      {conselhosOrdenados.map((conselho) => (
+                        <div key={conselho.id} className="bg-[hsl(var(--event-conselho-bg))] p-3 rounded border border-[hsl(var(--event-conselho)_/_20%)] group hover:border-[hsl(var(--event-conselho)_/_40%)] transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-[hsl(var(--event-conselho))]">
+                                {format(new Date(conselho.data), "dd/MM/yyyy")}
+                              </p>
+                              <p className="text-sm">{conselho.descricao || "Conselho de Classe"}</p>
+                              <Badge variant={conselho.bloqueia_edicao_avaliacoes ? "destructive" : "secondary"} className="text-xs mt-1">
+                                {conselho.bloqueia_edicao_avaliacoes ? "Bloqueia edições" : "Não bloqueia"}
+                              </Badge>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setItemExclusao({ id: conselho.id, tipo: "conselho", nome: conselho.descricao || "Conselho" })}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground py-4">Nenhum conselho cadastrado</p>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Entregas de Diários */}
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-[hsl(var(--event-entrega))]" />
+                    Entregas de Diários ({entregasOrdenadas.length})
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEntregasExpandido(!entregasExpandido)}
+                  >
+                    {entregasExpandido ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </CardHeader>
+              {entregasExpandido && (
+                <CardContent>
+                  <Button
+                    onClick={() => setEntregaDiariosDialogOpen(true)}
+                    className="w-full mb-4 bg-[hsl(var(--event-entrega))] hover:bg-[hsl(var(--event-entrega)_/_90%)]"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nova Entrega
+                  </Button>
+                  
+                  {entregasOrdenadas.length > 0 ? (
+                    <div className="space-y-2">
+                      {entregasOrdenadas.map((entrega) => (
+                        <div key={entrega.id} className="bg-[hsl(var(--event-entrega-bg))] p-3 rounded border border-[hsl(var(--event-entrega)_/_20%)] group hover:border-[hsl(var(--event-entrega)_/_40%)] transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-[hsl(var(--event-entrega))]">
+                                {format(new Date(entrega.data), "dd/MM/yyyy")}
+                              </p>
+                              <p className="text-sm">{entrega.descricao || "Entrega de Diários"}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setItemExclusao({ id: entrega.id, tipo: "entrega", nome: entrega.descricao || "Entrega" })}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground py-4">Nenhuma entrega cadastrada</p>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Eventos Institucionais */}
+            <Card className="border-none shadow-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-primary" />
+                    Eventos Institucionais ({eventosOrdenados.length})
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEventosExpandido(!eventosExpandido)}
+                  >
+                    {eventosExpandido ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </CardHeader>
+              {eventosExpandido && (
+                <CardContent>
+                  <Button
+                    onClick={() => setEventoDialogOpen(true)}
+                    className="w-full mb-4"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Novo Evento
+                  </Button>
+                  
+                  {eventosOrdenados.length > 0 ? (
+                    <div className="space-y-2">
+                      {eventosOrdenados.map((evento) => (
+                        <div key={evento.id} className="bg-muted/50 p-3 rounded border group hover:border-primary/40 transition-colors">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-primary">
+                                {format(new Date(evento.data), "dd/MM/yyyy")}
+                              </p>
+                              <p className="text-sm">{evento.descricao}</p>
+                              <Badge variant="outline" className="text-xs mt-1">{evento.tipo}</Badge>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setItemExclusao({ id: evento.id, tipo: "evento", nome: evento.descricao })}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground py-4">Nenhum evento cadastrado</p>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          </div>
+
+          {/* Coluna Lateral - Resumo */}
+          <div className="space-y-6">
+            <Card className="border-none shadow-lg sticky top-8">
+              <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
+                <CardTitle className="text-lg">📅 Resumo do Calendário</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                {/* Ano Letivo */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">ANO LETIVO {anoSelecionado}</p>
+                  {anoAtivo ? (
+                    <div className="text-sm">
+                      <p><span className="font-medium">Ano {anoAtivo.ano}</span></p>
+                      <p className="text-muted-foreground">
+                        {format(new Date(anoAtivo.data_inicio), "dd/MM/yyyy")} até {format(new Date(anoAtivo.data_fim), "dd/MM/yyyy")}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Não configurado</p>
+                  )}
+                </div>
+
+                {/* Bimestres */}
+                <div className="border-t pt-4">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">BIMESTRES</p>
+                  <div className="space-y-2">
+                    {bimestres && bimestres.length > 0 ? (
+                      bimestres.map((bim) => (
+                        <div key={bim.id} className="text-xs bg-[hsl(var(--event-bimestre-bg))] p-2 rounded border border-[hsl(var(--event-bimestre)_/_20%)]">
+                          <p className="font-semibold text-[hsl(var(--event-bimestre))]">{bim.numero}º Bimestre</p>
+                          <p className="text-muted-foreground">
+                            {format(new Date(bim.data_inicio), "dd/MM")} até {format(new Date(bim.data_fim), "dd/MM")}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Nenhum bimestre configurado</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Feriados */}
+                <div className="border-t pt-4">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">
+                    FERIADOS ({feriadosOrdenados.length})
+                  </p>
+                  {feriadosOrdenados.length > 0 ? (
+                    <div className="max-h-48 overflow-y-auto space-y-1">
+                      {feriadosOrdenados.slice(0, 5).map((feriado) => (
+                        <div key={feriado.id} className="text-xs bg-[hsl(var(--event-feriado-bg))] p-2 rounded border border-[hsl(var(--event-feriado)_/_20%)]">
+                          <p className="font-semibold text-[hsl(var(--event-feriado))]">
+                            {format(new Date(feriado.data), "dd/MM/yyyy")}
+                          </p>
+                          <p className="text-muted-foreground truncate">{feriado.descricao}</p>
+                        </div>
+                      ))}
+                      {feriadosOrdenados.length > 5 && (
+                        <p className="text-xs text-muted-foreground text-center pt-1">
+                          +{feriadosOrdenados.length - 5} mais
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Nenhum feriado cadastrado</p>
+                  )}
+                </div>
+
+                {/* Demais eventos - resumo compacto */}
+                <div className="border-t pt-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Sábados Letivos:</span>
+                    <Badge variant="outline" className="text-xs">{sabadosOrdenados.length}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Conselhos:</span>
+                    <Badge variant="outline" className="text-xs">{conselhosOrdenados.length}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Entregas:</span>
+                    <Badge variant="outline" className="text-xs">{entregasOrdenadas.length}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Eventos:</span>
+                    <Badge variant="outline" className="text-xs">{eventosOrdenados.length}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-4">
-          {isAdmin && (
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Escola</label>
-              <Select value={escolaSelecionada} onValueChange={setEscolaSelecionada}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as escolas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as escolas</SelectItem>
-                  {escolas?.map((escola) => (
-                    <SelectItem key={escola.id} value={escola.id}>
-                      {escola.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          
-          <div className="flex-1">
-            <label className="text-sm font-medium mb-2 block">Ano</label>
-            <Select 
-              value={anoSelecionado.toString()} 
-              onValueChange={(v) => setAnoSelecionado(parseInt(v))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[2024, 2025, 2026, 2027].map((ano) => (
-                  <SelectItem key={ano} value={ano.toString()}>
-                    {ano}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabs de Conteúdo */}
-      <Tabs defaultValue="visao-geral" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
-          <TabsTrigger value="ano-letivo">Ano Letivo</TabsTrigger>
-          <TabsTrigger value="feriados">Feriados</TabsTrigger>
-          <TabsTrigger value="sabados">Sábados Letivos</TabsTrigger>
-          <TabsTrigger value="conselhos">Conselhos</TabsTrigger>
-          <TabsTrigger value="entregas">Entregas</TabsTrigger>
-          <TabsTrigger value="eventos">Eventos</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="visao-geral" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendário Anual {anoSelecionado}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CalendarioVisual
-                eventos={[
-                  ...(feriados || []).map(f => ({
-                    id: f.id,
-                    data: f.data,
-                    titulo: f.descricao,
-                    tipo: "feriado" as const,
-                    subtitulo: f.tipo === "FERIADO" ? "Feriado" : "Ponto Facultativo",
-                    descricao: f.abrangencia,
-                    onEdit: isAdmin ? () => {} : undefined,
-                    onDelete: isAdmin ? () => setItemExclusao({ id: f.id, tipo: "feriado", nome: f.descricao }) : undefined,
-                  })),
-                  ...(sabadosLetivos || []).map(s => ({
-                    id: s.id,
-                    data: s.data,
-                    titulo: s.tipo === "REPLICA_DIA_SEMANA" ? `Réplica ${s.dia_replica}` : s.descricao || "Evento",
-                    tipo: "sabado_letivo" as const,
-                    subtitulo: "Sábado Letivo",
-                    descricao: s.exige_chamada ? "Exige chamada" : "Não exige chamada",
-                    onEdit: () => {},
-                    onDelete: () => setItemExclusao({ id: s.id, tipo: "sabado_letivo", nome: s.descricao || "Sábado Letivo" }),
-                  })),
-                  ...(conselhos || []).map(c => ({
-                    id: c.id,
-                    data: c.data,
-                    titulo: c.descricao || "Conselho de Classe",
-                    tipo: "conselho" as const,
-                    subtitulo: "Conselho de Classe",
-                    descricao: c.bloqueia_edicao_avaliacoes ? "Bloqueia edições" : "Não bloqueia edições",
-                    onEdit: () => {},
-                    onDelete: () => setItemExclusao({ id: c.id, tipo: "conselho", nome: c.descricao || "Conselho de Classe" }),
-                  })),
-                  ...(entregas || []).map(e => ({
-                    id: e.id,
-                    data: e.data,
-                    titulo: e.descricao || "Entrega de Diários",
-                    tipo: "entrega" as const,
-                    subtitulo: "Entrega de Diários",
-                    descricao: `${e.professores_entregaram.length} professor(es) entregaram`,
-                    onEdit: () => {},
-                    onDelete: () => setItemExclusao({ id: e.id, tipo: "entrega", nome: e.descricao || "Entrega de Diários" }),
-                  })),
-                ]}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="ano-letivo" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Anos Letivos</h2>
-            {isAdmin && (
-              <Button onClick={() => setAnoLetivoDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Ano Letivo
-              </Button>
-            )}
-          </div>
-          
-          <Card>
-            <CardContent className="pt-6">
-              {anosLetivos && anosLetivos.length > 0 ? (
-                <div className="space-y-4">
-                  {anosLetivos.map((ano) => (
-                    <div key={ano.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-lg">Ano Letivo {ano.ano}</h3>
-                            {ano.ativo && <Badge variant="default">Ativo</Badge>}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(ano.data_inicio), "dd/MM/yyyy")} a {format(new Date(ano.data_fim), "dd/MM/yyyy")}
-                          </p>
-                          {ano.escola && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Escola: {ano.escola.nome}
-                            </p>
-                          )}
-                          
-                          {/* Bimestres */}
-                          <Button 
-                            variant="link" 
-                            className="p-0 h-auto mt-2"
-                            onClick={() => setAnoLetivoSelecionado(ano.id)}
-                          >
-                            Ver bimestres
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {anoLetivoSelecionado === ano.id && bimestres && (
-                        <div className="mt-4 pt-4 border-t">
-                          <h4 className="font-medium mb-3">Bimestres</h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            {bimestres.map((bimestre) => (
-                              <div key={bimestre.id} className="border rounded p-3">
-                                <div className="font-medium">{bimestre.numero}º Bimestre</div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {format(new Date(bimestre.data_inicio), "dd/MM")} a {format(new Date(bimestre.data_fim), "dd/MM")}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>Nenhum ano letivo cadastrado</p>
-                  {isAdmin && (
-                    <Button className="mt-4" onClick={() => setAnoLetivoDialogOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Primeiro Ano Letivo
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="feriados" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Feriados {anoSelecionado}</h2>
-            {isAdmin && (
-              <Button onClick={() => setFeriadoDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Feriado
-              </Button>
-            )}
-          </div>
-          
-          <Card>
-            <CardContent className="pt-6">
-              {feriados && feriados.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Abrangência</TableHead>
-                      {isAdmin && <TableHead className="w-[100px]">Ações</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {feriados.map((feriado) => (
-                      <TableRow key={feriado.id}>
-                        <TableCell>{format(new Date(feriado.data), "dd/MM/yyyy")}</TableCell>
-                        <TableCell className="font-medium">{feriado.descricao}</TableCell>
-                        <TableCell>
-                          <Badge variant={feriado.tipo === "FERIADO" ? "default" : "secondary"}>
-                            {feriado.tipo === "FERIADO" ? "Feriado" : "Ponto Facultativo"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{feriado.abrangencia}</Badge>
-                        </TableCell>
-                        {isAdmin && (
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive"
-                                onClick={() => setItemExclusao({ id: feriado.id, tipo: "feriado", nome: feriado.descricao })}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>Nenhum feriado cadastrado para {anoSelecionado}</p>
-                  {isAdmin && (
-                    <Button className="mt-4" onClick={() => setFeriadoDialogOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Cadastrar Feriados
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="sabados" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Sábados Letivos {anoSelecionado}</h2>
-            <Button onClick={() => setSabadoLetivoDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Sábado Letivo
-            </Button>
-          </div>
-          
-          <Card>
-            <CardContent className="pt-6">
-              {sabadosLetivos && sabadosLetivos.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Detalhes</TableHead>
-                      <TableHead>Chamada</TableHead>
-                      <TableHead className="w-[100px]">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sabadosLetivos.map((sabado) => (
-                      <TableRow key={sabado.id}>
-                        <TableCell>{format(new Date(sabado.data), "dd/MM/yyyy")}</TableCell>
-                        <TableCell>
-                          <Badge variant={sabado.tipo === "REPLICA_DIA_SEMANA" ? "default" : "secondary"}>
-                            {sabado.tipo === "REPLICA_DIA_SEMANA" ? "Réplica" : "Evento"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {sabado.tipo === "REPLICA_DIA_SEMANA" ? (
-                            <span className="text-sm">Replica {sabado.dia_replica}</span>
-                          ) : (
-                            <span className="text-sm">{sabado.descricao}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {sabado.exige_chamada ? (
-                            <Badge variant="outline" className="bg-green-50">Sim</Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-gray-50">Não</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => setItemExclusao({ id: sabado.id, tipo: "sabado_letivo", nome: sabado.descricao || "Sábado Letivo" })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>Nenhum sábado letivo cadastrado</p>
-                  <Button className="mt-4" onClick={() => setSabadoLetivoDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar Sábado Letivo
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="conselhos" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Conselhos de Classe</h2>
-            <Button onClick={() => setConselhoDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Conselho
-            </Button>
-          </div>
-          
-          <Card>
-            <CardContent className="pt-6">
-              {conselhos && conselhos.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Bimestre</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Bloqueia Edição</TableHead>
-                      <TableHead className="w-[100px]">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {conselhos.map((conselho) => (
-                      <TableRow key={conselho.id}>
-                        <TableCell>{format(new Date(conselho.data), "dd/MM/yyyy")}</TableCell>
-                        <TableCell>
-                          <Badge>Bimestre</Badge>
-                        </TableCell>
-                        <TableCell>{conselho.descricao || "—"}</TableCell>
-                        <TableCell>
-                          {conselho.bloqueia_edicao_avaliacoes ? (
-                            <Badge variant="destructive">Sim</Badge>
-                          ) : (
-                            <Badge variant="outline">Não</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => setItemExclusao({ id: conselho.id, tipo: "conselho", nome: conselho.descricao || "Conselho de Classe" })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>Nenhum conselho de classe cadastrado</p>
-                  <Button className="mt-4" onClick={() => setConselhoDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar Conselho
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="entregas" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Entregas de Diários</h2>
-            <Button onClick={() => setEntregaDiariosDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Entrega
-            </Button>
-          </div>
-          
-          <Card>
-            <CardContent className="pt-6">
-              {entregas && entregas.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data Limite</TableHead>
-                      <TableHead>Bimestre</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Entregas</TableHead>
-                      <TableHead className="w-[100px]">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {entregas.map((entrega) => (
-                      <TableRow key={entrega.id}>
-                        <TableCell>{format(new Date(entrega.data), "dd/MM/yyyy")}</TableCell>
-                        <TableCell>
-                          <Badge>Bimestre</Badge>
-                        </TableCell>
-                        <TableCell>{entrega.descricao || "—"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {entrega.professores_entregaram.length} professor(es)
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => setItemExclusao({ id: entrega.id, tipo: "entrega", nome: entrega.descricao || "Entrega de Diários" })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>Nenhuma entrega de diários cadastrada</p>
-                  <Button className="mt-4" onClick={() => setEntregaDiariosDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar Entrega
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="eventos" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Eventos Institucionais {anoSelecionado}</h2>
-            <Button onClick={() => setEventoDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Evento
-            </Button>
-          </div>
-          
-          <Card>
-            <CardContent className="pt-6">
-              {eventos && eventos.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Bloqueia Letivo</TableHead>
-                      <TableHead className="w-[100px]">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {eventos.map((evento) => (
-                      <TableRow key={evento.id}>
-                        <TableCell>{format(new Date(evento.data), "dd/MM/yyyy")}</TableCell>
-                        <TableCell className="font-medium">{evento.descricao}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{evento.tipo}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {evento.bloqueia_letivo ? (
-                            <Badge variant="destructive">Sim</Badge>
-                          ) : (
-                            <Badge variant="outline">Não</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => setItemExclusao({ id: evento.id, tipo: "evento", nome: evento.descricao })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>Nenhum evento institucional cadastrado para {anoSelecionado}</p>
-                  <Button className="mt-4" onClick={() => setEventoDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Cadastrar Evento
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
       {/* Dialogs */}
-      <AnoLetivoDialog open={anoLetivoDialogOpen} onOpenChange={setAnoLetivoDialogOpen} />
-      <FeriadoDialog open={feriadoDialogOpen} onOpenChange={setFeriadoDialogOpen} />
+      <AnoLetivoDialog 
+        open={anoLetivoDialogOpen} 
+        onOpenChange={setAnoLetivoDialogOpen}
+      />
+      <FeriadoDialog 
+        open={feriadoDialogOpen} 
+        onOpenChange={setFeriadoDialogOpen}
+      />
       <SabadoLetivoDialog 
         open={sabadoLetivoDialogOpen} 
         onOpenChange={setSabadoLetivoDialogOpen}
@@ -681,26 +758,21 @@ export default function DatasPrazos() {
         escolaId={escolaSelecionada}
         anoLetivoId={anoLetivoSelecionado}
       />
-      <EventoDialog
-        open={eventoDialogOpen}
+      <EventoDialog 
+        open={eventoDialogOpen} 
         onOpenChange={setEventoDialogOpen}
         escolaId={escolaSelecionada}
       />
-      
-      {/* Dialog de Confirmação de Exclusão */}
+      <ImportarFeriadosDialog
+        open={importarFeriadosDialogOpen}
+        onOpenChange={setImportarFeriadosDialogOpen}
+      />
       <ConfirmarExclusaoDialog
         open={!!itemExclusao}
         onOpenChange={(open) => !open && setItemExclusao(null)}
         onConfirm={handleConfirmarExclusao}
-        titulo="Confirmar Exclusão"
+        titulo="Confirmar exclusão"
         descricao={`Tem certeza que deseja excluir "${itemExclusao?.nome}"? Esta ação não pode ser desfeita.`}
-        isLoading={deletarFeriado.isPending || deletarSabadoLetivo.isPending || deletarConselho.isPending || deletarEntrega.isPending || deletarEvento.isPending}
-      />
-      
-      {/* Dialog de Importação de Feriados */}
-      <ImportarFeriadosDialog
-        open={importarFeriadosDialogOpen}
-        onOpenChange={setImportarFeriadosDialogOpen}
       />
     </div>
   );
