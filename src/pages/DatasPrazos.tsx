@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarDays, Plus, Edit, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, Edit, Trash2, Upload, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +23,8 @@ import { EntregaDiariosDialog } from "@/components/DatasPrazos/EntregaDiariosDia
 import { EventoDialog } from "@/components/DatasPrazos/EventoDialog";
 import { CalendarioVisual } from "@/components/DatasPrazos/CalendarioVisual";
 import { ConfirmarExclusaoDialog } from "@/components/DatasPrazos/ConfirmarExclusaoDialog";
+import { ImportarFeriadosDialog } from "@/components/DatasPrazos/ImportarFeriadosDialog";
+import { exportarCalendarioParaImpressao } from "@/lib/exportar-calendario-pdf";
 
 export default function DatasPrazos() {
   const { data: usuario } = useUsuario();
@@ -38,9 +40,11 @@ export default function DatasPrazos() {
   const [conselhoDialogOpen, setConselhoDialogOpen] = useState(false);
   const [entregaDiariosDialogOpen, setEntregaDiariosDialogOpen] = useState(false);
   const [eventoDialogOpen, setEventoDialogOpen] = useState(false);
+  const [importarFeriadosDialogOpen, setImportarFeriadosDialogOpen] = useState(false);
   
-  // Estado para exclusão
+  // Estado para exclusão e edição
   const [itemExclusao, setItemExclusao] = useState<{ id: string; tipo: string; nome: string } | null>(null);
+  const [itemEditando, setItemEditando] = useState<any>(null);
   
   // Mutations para exclusão
   const deletarFeriado = useDeletarFeriado();
@@ -85,6 +89,21 @@ export default function DatasPrazos() {
   const { data: conselhos } = useConselhos(escolaSelecionada || undefined, anoLetivoSelecionado || undefined);
   const { data: entregas } = useEntregasDiarios(escolaSelecionada || undefined, anoLetivoSelecionado || undefined);
   const { data: eventos } = useEventosInstitucionais(escolaSelecionada || undefined, anoSelecionado);
+  
+  // Preparar eventos para exportação
+  const eventosParaExportar = [
+    ...(feriados || []).map(f => ({ data: f.data, tipo: "FERIADO", descricao: f.descricao })),
+    ...(sabadosLetivos || []).map(s => ({ data: s.data, tipo: "SABADO_LETIVO", descricao: s.descricao || "Sábado Letivo" })),
+    ...(conselhos || []).map(c => ({ data: c.data, tipo: "CONSELHO", descricao: c.descricao || "Conselho" })),
+    ...(entregas || []).map(e => ({ data: e.data, tipo: "ENTREGA", descricao: e.descricao || "Entrega de Diários" })),
+    ...(eventos || []).map(ev => ({ data: ev.data, tipo: "EVENTO", descricao: ev.descricao })),
+  ];
+  
+  const handleExportarCalendario = () => {
+    const escolaNome = escolas?.find(e => e.id === escolaSelecionada)?.nome || "Todas as Escolas";
+    const mesAtual = new Date().getMonth();
+    exportarCalendarioParaImpressao(eventosParaExportar, mesAtual, anoSelecionado, escolaNome);
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -97,6 +116,19 @@ export default function DatasPrazos() {
           <p className="text-muted-foreground mt-1">
             Gerencie o calendário letivo, feriados, eventos e prazos institucionais
           </p>
+        </div>
+        
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Button variant="outline" onClick={() => setImportarFeriadosDialogOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar Feriados
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleExportarCalendario}>
+            <Printer className="w-4 h-4 mr-2" />
+            Imprimir Calendário
+          </Button>
         </div>
       </div>
 
@@ -663,6 +695,12 @@ export default function DatasPrazos() {
         titulo="Confirmar Exclusão"
         descricao={`Tem certeza que deseja excluir "${itemExclusao?.nome}"? Esta ação não pode ser desfeita.`}
         isLoading={deletarFeriado.isPending || deletarSabadoLetivo.isPending || deletarConselho.isPending || deletarEntrega.isPending || deletarEvento.isPending}
+      />
+      
+      {/* Dialog de Importação de Feriados */}
+      <ImportarFeriadosDialog
+        open={importarFeriadosDialogOpen}
+        onOpenChange={setImportarFeriadosDialogOpen}
       />
     </div>
   );
