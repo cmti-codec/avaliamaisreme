@@ -69,7 +69,7 @@ export const useAtualizarConselho = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { id: string; updates: Partial<ConselhoClasse> }) => {
+    mutationFn: async (data: { id: string; updates: Partial<Omit<ConselhoClasse, "id" | "created_at" | "created_by">> }) => {
       const { data: result, error } = await supabase
         .from("conselhos_classe")
         .update(data.updates)

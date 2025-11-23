@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, CalendarDays, Plus, Edit, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAnosLetivos, useBimestres } from "@/hooks/useAnosLetivos";
-import { useFeriados } from "@/hooks/useFeriados";
-import { useSabadosLetivos } from "@/hooks/useSabadosLetivos";
-import { useConselhos } from "@/hooks/useConselhos";
-import { useEntregasDiarios } from "@/hooks/useEntregasDiarios";
+import { useFeriados, useDeletarFeriado } from "@/hooks/useFeriados";
+import { useSabadosLetivos, useDeletarSabadoLetivo } from "@/hooks/useSabadosLetivos";
+import { useConselhos, useDeletarConselho } from "@/hooks/useConselhos";
+import { useEntregasDiarios, useDeletarEntregaDiarios } from "@/hooks/useEntregasDiarios";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useUsuario } from "@/hooks/useUsuario";
 import { AnoLetivoDialog } from "@/components/DatasPrazos/AnoLetivoDialog";
@@ -19,6 +19,8 @@ import { FeriadoDialog } from "@/components/DatasPrazos/FeriadoDialog";
 import { SabadoLetivoDialog } from "@/components/DatasPrazos/SabadoLetivoDialog";
 import { ConselhoDialog } from "@/components/DatasPrazos/ConselhoDialog";
 import { EntregaDiariosDialog } from "@/components/DatasPrazos/EntregaDiariosDialog";
+import { CalendarioVisual } from "@/components/DatasPrazos/CalendarioVisual";
+import { ConfirmarExclusaoDialog } from "@/components/DatasPrazos/ConfirmarExclusaoDialog";
 
 export default function DatasPrazos() {
   const { data: usuario } = useUsuario();
@@ -33,6 +35,39 @@ export default function DatasPrazos() {
   const [sabadoLetivoDialogOpen, setSabadoLetivoDialogOpen] = useState(false);
   const [conselhoDialogOpen, setConselhoDialogOpen] = useState(false);
   const [entregaDiariosDialogOpen, setEntregaDiariosDialogOpen] = useState(false);
+  
+  // Estado para exclusão
+  const [itemExclusao, setItemExclusao] = useState<{ id: string; tipo: string; nome: string } | null>(null);
+  
+  // Mutations para exclusão
+  const deletarFeriado = useDeletarFeriado();
+  const deletarSabadoLetivo = useDeletarSabadoLetivo();
+  const deletarConselho = useDeletarConselho();
+  const deletarEntrega = useDeletarEntregaDiarios();
+  
+  const handleConfirmarExclusao = async () => {
+    if (!itemExclusao) return;
+    
+    try {
+      switch (itemExclusao.tipo) {
+        case "feriado":
+          await deletarFeriado.mutateAsync(itemExclusao.id);
+          break;
+        case "sabado_letivo":
+          await deletarSabadoLetivo.mutateAsync(itemExclusao.id);
+          break;
+        case "conselho":
+          await deletarConselho.mutateAsync(itemExclusao.id);
+          break;
+        case "entrega":
+          await deletarEntrega.mutateAsync(itemExclusao.id);
+          break;
+      }
+      setItemExclusao(null);
+    } catch (error) {
+      console.error("Erro ao excluir:", error);
+    }
+  };
   
   const isAdmin = usuario?.roles.includes("ADMIN") || usuario?.roles.includes("GESTOR_SEMED");
   
@@ -121,13 +156,50 @@ export default function DatasPrazos() {
               <CardTitle>Calendário Anual {anoSelecionado}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Calendário Visual em Desenvolvimento</p>
-                <p className="text-sm mt-2">
-                  Use as abas acima para gerenciar feriados, sábados letivos, conselhos e entregas
-                </p>
-              </div>
+              <CalendarioVisual
+                eventos={[
+                  ...(feriados || []).map(f => ({
+                    id: f.id,
+                    data: f.data,
+                    titulo: f.descricao,
+                    tipo: "feriado" as const,
+                    subtitulo: f.tipo === "FERIADO" ? "Feriado" : "Ponto Facultativo",
+                    descricao: f.abrangencia,
+                    onEdit: isAdmin ? () => {} : undefined,
+                    onDelete: isAdmin ? () => setItemExclusao({ id: f.id, tipo: "feriado", nome: f.descricao }) : undefined,
+                  })),
+                  ...(sabadosLetivos || []).map(s => ({
+                    id: s.id,
+                    data: s.data,
+                    titulo: s.tipo === "REPLICA_DIA_SEMANA" ? `Réplica ${s.dia_replica}` : s.descricao || "Evento",
+                    tipo: "sabado_letivo" as const,
+                    subtitulo: "Sábado Letivo",
+                    descricao: s.exige_chamada ? "Exige chamada" : "Não exige chamada",
+                    onEdit: () => {},
+                    onDelete: () => setItemExclusao({ id: s.id, tipo: "sabado_letivo", nome: s.descricao || "Sábado Letivo" }),
+                  })),
+                  ...(conselhos || []).map(c => ({
+                    id: c.id,
+                    data: c.data,
+                    titulo: c.descricao || "Conselho de Classe",
+                    tipo: "conselho" as const,
+                    subtitulo: "Conselho de Classe",
+                    descricao: c.bloqueia_edicao_avaliacoes ? "Bloqueia edições" : "Não bloqueia edições",
+                    onEdit: () => {},
+                    onDelete: () => setItemExclusao({ id: c.id, tipo: "conselho", nome: c.descricao || "Conselho de Classe" }),
+                  })),
+                  ...(entregas || []).map(e => ({
+                    id: e.id,
+                    data: e.data,
+                    titulo: e.descricao || "Entrega de Diários",
+                    tipo: "entrega" as const,
+                    subtitulo: "Entrega de Diários",
+                    descricao: `${e.professores_entregaram.length} professor(es) entregaram`,
+                    onEdit: () => {},
+                    onDelete: () => setItemExclusao({ id: e.id, tipo: "entrega", nome: e.descricao || "Entrega de Diários" }),
+                  })),
+                ]}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -229,6 +301,7 @@ export default function DatasPrazos() {
                       <TableHead>Descrição</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Abrangência</TableHead>
+                      {isAdmin && <TableHead className="w-[100px]">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -244,6 +317,20 @@ export default function DatasPrazos() {
                         <TableCell>
                           <Badge variant="outline">{feriado.abrangencia}</Badge>
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={() => setItemExclusao({ id: feriado.id, tipo: "feriado", nome: feriado.descricao })}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -282,6 +369,7 @@ export default function DatasPrazos() {
                       <TableHead>Tipo</TableHead>
                       <TableHead>Detalhes</TableHead>
                       <TableHead>Chamada</TableHead>
+                      <TableHead className="w-[100px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -306,6 +394,18 @@ export default function DatasPrazos() {
                           ) : (
                             <Badge variant="outline" className="bg-gray-50">Não</Badge>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => setItemExclusao({ id: sabado.id, tipo: "sabado_letivo", nome: sabado.descricao || "Sábado Letivo" })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -343,6 +443,7 @@ export default function DatasPrazos() {
                       <TableHead>Bimestre</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Bloqueia Edição</TableHead>
+                      <TableHead className="w-[100px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -359,6 +460,18 @@ export default function DatasPrazos() {
                           ) : (
                             <Badge variant="outline">Não</Badge>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => setItemExclusao({ id: conselho.id, tipo: "conselho", nome: conselho.descricao || "Conselho de Classe" })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -396,6 +509,7 @@ export default function DatasPrazos() {
                       <TableHead>Bimestre</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Entregas</TableHead>
+                      <TableHead className="w-[100px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -410,6 +524,18 @@ export default function DatasPrazos() {
                           <Badge variant="outline">
                             {entrega.professores_entregaram.length} professor(es)
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => setItemExclusao({ id: entrega.id, tipo: "entrega", nome: entrega.descricao || "Entrega de Diários" })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -466,6 +592,16 @@ export default function DatasPrazos() {
         onOpenChange={setEntregaDiariosDialogOpen}
         escolaId={escolaSelecionada}
         anoLetivoId={anoLetivoSelecionado}
+      />
+      
+      {/* Dialog de Confirmação de Exclusão */}
+      <ConfirmarExclusaoDialog
+        open={!!itemExclusao}
+        onOpenChange={(open) => !open && setItemExclusao(null)}
+        onConfirm={handleConfirmarExclusao}
+        titulo="Confirmar Exclusão"
+        descricao={`Tem certeza que deseja excluir "${itemExclusao?.nome}"? Esta ação não pode ser desfeita.`}
+        isLoading={deletarFeriado.isPending || deletarSabadoLetivo.isPending || deletarConselho.isPending || deletarEntrega.isPending}
       />
     </div>
   );

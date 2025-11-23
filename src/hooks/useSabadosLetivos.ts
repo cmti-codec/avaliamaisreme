@@ -72,7 +72,7 @@ export const useAtualizarSabadoLetivo = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { id: string; updates: Partial<SabadoLetivo> }) => {
+    mutationFn: async (data: { id: string; updates: Partial<Omit<SabadoLetivo, "id" | "created_at" | "created_by">> }) => {
       const { data: result, error } = await supabase
         .from("sabados_letivos")
         .update(data.updates)
