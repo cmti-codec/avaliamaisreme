@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, School, Building2, GraduationCap, Calendar as CalendarIcon, FileText, Download, Settings, BookOpen, Link2, Clock, Search, BarChart3, Activity } from "lucide-react";
+import { LayoutDashboard, Users, School, Building2, GraduationCap, Calendar as CalendarIcon, FileText, Download, Settings, BookOpen, Link2, Clock, Search, BarChart3, Activity, ClipboardList } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
@@ -6,6 +6,10 @@ const menuItems = [{
   title: "Painel",
   url: "/",
   icon: LayoutDashboard
+}, {
+  title: "Diário de Classe",
+  url: "/diario",
+  icon: ClipboardList
 }, {
   title: "Professores",
   url: "/professores",

@@ -31,6 +31,7 @@ import Coordenadores from "./pages/admin/Coordenadores";
 import Diagnostico from "./pages/admin/Diagnostico";
 import ConsultaHorarios from "./pages/horarios/Consulta";
 import LancamentoHorarios from "./pages/horarios/Lancamento";
+import DiarioClasse from "./pages/DiarioClasse";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -124,6 +125,9 @@ const App = () => (
             {/* Horarios Routes */}
             <Route path="/horarios/consulta" element={<LayoutWrapper><ConsultaHorarios /></LayoutWrapper>} />
             <Route path="/horarios/lancamento" element={<LayoutWrapper><LancamentoHorarios /></LayoutWrapper>} />
+
+            {/* Diário de Classe */}
+            <Route path="/diario" element={<LayoutWrapper><DiarioClasse /></LayoutWrapper>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
