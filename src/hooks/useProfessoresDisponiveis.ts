@@ -13,6 +13,7 @@ export interface Professor {
   formacoes?: any;
   ativo: boolean;
   usuario_id?: string;
+  pessoa_id?: string;
   escola_id: string | null; // Permite NULL para pool REME
   carga_horaria_contratual?: number;
   horas_pl?: number;
@@ -60,10 +61,13 @@ export const useProfessoresDisponiveis = (
         }
       }
 
-      // Buscar todos professores (ativos ou incluindo inativos conforme flag)
+      // Buscar todos professores com pessoa_id (via join)
       let query = supabase
         .from("professores")
-        .select("*")
+        .select(`
+          *,
+          usuarios!inner(pessoa_id)
+        `)
         .order("nome", { ascending: true });
 
       // Se não incluir inativos, filtrar apenas ativos
@@ -75,12 +79,16 @@ export const useProfessoresDisponiveis = (
 
       if (error) throw error;
 
-      // Filtrar no cliente os professores já lotados (mais robusto)
+      // Filtrar no cliente os professores já lotados e mapear pessoa_id
       const professoresDisponiveis = idsLotados.length > 0
         ? (allProfessores || []).filter(p => !idsLotados.includes(p.id))
         : (allProfessores || []);
 
-      return professoresDisponiveis as Professor[];
+      // Mapear pessoa_id do join
+      return professoresDisponiveis.map(p => ({
+        ...p,
+        pessoa_id: (p as any).usuarios?.pessoa_id
+      })) as Professor[];
     },
     enabled: !!escolaId && !!anoLetivo,
   });
