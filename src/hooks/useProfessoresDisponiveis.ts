@@ -38,14 +38,27 @@ export const useProfessoresDisponiveis = (
 
       // Buscar IDs dos professores associados a essas pessoas
       const pessoasLotadas = lotados?.map(l => l.pessoa_id) || [];
-      const { data: professoresLotados } = await supabase
-        .from("professores")
-        .select("id")
-        .in("usuario_id", pessoasLotadas.length > 0 ? 
-          (await supabase.from("usuarios").select("id").in("pessoa_id", pessoasLotadas)).data?.map(u => u.id) || [] 
-          : []);
       
-      const idsLotados = professoresLotados?.map(p => p.id) || [];
+      // Se houver pessoas lotadas, buscar os usuario_id correspondentes
+      let idsLotados: string[] = [];
+      if (pessoasLotadas.length > 0) {
+        const { data: usuarios } = await supabase
+          .from("usuarios")
+          .select("id")
+          .in("pessoa_id", pessoasLotadas);
+        
+        const usuariosLotados = usuarios?.map(u => u.id) || [];
+        
+        // Buscar IDs dos professores lotados
+        if (usuariosLotados.length > 0) {
+          const { data: professoresLotados } = await supabase
+            .from("professores")
+            .select("id")
+            .in("usuario_id", usuariosLotados);
+          
+          idsLotados = professoresLotados?.map(p => p.id) || [];
+        }
+      }
 
       // Buscar todos professores (ativos ou incluindo inativos conforme flag)
       let query = supabase
