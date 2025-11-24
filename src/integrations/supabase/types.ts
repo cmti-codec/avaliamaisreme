@@ -2284,6 +2284,12 @@ export type Database = {
       clear_impersonations_for: { Args: { _user_id: string }; Returns: number }
       get_effective_user_id: { Args: never; Returns: string }
       get_user_escola_id: { Args: { _user_id?: string }; Returns: string }
+      get_user_escolas_ids: {
+        Args: { _user_id?: string }
+        Returns: {
+          escola_id: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
