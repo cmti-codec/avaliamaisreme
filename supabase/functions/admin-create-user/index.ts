@@ -226,6 +226,34 @@ serve(async (req) => {
         throw rolesErr;
       }
 
+      // 4. Create lotacao if escola_id and relevant role
+      if (escola_id && roles.some(r => ['DIRETOR', 'SECRETARIO', 'COORDENADOR', 'PROFESSOR'].includes(r))) {
+        // Determine primary profile for lotacao
+        const perfilLotacao = roles.includes('DIRETOR') ? 'DIRETOR' :
+                              roles.includes('SECRETARIO') ? 'SECRETARIO' :
+                              roles.includes('COORDENADOR') ? 'COORDENADOR' :
+                              'PROFESSOR';
+        
+        const { error: lotacaoErr } = await supabaseAdmin
+          .from("lotacoes")
+          .insert({
+            pessoa_id: pessoaId,
+            escola_saesc: escola_id,
+            perfil: perfilLotacao,
+            ano_letivo: new Date().getFullYear().toString(),
+            data_inicio: new Date().toISOString().split('T')[0],
+            ativo: true,
+            status: 'ATIVO'
+          });
+
+        if (lotacaoErr) {
+          console.warn("⚠️ Lotação não criada:", lotacaoErr);
+          // Don't fail user creation, just log warning
+        } else {
+          console.log("✅ Lotação criada:", { pessoa_id: pessoaId, escola_saesc: escola_id, perfil: perfilLotacao });
+        }
+      }
+
       console.log("✅ User created successfully:", { newUserId, pessoaId, roles });
 
       return new Response(
