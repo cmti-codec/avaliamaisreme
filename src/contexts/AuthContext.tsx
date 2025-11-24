@@ -309,11 +309,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Create test user
       const email = `teste.${Date.now()}@tempmail.lovable.dev`;
       const password = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
+      // Generate a test CPF (11 digits)
+      const testCpf = String(Date.now()).slice(-11).padStart(11, '0');
 
       const { data: createResp, error: createErr } = await supabase.functions.invoke('admin-create-user', {
         body: {
           nome: `Teste - ${profile} (${schoolName})`,
           email,
+          cpf: testCpf,
           senha: password,
           roles: [profile],
           escola_id: schoolId,
