@@ -97,15 +97,15 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Buscar nomes das escolas
+      // Buscar nomes das escolas usando o UUID (id) em vez de saesc (código)
       const escolasSaesc = [...new Set(lotacoesData.map(l => l.escola_saesc))];
       const { data: escolasData } = await supabase
         .from('escolas')
-        .select('saesc, nome')
-        .in('saesc', escolasSaesc);
+        .select('id, nome')
+        .in('id', escolasSaesc);
 
       const escolasMap = new Map(
-        escolasData?.map(e => [e.saesc.toString(), e.nome]) || []
+        escolasData?.map(e => [e.id.toString(), e.nome]) || []
       );
 
       const lotacoes: Lotacao[] = lotacoesData.map((l: any) => ({
