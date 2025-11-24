@@ -103,7 +103,7 @@ const App = () => (
             <Route path="/" element={<LayoutWrapper><Dashboard /></LayoutWrapper>} />
             <Route path="/professores" element={
               <LayoutWrapper>
-                <ProtectedRoute perfisPermitidos={['DIRETOR', 'SECRETARIO', 'COORDENADOR']}>
+                <ProtectedRoute>
                   <Professores />
                 </ProtectedRoute>
               </LayoutWrapper>
