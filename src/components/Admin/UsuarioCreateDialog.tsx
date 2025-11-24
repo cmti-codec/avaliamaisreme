@@ -78,6 +78,15 @@ export function UsuarioCreateDialog({ open, onOpenChange }: UsuarioCreateDialogP
     try {
       console.log('🔵 Iniciando criação de usuário:', email.trim());
       console.log('🔵 Roles selecionadas:', selectedRoles);
+      console.log('🔵 Dados completos:', {
+        nome: nome.trim(),
+        email: email.trim(),
+        cpf: cpfDigits,
+        telefone: telefone.trim() || null,
+        senha: '***',
+        roles: selectedRoles,
+        escola_id: null,
+      });
 
       // Criar usuário via função de backend
       const { data: result, error: fnError } = await supabase.functions.invoke('admin-create-user', {

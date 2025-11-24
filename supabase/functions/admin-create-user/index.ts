@@ -102,6 +102,8 @@ serve(async (req) => {
 
     // Parse body
     const body = await req.json();
+    console.log("📥 Received body:", JSON.stringify(body, null, 2));
+    
     const nome: string = (body?.nome || "").trim();
     const email: string = (body?.email || "").trim();
     const cpf: string = (body?.cpf || "").trim();
@@ -110,7 +112,16 @@ serve(async (req) => {
     const roles: string[] = Array.isArray(body?.roles) ? body.roles : [];
     const escola_id: string | null = body?.escola_id ?? null;
 
+    console.log("📋 Parsed values:", { nome, email, cpf, telefone, senha: senha ? "***" : "(empty)", roles, escola_id });
+
     if (!nome || !email || !cpf || !senha || roles.length === 0) {
+      console.error("❌ Validation failed:", { 
+        hasNome: !!nome, 
+        hasEmail: !!email, 
+        hasCpf: !!cpf, 
+        hasSenha: !!senha, 
+        rolesCount: roles.length 
+      });
       return new Response(
         JSON.stringify({ error: "Campos obrigatórios ausentes: nome, email, CPF, senha e perfis" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
