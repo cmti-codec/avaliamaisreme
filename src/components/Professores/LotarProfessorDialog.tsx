@@ -204,10 +204,17 @@ export function LotarProfessorDialog({
 
   const handleConfirm = () => {
     if (selectedIds.length > 0) {
-      onLotar(selectedIds);
-      setSelectedIds([]);
-      setSearchTerm("");
-      setFiltroVinculo("TODOS");
+      // Mapear IDs de professores para pessoa_id
+      const pessoaIds = selectedIds
+        .map(id => professores.find(p => p.id === id)?.pessoa_id)
+        .filter(Boolean) as string[];
+      
+      if (pessoaIds.length > 0) {
+        onLotar(pessoaIds);
+        setSelectedIds([]);
+        setSearchTerm("");
+        setFiltroVinculo("TODOS");
+      }
     }
   };
 
