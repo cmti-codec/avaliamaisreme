@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAnosLetivos, useBimestres } from "@/hooks/useAnosLetivos";
+import { useAnosLetivos, useBimestres, useAtualizarBimestre } from "@/hooks/useAnosLetivos";
 import { useFeriados, useDeletarFeriado } from "@/hooks/useFeriados";
 import { useSabadosLetivos, useDeletarSabadoLetivo } from "@/hooks/useSabadosLetivos";
 import { useConselhos, useDeletarConselho } from "@/hooks/useConselhos";
@@ -52,11 +52,16 @@ export default function DatasPrazos() {
   const [itemExclusao, setItemExclusao] = useState<{ id: string; tipo: string; nome: string } | null>(null);
   const [itemEditando, setItemEditando] = useState<any>(null);
   
+  // Estados para edição de bimestres
+  const [bimestreEditando, setBimestreEditando] = useState<string | null>(null);
+  const [datasEditando, setDatasEditando] = useState<{ data_inicio: string; data_fim: string }>({ data_inicio: '', data_fim: '' });
+  
   const deletarFeriado = useDeletarFeriado();
   const deletarSabadoLetivo = useDeletarSabadoLetivo();
   const deletarConselho = useDeletarConselho();
   const deletarEntrega = useDeletarEntregaDiarios();
   const deletarEvento = useDeletarEventoInstitucional();
+  const atualizarBimestre = useAtualizarBimestre();
   
   const handleConfirmarExclusao = async () => {
     if (!itemExclusao) return;
@@ -82,6 +87,34 @@ export default function DatasPrazos() {
       setItemExclusao(null);
     } catch (error) {
       console.error("Erro ao excluir:", error);
+    }
+  };
+  
+  const iniciarEdicaoBimestre = (bimestre: any) => {
+    setBimestreEditando(bimestre.id);
+    setDatasEditando({
+      data_inicio: bimestre.data_inicio,
+      data_fim: bimestre.data_fim
+    });
+  };
+  
+  const cancelarEdicaoBimestre = () => {
+    setBimestreEditando(null);
+    setDatasEditando({ data_inicio: '', data_fim: '' });
+  };
+  
+  const handleSalvarBimestre = async () => {
+    if (!bimestreEditando) return;
+    
+    try {
+      await atualizarBimestre.mutateAsync({
+        id: bimestreEditando,
+        data_inicio: datasEditando.data_inicio,
+        data_fim: datasEditando.data_fim
+      });
+      setBimestreEditando(null);
+    } catch (error) {
+      console.error("Erro ao salvar bimestre:", error);
     }
   };
   
@@ -314,14 +347,69 @@ export default function DatasPrazos() {
 
                         {isExpandido && (
                           <div className="p-4 bg-[hsl(var(--event-bimestre-bg))] border-t">
-                            <div className="text-sm space-y-2">
-                              <p>
-                                <span className="font-medium">Início:</span> {format(new Date(bimestre.data_inicio), "dd/MM/yyyy")}
-                              </p>
-                              <p>
-                                <span className="font-medium">Término:</span> {format(new Date(bimestre.data_fim), "dd/MM/yyyy")}
-                              </p>
-                            </div>
+                            {bimestreEditando === bimestre.id ? (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="text-sm font-medium mb-2 block">Data Início</label>
+                                    <input
+                                      type="date"
+                                      value={datasEditando.data_inicio}
+                                      onChange={(e) => setDatasEditando({ ...datasEditando, data_inicio: e.target.value })}
+                                      className="w-full px-3 py-2 border rounded-md bg-background"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium mb-2 block">Data Fim</label>
+                                    <input
+                                      type="date"
+                                      value={datasEditando.data_fim}
+                                      onChange={(e) => setDatasEditando({ ...datasEditando, data_fim: e.target.value })}
+                                      className="w-full px-3 py-2 border rounded-md bg-background"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={cancelarEdicaoBimestre}
+                                  >
+                                    <X className="w-4 h-4 mr-2" />
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleSalvarBimestre}
+                                    className="bg-[hsl(var(--event-bimestre))] hover:bg-[hsl(var(--event-bimestre)_/_90%)]"
+                                  >
+                                    <Save className="w-4 h-4 mr-2" />
+                                    Salvar
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex justify-between items-start">
+                                <div className="text-sm space-y-2">
+                                  <p>
+                                    <span className="font-medium">Início:</span> {format(new Date(bimestre.data_inicio), "dd/MM/yyyy")}
+                                  </p>
+                                  <p>
+                                    <span className="font-medium">Término:</span> {format(new Date(bimestre.data_fim), "dd/MM/yyyy")}
+                                  </p>
+                                </div>
+                                {isAdmin && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => iniciarEdicaoBimestre(bimestre)}
+                                    className="hover:bg-[hsl(var(--event-bimestre-bg))]"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
