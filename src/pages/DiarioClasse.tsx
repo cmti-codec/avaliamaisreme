@@ -36,7 +36,7 @@ const DiarioClasse = () => {
   const [validandoData, setValidandoData] = useState(false);
 
   const { escolaAtual } = useSchool();
-  const { data: anosLetivos } = useAnosLetivos(escolaAtual?.saesc);
+  const { data: anosLetivos } = useAnosLetivos();
   const anoLetivoAtivo = anosLetivos?.find(ano => ano.ativo);
 
   const { data: diarios, isLoading: loadingDiarios } = useDiariosComHorarios();

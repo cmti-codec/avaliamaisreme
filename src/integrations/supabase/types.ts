@@ -104,7 +104,6 @@ export type Database = {
           created_by: string | null
           data_fim: string
           data_inicio: string
-          escola_id: string
           id: string
         }
         Insert: {
@@ -114,7 +113,6 @@ export type Database = {
           created_by?: string | null
           data_fim: string
           data_inicio: string
-          escola_id: string
           id?: string
         }
         Update: {
@@ -124,7 +122,6 @@ export type Database = {
           created_by?: string | null
           data_fim?: string
           data_inicio?: string
-          escola_id?: string
           id?: string
         }
         Relationships: [
@@ -148,13 +145,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "usuarios_contextualizados"
             referencedColumns: ["usuario_id"]
-          },
-          {
-            foreignKeyName: "anos_letivos_escola_id_fkey"
-            columns: ["escola_id"]
-            isOneToOne: false
-            referencedRelation: "escolas"
-            referencedColumns: ["id"]
           },
         ]
       }
