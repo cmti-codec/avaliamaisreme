@@ -809,7 +809,7 @@ export default function DatasPrazos() {
                         <div key={bim.id} className="text-xs bg-[hsl(var(--event-bimestre-bg))] p-2 rounded border border-[hsl(var(--event-bimestre)_/_20%)]">
                           <p className="font-semibold text-[hsl(var(--event-bimestre))]">{bim.numero}º Bimestre</p>
                           <p className="text-muted-foreground">
-                            {format(new Date(bim.data_inicio), "dd/MM")} até {format(new Date(bim.data_fim), "dd/MM")}
+                            {format(parseISO(bim.data_inicio), "dd/MM")} até {format(parseISO(bim.data_fim), "dd/MM")}
                           </p>
                         </div>
                       ))
