@@ -340,7 +340,7 @@ export default function DatasPrazos() {
                               <h4 className="font-semibold">{bimestre.numero}º Bimestre</h4>
                               {!isExpandido && (
                                 <p className="text-xs text-muted-foreground">
-                                  {format(new Date(bimestre.data_inicio), "dd/MM/yyyy")} até {format(new Date(bimestre.data_fim), "dd/MM/yyyy")}
+                                  {format(parseISO(bimestre.data_inicio), "dd/MM/yyyy")} até {format(parseISO(bimestre.data_fim), "dd/MM/yyyy")}
                                 </p>
                               )}
                             </div>
