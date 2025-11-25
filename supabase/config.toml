@@ -1,1 +1,16 @@
 project_id = "tephygczbkacwdxpjqvv"
+
+[functions.admin-create-user]
+verify_jwt = false
+
+[functions.admin-delete-user]
+verify_jwt = false
+
+[functions.import-pessoas]
+verify_jwt = false
+
+[functions.secure-impersonate]
+verify_jwt = false
+
+[functions.cleanup-test-users]
+verify_jwt = false
