@@ -104,7 +104,7 @@ export default function DatasPrazos() {
   };
   
   const handleSalvarBimestre = async () => {
-    if (!bimestreEditando) return;
+    if (!bimestreEditando || !datasEditando.data_inicio || !datasEditando.data_fim) return;
     
     try {
       await atualizarBimestre.mutateAsync({
@@ -113,6 +113,7 @@ export default function DatasPrazos() {
         data_fim: datasEditando.data_fim
       });
       setBimestreEditando(null);
+      setDatasEditando({ data_inicio: '', data_fim: '' });
     } catch (error) {
       console.error("Erro ao salvar bimestre:", error);
     }
