@@ -75,7 +75,6 @@ export const getBimestreAtual = async (
     const { data: anoLetivo } = await supabase
       .from("anos_letivos")
       .select("id")
-      .eq("escola_id", escolaId)
       .eq("ativo", true)
       .gte("data_fim", dataStr)
       .lte("data_inicio", dataStr)

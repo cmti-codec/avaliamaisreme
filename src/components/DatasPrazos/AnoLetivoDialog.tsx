@@ -13,10 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useCriarAnoLetivo, useAtualizarAnoLetivo } from "@/hooks/useAnosLetivos";
-import { useEscolas } from "@/hooks/useEscolas";
 
 const formSchema = z.object({
-  escola_id: z.string().min(1, "Selecione uma escola"),
   ano: z.coerce.number().min(2020).max(2050),
   data_inicio: z.date({ message: "Data inicial é obrigatória" }),
   data_fim: z.date({ message: "Data final é obrigatória" }),
@@ -31,7 +29,6 @@ interface AnoLetivoDialogProps {
 }
 
 export function AnoLetivoDialog({ open, onOpenChange }: AnoLetivoDialogProps) {
-  const { data: escolas } = useEscolas();
   const criarAnoLetivo = useCriarAnoLetivo();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -43,7 +40,6 @@ export function AnoLetivoDialog({ open, onOpenChange }: AnoLetivoDialogProps) {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     await criarAnoLetivo.mutateAsync({
-      escola_id: values.escola_id,
       ano: values.ano,
       data_inicio: format(values.data_inicio, "yyyy-MM-dd"),
       data_fim: format(values.data_fim, "yyyy-MM-dd"),
@@ -61,31 +57,6 @@ export function AnoLetivoDialog({ open, onOpenChange }: AnoLetivoDialogProps) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="escola_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Escola</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a escola" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {escolas?.map((escola) => (
-                        <SelectItem key={escola.id} value={escola.id}>
-                          {escola.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="ano"
@@ -173,8 +144,8 @@ export function AnoLetivoDialog({ open, onOpenChange }: AnoLetivoDialogProps) {
             />
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-              <p className="font-medium">Bimestres serão criados automaticamente</p>
-              <p className="text-xs mt-1">4 bimestres com duração igual serão gerados ao salvar</p>
+              <p className="font-medium">Ano Letivo da REME</p>
+              <p className="text-xs mt-1">Este ano letivo será único para toda a Rede Municipal de Ensino. 4 bimestres com duração igual serão gerados automaticamente.</p>
             </div>
 
             <DialogFooter>

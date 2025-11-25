@@ -120,7 +120,7 @@ export default function DatasPrazos() {
   
   const isAdmin = usuario?.roles.includes("ADMIN") || usuario?.roles.includes("GESTOR_SEMED");
   
-  const { data: anosLetivos } = useAnosLetivos(escolaSelecionada || undefined);
+  const { data: anosLetivos } = useAnosLetivos();
   const { data: bimestres } = useBimestres(anoLetivoSelecionado || null);
   const { data: feriados } = useFeriados(anoSelecionado);
   const { data: sabadosLetivos } = useSabadosLetivos(escolaSelecionada || undefined, anoSelecionado);

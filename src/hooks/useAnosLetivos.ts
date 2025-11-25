@@ -4,17 +4,12 @@ import { toast } from "sonner";
 
 export interface AnoLetivo {
   id: string;
-  escola_id: string;
   ano: number;
   data_inicio: string;
   data_fim: string;
   ativo: boolean;
   created_at: string;
   created_by?: string;
-  escola?: {
-    id: string;
-    nome: string;
-  };
 }
 
 export interface Bimestre {
@@ -26,23 +21,14 @@ export interface Bimestre {
   created_at: string;
 }
 
-export const useAnosLetivos = (escolaId?: string) => {
+export const useAnosLetivos = () => {
   return useQuery({
-    queryKey: ["anos_letivos", escolaId],
+    queryKey: ["anos_letivos"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("anos_letivos")
-        .select(`
-          *,
-          escola:escolas(id, nome)
-        `)
+        .select("*")
         .order("ano", { ascending: false });
-
-      if (escolaId) {
-        query = query.eq("escola_id", escolaId);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       return data as AnoLetivo[];
@@ -58,10 +44,7 @@ export const useAnoLetivo = (id: string | null) => {
 
       const { data, error } = await supabase
         .from("anos_letivos")
-        .select(`
-          *,
-          escola:escolas(id, nome)
-        `)
+        .select("*")
         .eq("id", id)
         .single();
 
@@ -96,7 +79,6 @@ export const useCriarAnoLetivo = () => {
 
   return useMutation({
     mutationFn: async (data: {
-      escola_id: string;
       ano: number;
       data_inicio: string;
       data_fim: string;
