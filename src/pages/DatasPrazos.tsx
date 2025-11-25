@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
-import { CalendarDays, Plus, ChevronDown, ChevronUp, Edit2, Trash2, Save, X, Info, Upload, Printer } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarDays, Plus, ChevronDown, ChevronUp, Edit2, Trash2, Save, X, Info, Upload, Printer, CalendarIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useAnosLetivos, useBimestres, useAtualizarBimestre } from "@/hooks/useAnosLetivos";
 import { useFeriados, useDeletarFeriado } from "@/hooks/useFeriados";
 import { useSabadosLetivos, useDeletarSabadoLetivo } from "@/hooks/useSabadosLetivos";
@@ -54,7 +57,10 @@ export default function DatasPrazos() {
   
   // Estados para edição de bimestres
   const [bimestreEditando, setBimestreEditando] = useState<string | null>(null);
-  const [datasEditando, setDatasEditando] = useState<{ data_inicio: string; data_fim: string }>({ data_inicio: '', data_fim: '' });
+  const [datasEditando, setDatasEditando] = useState<{ data_inicio: Date | undefined; data_fim: Date | undefined }>({ 
+    data_inicio: undefined, 
+    data_fim: undefined 
+  });
   
   const deletarFeriado = useDeletarFeriado();
   const deletarSabadoLetivo = useDeletarSabadoLetivo();
@@ -93,14 +99,14 @@ export default function DatasPrazos() {
   const iniciarEdicaoBimestre = (bimestre: any) => {
     setBimestreEditando(bimestre.id);
     setDatasEditando({
-      data_inicio: bimestre.data_inicio,
-      data_fim: bimestre.data_fim
+      data_inicio: parseISO(bimestre.data_inicio),
+      data_fim: parseISO(bimestre.data_fim)
     });
   };
   
   const cancelarEdicaoBimestre = () => {
     setBimestreEditando(null);
-    setDatasEditando({ data_inicio: '', data_fim: '' });
+    setDatasEditando({ data_inicio: undefined, data_fim: undefined });
   };
   
   const handleSalvarBimestre = async () => {
@@ -109,11 +115,11 @@ export default function DatasPrazos() {
     try {
       await atualizarBimestre.mutateAsync({
         id: bimestreEditando,
-        data_inicio: datasEditando.data_inicio,
-        data_fim: datasEditando.data_fim
+        data_inicio: format(datasEditando.data_inicio, 'yyyy-MM-dd'),
+        data_fim: format(datasEditando.data_fim, 'yyyy-MM-dd')
       });
       setBimestreEditando(null);
-      setDatasEditando({ data_inicio: '', data_fim: '' });
+      setDatasEditando({ data_inicio: undefined, data_fim: undefined });
     } catch (error) {
       console.error("Erro ao salvar bimestre:", error);
     }
@@ -351,23 +357,65 @@ export default function DatasPrazos() {
                             {bimestreEditando === bimestre.id ? (
                               <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <label className="text-sm font-medium mb-2 block">Data Início</label>
-                                    <input
-                                      type="date"
-                                      value={datasEditando.data_inicio}
-                                      onChange={(e) => setDatasEditando({ ...datasEditando, data_inicio: e.target.value })}
-                                      className="w-full px-3 py-2 border rounded-md bg-background"
-                                    />
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Data Início</label>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !datasEditando.data_inicio && "text-muted-foreground"
+                                          )}
+                                        >
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {datasEditando.data_inicio ? (
+                                            format(datasEditando.data_inicio, "dd/MM/yyyy")
+                                          ) : (
+                                            <span>Selecione...</span>
+                                          )}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          selected={datasEditando.data_inicio}
+                                          onSelect={(date) => setDatasEditando({ ...datasEditando, data_inicio: date })}
+                                          initialFocus
+                                          className={cn("p-3 pointer-events-auto")}
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
                                   </div>
-                                  <div>
-                                    <label className="text-sm font-medium mb-2 block">Data Fim</label>
-                                    <input
-                                      type="date"
-                                      value={datasEditando.data_fim}
-                                      onChange={(e) => setDatasEditando({ ...datasEditando, data_fim: e.target.value })}
-                                      className="w-full px-3 py-2 border rounded-md bg-background"
-                                    />
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Data Fim</label>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !datasEditando.data_fim && "text-muted-foreground"
+                                          )}
+                                        >
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {datasEditando.data_fim ? (
+                                            format(datasEditando.data_fim, "dd/MM/yyyy")
+                                          ) : (
+                                            <span>Selecione...</span>
+                                          )}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          selected={datasEditando.data_fim}
+                                          onSelect={(date) => setDatasEditando({ ...datasEditando, data_fim: date })}
+                                          initialFocus
+                                          className={cn("p-3 pointer-events-auto")}
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
                                   </div>
                                 </div>
                                 <div className="flex gap-2 justify-end">
@@ -382,6 +430,7 @@ export default function DatasPrazos() {
                                   <Button
                                     size="sm"
                                     onClick={handleSalvarBimestre}
+                                    disabled={!datasEditando.data_inicio || !datasEditando.data_fim}
                                     className="bg-[hsl(var(--event-bimestre))] hover:bg-[hsl(var(--event-bimestre)_/_90%)]"
                                   >
                                     <Save className="w-4 h-4 mr-2" />
@@ -393,10 +442,10 @@ export default function DatasPrazos() {
                               <div className="flex justify-between items-start">
                                 <div className="text-sm space-y-2">
                                   <p>
-                                    <span className="font-medium">Início:</span> {format(new Date(bimestre.data_inicio), "dd/MM/yyyy")}
+                                    <span className="font-medium">Início:</span> {format(parseISO(bimestre.data_inicio), "dd/MM/yyyy")}
                                   </p>
                                   <p>
-                                    <span className="font-medium">Término:</span> {format(new Date(bimestre.data_fim), "dd/MM/yyyy")}
+                                    <span className="font-medium">Término:</span> {format(parseISO(bimestre.data_fim), "dd/MM/yyyy")}
                                   </p>
                                 </div>
                                 {isAdmin && (
