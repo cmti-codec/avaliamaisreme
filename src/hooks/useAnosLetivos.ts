@@ -139,26 +139,27 @@ export const useAtualizarBimestre = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
+    mutationFn: async (params: {
       id: string;
       data_inicio: string;
       data_fim: string;
     }) => {
-      const { data: result, error } = await supabase
+      const { data, error } = await supabase
         .from("bimestres")
         .update({
-          data_inicio: data.data_inicio,
-          data_fim: data.data_fim,
+          data_inicio: params.data_inicio,
+          data_fim: params.data_fim,
         })
-        .eq("id", data.id)
+        .eq("id", params.id)
         .select()
         .single();
 
       if (error) throw error;
-      return result;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bimestres"] });
+      queryClient.invalidateQueries({ queryKey: ["anos_letivos"] });
       toast.success("Bimestre atualizado com sucesso!");
     },
     onError: (error: any) => {
