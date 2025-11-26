@@ -162,7 +162,7 @@ export function LotarUsuarioDialog({
               </SelectTrigger>
               <SelectContent>
                 {escolas.map((escola) => (
-                  <SelectItem key={escola.id} value={escola.saesc || ''}>
+                  <SelectItem key={escola.id} value={escola.id}>
                     {escola.nome}
                   </SelectItem>
                 ))}
