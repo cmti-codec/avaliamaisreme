@@ -570,9 +570,12 @@ export default function Usuarios() {
                     <TableCell>
                       {(() => {
                         // Filtrar lotações pelo perfil selecionado (se não for 'all')
-                        const lotacoesFiltradas = perfilFilter === 'all' 
+                        let lotacoesFiltradas = perfilFilter === 'all' 
                           ? usuario.lotacoes_ativas 
                           : usuario.lotacoes_ativas?.filter(lot => lot.perfil === perfilFilter);
+                        
+                        // Filtrar lotações com escolas válidas
+                        lotacoesFiltradas = lotacoesFiltradas?.filter(lot => lot.escola_nome);
                         
                         return lotacoesFiltradas && lotacoesFiltradas.length > 0 ? (
                           <div className="space-y-1">
@@ -582,9 +585,10 @@ export default function Usuarios() {
                                   {getPerfilLabel(lot.perfil)}
                                 </Badge>
                                 <span className="text-muted-foreground truncate max-w-[200px]" title={lot.escola_nome}>
-                                  {lot.escola_nome || 'Escola desconhecida'}
+                                  {lot.escola_nome}
                                 </span>
-                                {lot.carga_horaria && (
+                                {/* Mostrar carga horária apenas para PROFESSOR */}
+                                {lot.perfil === 'PROFESSOR' && lot.carga_horaria && (
                                   <span className="text-xs text-muted-foreground">
                                     ({lot.carga_horaria}h)
                                   </span>
