@@ -93,14 +93,19 @@ export const useLotacoesGestao = (pessoaId?: string) => {
           ...dados,
           ativo: true,
         })
-        .select(`
-          *,
-          escola:escolas!inner(nome)
-        `)
+        .select()
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Buscar nome da escola separadamente
+      const { data: escolaData } = await supabase
+        .from("escolas")
+        .select("nome")
+        .eq("id", dados.escola_saesc)
+        .single();
+      
+      return { ...data, escola: escolaData };
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["lotacoes-gestao"] });
