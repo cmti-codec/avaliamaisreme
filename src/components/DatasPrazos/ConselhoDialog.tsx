@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -11,9 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useCriarConselho, useAtualizarConselho } from "@/hooks/useConselhos";
 import { useBimestres } from "@/hooks/useAnosLetivos";
+import { verificarSobreposicao, formatarMensagemSobreposicao } from "@/lib/validacao-sobreposicao";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const formSchema = z.object({
   escola_id: z.string().min(1, "Escola é obrigatória"),
@@ -29,15 +33,29 @@ interface ConselhoDialogProps {
   onOpenChange: (open: boolean) => void;
   escolaId?: string;
   anoLetivoId?: string;
+  conselho?: {
+    id: string;
+    data: string;
+    descricao?: string;
+    bloqueia_edicao_avaliacoes?: boolean;
+  };
 }
 
-export function ConselhoDialog({ open, onOpenChange, escolaId, anoLetivoId }: ConselhoDialogProps) {
+export function ConselhoDialog({ open, onOpenChange, escolaId, anoLetivoId, conselho }: ConselhoDialogProps) {
+  const [sobreposicaoInfo, setSobreposicaoInfo] = useState<string | null>(null);
   const criarConselho = useCriarConselho();
+  const atualizarConselho = useAtualizarConselho();
   const { data: bimestres } = useBimestres(anoLetivoId || null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: conselho ? {
+      escola_id: escolaId || "",
+      ano_letivo_id: anoLetivoId || "",
+      data: new Date(conselho.data),
+      descricao: conselho.descricao,
+      bloqueia_edicao_avaliacoes: conselho.bloqueia_edicao_avaliacoes ?? true,
+    } : {
       escola_id: escolaId || "",
       ano_letivo_id: anoLetivoId || "",
       bloqueia_edicao_avaliacoes: true,
@@ -45,23 +63,86 @@ export function ConselhoDialog({ open, onOpenChange, escolaId, anoLetivoId }: Co
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    await criarConselho.mutateAsync({
-      escola_id: values.escola_id,
-      ano_letivo_id: values.ano_letivo_id,
-      bimestre_id: values.bimestre_id,
-      data: format(values.data, "yyyy-MM-dd"),
-      descricao: values.descricao,
-      bloqueia_edicao_avaliacoes: values.bloqueia_edicao_avaliacoes,
-    });
+    if (!escolaId) return;
+    
+    const dataStr = format(values.data, "yyyy-MM-dd");
+    
+    // Verificar sobreposição
+    const { temSobreposicao, eventos } = await verificarSobreposicao(
+      dataStr,
+      escolaId,
+      conselho?.id,
+      "CONSELHO"
+    );
+    
+    if (temSobreposicao) {
+      const mensagem = formatarMensagemSobreposicao(eventos);
+      setSobreposicaoInfo(mensagem);
+      toast.warning("Atenção: Há eventos sobrepostos nesta data", {
+        description: "Verifique o aviso abaixo antes de confirmar.",
+      });
+      return;
+    }
+    
+    if (conselho) {
+      await atualizarConselho.mutateAsync({
+        id: conselho.id,
+        updates: {
+          data: dataStr,
+          descricao: values.descricao,
+          bloqueia_edicao_avaliacoes: values.bloqueia_edicao_avaliacoes,
+        },
+      });
+    } else {
+      await criarConselho.mutateAsync({
+        escola_id: escolaId,
+        ano_letivo_id: values.ano_letivo_id,
+        bimestre_id: values.bimestre_id,
+        data: dataStr,
+        descricao: values.descricao,
+        bloqueia_edicao_avaliacoes: values.bloqueia_edicao_avaliacoes,
+      });
+    }
     onOpenChange(false);
     form.reset();
+    setSobreposicaoInfo(null);
+  };
+  
+  const handleForcarCriacao = async () => {
+    if (!escolaId) return;
+    
+    const values = form.getValues();
+    const dataStr = format(values.data, "yyyy-MM-dd");
+    
+    if (conselho) {
+      await atualizarConselho.mutateAsync({
+        id: conselho.id,
+        updates: {
+          data: dataStr,
+          descricao: values.descricao,
+          bloqueia_edicao_avaliacoes: values.bloqueia_edicao_avaliacoes,
+        },
+      });
+    } else {
+      await criarConselho.mutateAsync({
+        escola_id: escolaId,
+        ano_letivo_id: values.ano_letivo_id,
+        bimestre_id: values.bimestre_id,
+        data: dataStr,
+        descricao: values.descricao,
+        bloqueia_edicao_avaliacoes: values.bloqueia_edicao_avaliacoes,
+      });
+    }
+    onOpenChange(false);
+    form.reset();
+    setSobreposicaoInfo(null);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Cadastrar Conselho de Classe</DialogTitle>
+          <DialogTitle>{conselho ? "Editar Conselho de Classe" : "Cadastrar Conselho de Classe"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -162,13 +243,38 @@ export function ConselhoDialog({ open, onOpenChange, escolaId, anoLetivoId }: Co
               )}
             />
 
+            {sobreposicaoInfo && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Eventos sobrepostos nesta data:</strong>
+                  <pre className="text-xs mt-1 whitespace-pre-wrap">{sobreposicaoInfo}</pre>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => {
+                onOpenChange(false);
+                setSobreposicaoInfo(null);
+                form.reset();
+              }}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={criarConselho.isPending}>
-                {criarConselho.isPending ? "Cadastrando..." : "Cadastrar"}
-              </Button>
+              {sobreposicaoInfo ? (
+                <Button 
+                  type="button" 
+                  onClick={handleForcarCriacao}
+                  disabled={criarConselho.isPending || atualizarConselho.isPending}
+                  variant="destructive"
+                >
+                  {(criarConselho.isPending || atualizarConselho.isPending) ? "Processando..." : "Cadastrar Mesmo Assim"}
+                </Button>
+              ) : (
+                <Button type="submit" disabled={criarConselho.isPending || atualizarConselho.isPending}>
+                  {(criarConselho.isPending || atualizarConselho.isPending) ? "Processando..." : (conselho ? "Atualizar" : "Cadastrar")}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </Form>

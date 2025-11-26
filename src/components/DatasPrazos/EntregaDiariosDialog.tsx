@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -10,9 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useCriarEntregaDiarios, useAtualizarEntregaDiarios } from "@/hooks/useEntregasDiarios";
 import { useBimestres } from "@/hooks/useAnosLetivos";
+import { verificarSobreposicao, formatarMensagemSobreposicao } from "@/lib/validacao-sobreposicao";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const formSchema = z.object({
   escola_id: z.string().min(1, "Escola é obrigatória"),
@@ -30,6 +34,7 @@ interface EntregaDiariosDialogProps {
 }
 
 export function EntregaDiariosDialog({ open, onOpenChange, escolaId, anoLetivoId }: EntregaDiariosDialogProps) {
+  const [sobreposicaoInfo, setSobreposicaoInfo] = useState<string | null>(null);
   const criarEntrega = useCriarEntregaDiarios();
   const { data: bimestres } = useBimestres(anoLetivoId || null);
 
@@ -42,15 +47,51 @@ export function EntregaDiariosDialog({ open, onOpenChange, escolaId, anoLetivoId
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    const dataStr = format(values.data, "yyyy-MM-dd");
+    
+    // Verificar sobreposição
+    const { temSobreposicao, eventos } = await verificarSobreposicao(
+      dataStr,
+      values.escola_id,
+      undefined,
+      "ENTREGA_DIARIOS"
+    );
+    
+    if (temSobreposicao) {
+      const mensagem = formatarMensagemSobreposicao(eventos);
+      setSobreposicaoInfo(mensagem);
+      toast.warning("Atenção: Há eventos sobrepostos nesta data", {
+        description: "Verifique o aviso abaixo antes de confirmar.",
+      });
+      return;
+    }
+    
     await criarEntrega.mutateAsync({
       escola_id: values.escola_id,
       ano_letivo_id: values.ano_letivo_id,
       bimestre_id: values.bimestre_id,
-      data: format(values.data, "yyyy-MM-dd"),
+      data: dataStr,
       descricao: values.descricao,
     });
     onOpenChange(false);
     form.reset();
+    setSobreposicaoInfo(null);
+  };
+  
+  const handleForcarCriacao = async () => {
+    const values = form.getValues();
+    const dataStr = format(values.data, "yyyy-MM-dd");
+    
+    await criarEntrega.mutateAsync({
+      escola_id: values.escola_id,
+      ano_letivo_id: values.ano_letivo_id,
+      bimestre_id: values.bimestre_id,
+      data: dataStr,
+      descricao: values.descricao,
+    });
+    onOpenChange(false);
+    form.reset();
+    setSobreposicaoInfo(null);
   };
 
   return (
@@ -137,13 +178,38 @@ export function EntregaDiariosDialog({ open, onOpenChange, escolaId, anoLetivoId
               )}
             />
 
+            {sobreposicaoInfo && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Eventos sobrepostos nesta data:</strong>
+                  <pre className="text-xs mt-1 whitespace-pre-wrap">{sobreposicaoInfo}</pre>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => {
+                onOpenChange(false);
+                setSobreposicaoInfo(null);
+                form.reset();
+              }}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={criarEntrega.isPending}>
-                {criarEntrega.isPending ? "Cadastrando..." : "Cadastrar"}
-              </Button>
+              {sobreposicaoInfo ? (
+                <Button 
+                  type="button" 
+                  onClick={handleForcarCriacao}
+                  disabled={criarEntrega.isPending}
+                  variant="destructive"
+                >
+                  {criarEntrega.isPending ? "Processando..." : "Cadastrar Mesmo Assim"}
+                </Button>
+              ) : (
+                <Button type="submit" disabled={criarEntrega.isPending}>
+                  {criarEntrega.isPending ? "Cadastrando..." : "Cadastrar"}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </Form>

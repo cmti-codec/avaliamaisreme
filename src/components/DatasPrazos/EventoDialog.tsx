@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,11 +11,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { CalendarIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useCriarEventoInstitucional, useAtualizarEventoInstitucional } from "@/hooks/useEventosInstitucionais";
+import { verificarSobreposicao, formatarMensagemSobreposicao } from "@/lib/validacao-sobreposicao";
+import { toast } from "sonner";
 
 interface EventoDialogProps {
   open: boolean;
@@ -41,6 +45,7 @@ const formSchema = z.object({
 });
 
 export function EventoDialog({ open, onOpenChange, escolaId, evento }: EventoDialogProps) {
+  const [sobreposicaoInfo, setSobreposicaoInfo] = useState<string | null>(null);
   const criarEvento = useCriarEventoInstitucional();
   const atualizarEvento = useAtualizarEventoInstitucional();
   
@@ -66,6 +71,23 @@ export function EventoDialog({ open, onOpenChange, escolaId, evento }: EventoDia
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const dataFormatada = format(values.data, "yyyy-MM-dd");
     
+    // Verificar sobreposição
+    const { temSobreposicao, eventos } = await verificarSobreposicao(
+      dataFormatada,
+      escolaId,
+      evento?.id,
+      "EVENTO_INSTITUCIONAL"
+    );
+    
+    if (temSobreposicao) {
+      const mensagem = formatarMensagemSobreposicao(eventos);
+      setSobreposicaoInfo(mensagem);
+      toast.warning("Atenção: Há eventos sobrepostos nesta data", {
+        description: "Verifique o aviso abaixo antes de confirmar.",
+      });
+      return;
+    }
+    
     if (evento) {
       await atualizarEvento.mutateAsync({
         id: evento.id,
@@ -82,6 +104,31 @@ export function EventoDialog({ open, onOpenChange, escolaId, evento }: EventoDia
       });
     }
     form.reset();
+    setSobreposicaoInfo(null);
+    onOpenChange(false);
+  };
+  
+  const handleForcarCriacao = async () => {
+    const values = form.getValues();
+    const dataFormatada = format(values.data, "yyyy-MM-dd");
+    
+    if (evento) {
+      await atualizarEvento.mutateAsync({
+        id: evento.id,
+        updates: {
+          ...values,
+          data: dataFormatada,
+        },
+      });
+    } else {
+      await criarEvento.mutateAsync({
+        escola_id: escolaId,
+        ...values,
+        data: dataFormatada,
+      });
+    }
+    form.reset();
+    setSobreposicaoInfo(null);
     onOpenChange(false);
   };
 
@@ -216,13 +263,38 @@ export function EventoDialog({ open, onOpenChange, escolaId, evento }: EventoDia
               )}
             />
 
+            {sobreposicaoInfo && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Eventos sobrepostos nesta data:</strong>
+                  <pre className="text-xs mt-1 whitespace-pre-wrap">{sobreposicaoInfo}</pre>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => {
+                onOpenChange(false);
+                setSobreposicaoInfo(null);
+                form.reset();
+              }}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={criarEvento.isPending || atualizarEvento.isPending}>
-                {(criarEvento.isPending || atualizarEvento.isPending) ? "Salvando..." : (evento ? "Atualizar" : "Cadastrar")}
-              </Button>
+              {sobreposicaoInfo ? (
+                <Button 
+                  type="button" 
+                  onClick={handleForcarCriacao}
+                  disabled={criarEvento.isPending || atualizarEvento.isPending}
+                  variant="destructive"
+                >
+                  {(criarEvento.isPending || atualizarEvento.isPending) ? "Processando..." : "Cadastrar Mesmo Assim"}
+                </Button>
+              ) : (
+                <Button type="submit" disabled={criarEvento.isPending || atualizarEvento.isPending}>
+                  {(criarEvento.isPending || atualizarEvento.isPending) ? "Salvando..." : (evento ? "Atualizar" : "Cadastrar")}
+                </Button>
+              )}
             </div>
           </form>
         </Form>

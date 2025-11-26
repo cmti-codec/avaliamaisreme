@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -11,8 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { useCriarSabadoLetivo, useAtualizarSabadoLetivo } from "@/hooks/useSabadosLetivos";
+import { useCriarSabadoLetivo } from "@/hooks/useSabadosLetivos";
+import { verificarSobreposicao, formatarMensagemSobreposicao } from "@/lib/validacao-sobreposicao";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   escola_id: z.string().min(1, "Escola é obrigatória"),
@@ -30,6 +34,7 @@ interface SabadoLetivoDialogProps {
 }
 
 export function SabadoLetivoDialog({ open, onOpenChange, escolaId }: SabadoLetivoDialogProps) {
+  const [sobreposicaoInfo, setSobreposicaoInfo] = useState<string | null>(null);
   const criarSabadoLetivo = useCriarSabadoLetivo();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -44,6 +49,39 @@ export function SabadoLetivoDialog({ open, onOpenChange, escolaId }: SabadoLetiv
   const tipoSelecionado = form.watch("tipo");
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!escolaId) return;
+    
+    const dataStr = format(values.data, "yyyy-MM-dd");
+    
+    const { temSobreposicao, eventos } = await verificarSobreposicao(
+      dataStr,
+      escolaId,
+      undefined,
+      "SABADO_LETIVO"
+    );
+    
+    if (temSobreposicao) {
+      const mensagem = formatarMensagemSobreposicao(eventos);
+      setSobreposicaoInfo(mensagem);
+      toast.warning("Atenção: Há eventos sobrepostos nesta data");
+      return;
+    }
+    
+    await criarSabadoLetivo.mutateAsync({
+      escola_id: values.escola_id,
+      data: dataStr,
+      tipo: values.tipo,
+      dia_replica: values.dia_replica,
+      descricao: values.descricao,
+      exige_chamada: values.exige_chamada,
+    });
+    onOpenChange(false);
+    form.reset();
+    setSobreposicaoInfo(null);
+  };
+  
+  const handleForcarCriacao = async () => {
+    const values = form.getValues();
     await criarSabadoLetivo.mutateAsync({
       escola_id: values.escola_id,
       data: format(values.data, "yyyy-MM-dd"),
@@ -54,6 +92,7 @@ export function SabadoLetivoDialog({ open, onOpenChange, escolaId }: SabadoLetiv
     });
     onOpenChange(false);
     form.reset();
+    setSobreposicaoInfo(null);
   };
 
   return (
@@ -192,13 +231,29 @@ export function SabadoLetivoDialog({ open, onOpenChange, escolaId }: SabadoLetiv
               )}
             />
 
+            {sobreposicaoInfo && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Eventos sobrepostos:</strong>
+                  <pre className="text-xs mt-1">{sobreposicaoInfo}</pre>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={criarSabadoLetivo.isPending}>
-                {criarSabadoLetivo.isPending ? "Cadastrando..." : "Cadastrar"}
-              </Button>
+              {sobreposicaoInfo ? (
+                <Button type="button" onClick={handleForcarCriacao} variant="destructive">
+                  Cadastrar Mesmo Assim
+                </Button>
+              ) : (
+                <Button type="submit" disabled={criarSabadoLetivo.isPending}>
+                  {criarSabadoLetivo.isPending ? "Cadastrando..." : "Cadastrar"}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </Form>
