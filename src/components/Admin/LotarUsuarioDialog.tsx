@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   Dialog,
@@ -72,6 +72,15 @@ export function LotarUsuarioDialog({
       observacoes: "",
     },
   });
+
+  // Auto-selecionar perfil se houver apenas um disponível
+  useEffect(() => {
+    if (usuario?.roles && usuario.roles.length === 1 && open) {
+      setPerfilSelecionado(usuario.roles[0]);
+    } else if (open && (!usuario?.roles || usuario.roles.length === 0)) {
+      setPerfilSelecionado("");
+    }
+  }, [usuario, open]);
 
   const handleClose = () => {
     reset();
