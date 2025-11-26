@@ -107,11 +107,13 @@ export function TransferirProfessorDialog({
                 <SelectValue placeholder="Selecione a lotação a transferir" />
               </SelectTrigger>
               <SelectContent>
-                {pessoa.lotacoes_ativas?.map((lot: any) => (
-                  <SelectItem key={lot.lotacao_id} value={lot.lotacao_id}>
-                    {lot.escola_nome} - {lot.carga_horaria}h
-                  </SelectItem>
-                ))}
+                {pessoa.lotacoes_ativas
+                  ?.filter((lot: any) => lot.perfil === "PROFESSOR")
+                  .map((lot: any) => (
+                    <SelectItem key={lot.lotacao_id} value={lot.lotacao_id}>
+                      {lot.escola_nome || "Escola não identificada"} - {lot.carga_horaria || 0}h
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

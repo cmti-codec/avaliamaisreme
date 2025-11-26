@@ -73,9 +73,11 @@ export default function PoolProfessores() {
 
   const getCargaTotalProfessor = (pessoa: any) => {
     if (!pessoa.lotacoes_ativas || pessoa.lotacoes_ativas.length === 0) return 0;
-    return pessoa.lotacoes_ativas.reduce((total: number, lot: any) => {
-      return total + (lot.carga_horaria || 0);
-    }, 0);
+    return pessoa.lotacoes_ativas
+      .filter((lot: any) => lot.perfil === "PROFESSOR")
+      .reduce((total: number, lot: any) => {
+        return total + (lot.carga_horaria || 0);
+      }, 0);
   };
 
   return (
@@ -170,7 +172,8 @@ export default function PoolProfessores() {
                 <TableBody>
                   {pessoas.map((pessoa) => {
                     const cargaTotal = getCargaTotalProfessor(pessoa);
-                    const temLotacao = pessoa.total_lotacoes_ativas > 0;
+                    const lotacoesProfessor = pessoa.lotacoes_ativas?.filter((lot: any) => lot.perfil === "PROFESSOR") || [];
+                    const temLotacao = lotacoesProfessor.length > 0;
 
                     return (
                       <TableRow key={pessoa.pessoa_id}>
@@ -182,14 +185,16 @@ export default function PoolProfessores() {
                         <TableCell>
                           {temLotacao ? (
                             <div className="space-y-1">
-                              {pessoa.lotacoes_ativas?.map((lot: any, idx: number) => (
-                                <div key={idx} className="text-sm">
-                                  <span className="font-medium">{lot.escola_nome}</span>
-                                  <span className="text-muted-foreground ml-2">
-                                    ({lot.carga_horaria}h)
-                                  </span>
-                                </div>
-                              ))}
+                              {pessoa.lotacoes_ativas
+                                ?.filter((lot: any) => lot.perfil === "PROFESSOR")
+                                .map((lot: any, idx: number) => (
+                                  <div key={idx} className="text-sm">
+                                    <span className="font-medium">{lot.escola_nome || "Escola não identificada"}</span>
+                                    <span className="text-muted-foreground ml-2">
+                                      ({lot.carga_horaria || 0}h)
+                                    </span>
+                                  </div>
+                                ))}
                             </div>
                           ) : (
                             <Badge variant="outline" className="gap-1">
