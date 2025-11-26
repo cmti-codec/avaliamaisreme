@@ -568,27 +568,34 @@ export default function Usuarios() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {usuario.lotacoes_ativas && usuario.lotacoes_ativas.length > 0 ? (
-                        <div className="space-y-1">
-                          {usuario.lotacoes_ativas.map((lot, idx) => (
-                            <div key={lot.id} className="flex items-center gap-2 text-sm">
-                              <Badge variant="outline" className="text-xs">
-                                {getPerfilLabel(lot.perfil)}
-                              </Badge>
-                              <span className="text-muted-foreground truncate max-w-[200px]" title={lot.escola_nome}>
-                                {lot.escola_nome}
-                              </span>
-                              {lot.carga_horaria && (
-                                <span className="text-xs text-muted-foreground">
-                                  ({lot.carga_horaria}h)
+                      {(() => {
+                        // Filtrar lotações pelo perfil selecionado (se não for 'all')
+                        const lotacoesFiltradas = perfilFilter === 'all' 
+                          ? usuario.lotacoes_ativas 
+                          : usuario.lotacoes_ativas?.filter(lot => lot.perfil === perfilFilter);
+                        
+                        return lotacoesFiltradas && lotacoesFiltradas.length > 0 ? (
+                          <div className="space-y-1">
+                            {lotacoesFiltradas.map((lot, idx) => (
+                              <div key={lot.id} className="flex items-center gap-2 text-sm">
+                                <Badge variant="outline" className="text-xs">
+                                  {getPerfilLabel(lot.perfil)}
+                                </Badge>
+                                <span className="text-muted-foreground truncate max-w-[200px]" title={lot.escola_nome}>
+                                  {lot.escola_nome || 'Escola desconhecida'}
                                 </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Sem lotações</span>
-                      )}
+                                {lot.carga_horaria && (
+                                  <span className="text-xs text-muted-foreground">
+                                    ({lot.carga_horaria}h)
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Sem lotações</span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Badge variant={usuario.ativo ? 'default' : 'secondary'}>
