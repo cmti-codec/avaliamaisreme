@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { LotarUsuarioDialog } from './LotarUsuarioDialog';
+import { useLotacoesGestao } from '@/hooks/useLotacoesGestao';
 
 interface Usuario {
   id: string;
@@ -47,14 +49,29 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
   const [email, setEmail] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  
   const [isProfessor, setIsProfessor] = useState(false);
+  
+  // Estado para controlar dialog de lotação
+  const [showLotarDialog, setShowLotarDialog] = useState(false);
+  const [pendingGestaoRole, setPendingGestaoRole] = useState<string | null>(null);
+  const [pessoaId, setPessoaId] = useState<string | null>(null);
+  
+  const { criarLotacao } = useLotacoesGestao();
 
   useEffect(() => {
     const loadUserData = async () => {
       if (usuario && open) {
         setNome(usuario.nome);
         setEmail(usuario.email);
+        
+        // Buscar pessoa_id do usuário
+        const { data: usuarioData } = await supabase
+          .from('usuarios')
+          .select('pessoa_id')
+          .eq('id', usuario.id)
+          .single();
+        
+        setPessoaId(usuarioData?.pessoa_id || null);
         
         // Buscar roles reais do banco
         const { data: rolesData } = await supabase
@@ -95,6 +112,22 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
     
     // Atualizar flag isProfessor
     setIsProfessor(newRoles.includes('PROFESSOR'));
+    
+    // 🎯 NOVO: Se está adicionando uma role de gestão, preparar para criar lotação
+    const isAdding = !isCurrentlySelected;
+    const gestaoRoles = ['DIRETOR', 'SECRETARIO', 'COORDENADOR'];
+    
+    if (isAdding && gestaoRoles.includes(role)) {
+      // Verificar se usuário tem pessoa_id vinculado
+      if (!pessoaId) {
+        toast.error('❌ Este usuário não possui cadastro de pessoa vinculado. Não é possível criar lotação.');
+        return;
+      }
+      
+      // Armazenar a role pendente e abrir dialog de lotação
+      setPendingGestaoRole(role);
+      setShowLotarDialog(true);
+    }
   };
 
 
@@ -166,22 +199,55 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
       }
 
 
-      toast.success('Usuário atualizado com sucesso!');
+      toast.success('✅ Usuário atualizado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       queryClient.invalidateQueries({ queryKey: ['pessoas-pool'] });
-      onOpenChange(false);
+      
+      // Não fechar o dialog se houver lotação pendente
+      if (!pendingGestaoRole) {
+        onOpenChange(false);
+      }
     } catch (error: any) {
       console.error('Erro ao atualizar usuário:', error);
-      toast.error('Erro ao atualizar usuário: ' + error.message);
+      toast.error('❌ Erro ao atualizar usuário: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleConfirmLotacao = (data: {
+    pessoa_id: string;
+    perfil: string;
+    escola_saesc: string;
+    data_inicio: string;
+    carga_horaria?: number | null;
+    observacoes?: string;
+  }) => {
+    criarLotacao(data as any);
+    setPendingGestaoRole(null);
+    setShowLotarDialog(false);
+    
+    // Fechar dialog principal após criar lotação
+    setTimeout(() => {
+      onOpenChange(false);
+    }, 500);
+  };
+
+  const handleCancelLotacao = () => {
+    // Se usuário cancelar lotação, remover a role que foi adicionada
+    if (pendingGestaoRole) {
+      setSelectedRoles(prev => prev.filter(r => r !== pendingGestaoRole));
+      toast.info('ℹ️ Perfil de gestão não foi atribuído pois a lotação foi cancelada.');
+    }
+    setPendingGestaoRole(null);
+    setShowLotarDialog(false);
+  };
+
   if (!usuario) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Usuário</DialogTitle>
@@ -256,5 +322,22 @@ export function UsuarioEditDialog({ usuario, open, onOpenChange }: UsuarioEditDi
         </form>
       </DialogContent>
     </Dialog>
+
+      {/* Dialog de lotação automática para perfis de gestão */}
+      <LotarUsuarioDialog
+        open={showLotarDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCancelLotacao();
+          }
+        }}
+        usuario={usuario ? {
+          ...usuario,
+          pessoa_id: pessoaId,
+          roles: pendingGestaoRole ? [pendingGestaoRole] : []
+        } : null}
+        onConfirm={handleConfirmLotacao}
+      />
+    </>
   );
 }
