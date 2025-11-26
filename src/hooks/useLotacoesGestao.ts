@@ -112,7 +112,10 @@ export const useLotacoesGestao = (pessoaId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["pessoas-pool"] });
       
       const escolaNome = data.escola?.nome || "escola selecionada";
-      const carga = data.carga_horaria ? `com ${data.carga_horaria}h/semana` : "";
+      // Mostrar carga horária apenas para PROFESSOR (gestores têm dedicação exclusiva)
+      const carga = data.perfil === 'PROFESSOR' && data.carga_horaria 
+        ? `com ${data.carga_horaria}h/semana` 
+        : "";
       toast.success(`✅ Lotação criada em ${escolaNome} ${carga}`);
     },
     onError: (error: any) => {
