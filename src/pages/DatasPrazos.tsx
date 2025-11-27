@@ -25,7 +25,7 @@ import { EntregaDiariosDialog } from "@/components/DatasPrazos/EntregaDiariosDia
 import { EventoDialog } from "@/components/DatasPrazos/EventoDialog";
 import { ConfirmarExclusaoDialog } from "@/components/DatasPrazos/ConfirmarExclusaoDialog";
 import { ImportarFeriadosDialog } from "@/components/DatasPrazos/ImportarFeriadosDialog";
-import { exportarCalendarioParaImpressao } from "@/lib/exportar-calendario-pdf";
+import { exportarCalendarioParaImpressao, exportarCalendarioAnualParaImpressao } from "@/lib/exportar-calendario-pdf";
 
 export default function DatasPrazos() {
   const { data: usuario } = useUsuario();
@@ -183,7 +183,14 @@ export default function DatasPrazos() {
                 exportarCalendarioParaImpressao(eventosParaExportar, new Date().getMonth(), anoSelecionado, escolaNome);
               }}>
                 <Printer className="w-4 h-4 mr-2" />
-                Imprimir
+                Imprimir Mês
+              </Button>
+              <Button variant="outline" onClick={() => {
+                const escolaNome = escolas?.find(e => e.id === escolaSelecionada)?.nome || "Todas as Escolas";
+                exportarCalendarioAnualParaImpressao(eventosParaExportar, anoSelecionado, escolaNome);
+              }}>
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Imprimir Ano Completo
               </Button>
             </div>
           </div>
