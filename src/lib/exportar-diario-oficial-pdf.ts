@@ -513,9 +513,9 @@ function gerarPagina1Frequencias(
     alunosFrequencia.forEach(aluno => {
       const presente = frequenciasPorAluno.get(aluno.id);
       if (presente === undefined) {
-        html += '<td>--</td>'; // Sem registro
+        html += '<td></td>'; // Sem registro
       } else if (presente) {
-        html += '<td class="marca-presente">--</td>';
+        html += '<td class="marca-presente">.</td>';
       } else {
         html += '<td class="marca-falta">F</td>';
       }
@@ -651,7 +651,7 @@ function gerarPagina3Canhoto(
     html += `
       <tr>
         <td>${String(idx + 1).padStart(2, '0')}</td>
-        <td>${aluno.total_faltas > 0 ? String(aluno.total_faltas).padStart(2, '0') : '--'}</td>
+        <td>${aluno.total_faltas === 0 ? '--' : String(aluno.total_faltas).padStart(2, '0')}</td>
       </tr>
     `;
   });
