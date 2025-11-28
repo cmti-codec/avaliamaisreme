@@ -119,6 +119,15 @@ export function validarFormacao(
         f.toUpperCase().includes("EDUCACAO FISICA")
       );
     }
+    if (componenteNorm === "ARTE") {
+      return professorFormacoes.some((f) => f.toUpperCase().includes("ARTE"));
+    }
+    // Para outros componentes em Grupos 1-3, permitir qualquer professor com formação em Ed. Infantil
+    return professorFormacoes.some((f) => {
+      const fNorm = f.toUpperCase();
+      return (fNorm.includes("PEDAGOGIA") && fNorm.includes("INFANTIL")) ||
+             fNorm.includes("EDUCAÇÃO INFANTIL");
+    });
   }
 
   // Educação Infantil - Grupos 4, 4 EMEI, 4 Escola, 5, 5 EMEI, 5 Escola
@@ -140,6 +149,12 @@ export function validarFormacao(
     if (componenteNorm === "ARTE") {
       return professorFormacoes.some((f) => f.toUpperCase().includes("ARTE"));
     }
+    // Para outros componentes em Grupos 4-5, permitir qualquer professor com formação em Ed. Infantil
+    return professorFormacoes.some((f) => {
+      const fNorm = f.toUpperCase();
+      return (fNorm.includes("PEDAGOGIA") && fNorm.includes("INFANTIL")) ||
+             fNorm.includes("EDUCAÇÃO INFANTIL");
+    });
   }
 
   // EF I - Anos Iniciais (componentes polivalentes)
@@ -267,8 +282,9 @@ export function validarFormacao(
     });
   }
 
-  // Para outros componentes não mapeados, retornar false
-  return false;
+  // Para outros componentes não mapeados, permitir qualquer professor
+  // (Melhor ter um professor não perfeitamente qualificado do que nenhum professor)
+  return true;
 }
 
 // Detectar conflitos de professor
