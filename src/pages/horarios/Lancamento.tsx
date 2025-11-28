@@ -45,7 +45,7 @@ import { useSchool } from "@/contexts/SchoolContext";
 
 const Lancamento = () => {
   const { toast } = useToast();
-  const { user: authUser } = useAuth();
+  const { user: authUser, testSchoolId } = useAuth();
   const { escolaAtual } = useSchool();
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
@@ -89,6 +89,13 @@ const Lancamento = () => {
     carregarDados();
   }, []);
 
+  // Recarregar dados quando contexto de escola mudar
+  useEffect(() => {
+    if (testSchoolId || escolaAtual) {
+      carregarDados();
+    }
+  }, [testSchoolId, escolaAtual?.saesc]);
+
   useEffect(() => {
     if (turmaSelecionada) {
       carregarHorariosTurma();
@@ -104,7 +111,8 @@ const Lancamento = () => {
 
   const carregarDados = useCallback(async () => {
     try {
-      const escolaId = escolaAtual?.saesc || null;
+      // Em modo teste, usar testSchoolId diretamente
+      const escolaId = testSchoolId || escolaAtual?.saesc || null;
 
       if (!escolaId) {
         toast({
@@ -192,7 +200,7 @@ const Lancamento = () => {
         variant: "destructive",
       });
     }
-  }, [toast, authUser]);
+  }, [toast, authUser, testSchoolId, escolaAtual]);
 
   const carregarHorariosTurma = useCallback(async () => {
     if (!turmaSelecionada) return;
