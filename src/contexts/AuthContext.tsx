@@ -326,7 +326,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (createErr) throw createErr;
 
       const newUserId: string | undefined = createResp?.userId ?? createResp?.id ?? createResp?.user_id;
+      const pessoa_id: string | undefined = createResp?.pessoa_id;
       if (!newUserId) throw new Error('ID do usuário de teste não retornado');
+      if (!pessoa_id) throw new Error('Pessoa ID não retornado');
+
+      // Criar lotação para gestores escolares (DIRETOR, SECRETARIO, COORDENADOR)
+      if (['DIRETOR', 'SECRETARIO', 'COORDENADOR'].includes(profile)) {
+        const { error: lotacaoErr } = await supabase
+          .from('lotacoes')
+          .insert({
+            pessoa_id,
+            escola_saesc: schoolId,
+            perfil: profile,
+            carga_horaria: 40,
+            ativo: true,
+            ano_letivo: new Date().getFullYear().toString(),
+            created_by: originalAdminUser.id,
+          });
+
+        if (lotacaoErr) {
+          console.error('Erro ao criar lotação para teste:', lotacaoErr);
+          // Não bloquear o teste por conta disso, apenas log
+        }
+      }
 
       // Start impersonation for test user
       const { data: impData, error: impError } = await supabase.functions.invoke('secure-impersonate', {

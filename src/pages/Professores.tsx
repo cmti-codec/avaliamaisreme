@@ -14,21 +14,23 @@ import { LotarProfessorDialog } from "@/components/Professores/LotarProfessorDia
 import { ProfessorLotadoCard } from "@/components/Professores/ProfessorLotadoCard";
 
 const Professores = () => {
-  const { user } = useAuth();
+  const { user, testSchoolId } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear().toString());
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { escolaAtual } = useSchool();
 
-  // Buscar escola_saesc do usuário via SchoolContext
+  // Buscar escola_saesc do usuário via SchoolContext ou testSchoolId
   const [escolaSaesc, setEscolaSaesc] = useState<string>("");
 
   useEffect(() => {
-    if (escolaAtual?.saesc) {
-      setEscolaSaesc(escolaAtual.saesc);
+    // Em modo teste, usar testSchoolId diretamente
+    const escolaId = testSchoolId || escolaAtual?.saesc;
+    if (escolaId) {
+      setEscolaSaesc(escolaId);
     }
-  }, [escolaAtual]);
+  }, [escolaAtual, testSchoolId]);
 
   const { lotacoes, isLoading, criarLotacao, atualizarCarga, removerLotacao, isSaving } = useLotacoes(escolaSaesc, anoLetivo);
 
