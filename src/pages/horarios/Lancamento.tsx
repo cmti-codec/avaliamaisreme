@@ -123,24 +123,6 @@ const Lancamento = () => {
         return;
       }
 
-      // Buscar escola_saesc do escola_id
-      const { data: escolaData } = await supabase
-        .from("escolas")
-        .select("saesc")
-        .eq("id", escolaId)
-        .single();
-
-      if (!escolaData) {
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar informações da escola",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const escolaSaesc = escolaData.saesc.toString();
-
       const { data: turmasData, error: turmasError } = await supabase
         .from("turmas")
         .select("*")
@@ -154,11 +136,11 @@ const Lancamento = () => {
       }));
       setTurmas(sortTurmasPedagogica(turmasFormatadas));
 
-      // Buscar professores lotados via nova tabela lotacoes
+      // Buscar professores lotados via nova tabela lotacoes usando o UUID da escola
       const { data: lotacoesData, error: lotacoesError } = await supabase
         .from("lotacoes")
         .select("pessoa_id")
-        .eq("escola_saesc", escolaSaesc)
+        .eq("escola_saesc", escolaId)
         .eq("perfil", "PROFESSOR")
         .eq("ativo", true);
 
