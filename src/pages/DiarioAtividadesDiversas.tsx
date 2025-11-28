@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, BookOpen, Users, AlertCircle, CheckCircle } from "lucide-react";
+import { Calendar, BookOpen, Users, AlertCircle, CheckCircle, Save } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -14,26 +16,73 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDiariosComHorarios, useAlunosDaTurma, type DiarioComHorarios } from "@/hooks/useDiariosClasse";
+import { useFrequenciasDaAula, useSalvarFrequencias } from "@/hooks/useFrequencias";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DiarioAtividadesDiversas = () => {
   const [diarioSelecionado, setDiarioSelecionado] = useState<DiarioComHorarios | null>(null);
   const [dataSelecionada, setDataSelecionada] = useState<Date>(new Date());
   const [turnoAtual, setTurnoAtual] = useState<"MATUTINO" | "VESPERTINO">("MATUTINO");
+  const [tempoSelecionado, setTempoSelecionado] = useState<number>(1);
+  const [presencasLocais, setPresencasLocais] = useState<Map<string, boolean>>(new Map());
 
   const { data: diarios, isLoading: loadingDiarios } = useDiariosComHorarios();
   const { data: alunos, isLoading: loadingAlunos } = useAlunosDaTurma(
     diarioSelecionado?.turma_id || null
   );
 
+  const dataFormatada = format(dataSelecionada, "yyyy-MM-dd");
+  const { data: frequenciasSalvas, isLoading: loadingFrequencias } = useFrequenciasDaAula(
+    diarioSelecionado?.id || null,
+    dataFormatada,
+    tempoSelecionado
+  );
+
+  const salvarFrequenciasMutation = useSalvarFrequencias();
+
   // Filtrar apenas diários de atividades diversas
   const diariosAtividades = diarios?.filter(
     (d) => d.tipo_diario === "ATIVIDADES_DIVERSAS"
   ) || [];
 
+  // Atualizar presenças locais quando frequências salvas mudarem
+  useEffect(() => {
+    if (frequenciasSalvas && alunos) {
+      const novasPresencas = new Map<string, boolean>();
+      alunos.forEach((aluno) => {
+        const freq = frequenciasSalvas.find((f) => f.aluno_id === aluno.id);
+        novasPresencas.set(aluno.id, freq?.presente ?? true); // default: presente
+      });
+      setPresencasLocais(novasPresencas);
+    }
+  }, [frequenciasSalvas, alunos]);
+
   const handleDiarioChange = (diarioId: string) => {
     const diario = diariosAtividades.find((d) => d.id === diarioId);
     setDiarioSelecionado(diario || null);
+    setPresencasLocais(new Map()); // Limpar seleções
+  };
+
+  const handlePresencaChange = (alunoId: string, presente: boolean) => {
+    setPresencasLocais((prev) => {
+      const next = new Map(prev);
+      next.set(alunoId, presente);
+      return next;
+    });
+  };
+
+  const handleSalvarFrequencias = async () => {
+    if (!diarioSelecionado || !alunos) return;
+
+    const frequencias = alunos.map((aluno) => ({
+      diario_id: diarioSelecionado.id,
+      aluno_id: aluno.id,
+      data_aula: dataFormatada,
+      tempo: tempoSelecionado,
+      presente: presencasLocais.get(aluno.id) ?? true,
+    }));
+
+    await salvarFrequenciasMutation.mutateAsync(frequencias);
   };
 
   if (loadingDiarios) {
@@ -191,20 +240,76 @@ const DiarioAtividadesDiversas = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Formulário em desenvolvimento</AlertTitle>
-                  <AlertDescription>
-                    O formulário de lançamento está sendo construído.
-                    Em breve você poderá registrar as presenças/faltas.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="text-sm text-muted-foreground">
-                  <strong>Total de alunos:</strong> {alunos?.length || 0}
-                  <br />
-                  <strong>Turno atual:</strong> {turnoAtual === "MATUTINO" ? "Manhã" : "Tarde"}
+                {/* Seleção de Tempo */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tempo de Aula</label>
+                  <Select
+                    value={tempoSelecionado.toString()}
+                    onValueChange={(v) => setTempoSelecionado(Number(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tempo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1º Tempo</SelectItem>
+                      <SelectItem value="2">2º Tempo</SelectItem>
+                      <SelectItem value="3">3º Tempo</SelectItem>
+                      <SelectItem value="4">4º Tempo</SelectItem>
+                      <SelectItem value="5">5º Tempo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {loadingFrequencias ? (
+                  <Skeleton className="h-64 w-full" />
+                ) : (
+                  <>
+                    {/* Lista de Alunos com Checkboxes */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted px-4 py-2 flex justify-between items-center">
+                        <span className="text-sm font-medium">
+                          Alunos ({alunos?.length || 0})
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          Tempo: {tempoSelecionado}º
+                        </span>
+                      </div>
+                      <div className="divide-y max-h-96 overflow-y-auto">
+                        {alunos?.map((aluno) => (
+                          <div
+                            key={aluno.id}
+                            className="px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                          >
+                            <span className="text-sm">{aluno.nomalu}</span>
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={presencasLocais.get(aluno.id) ?? true}
+                                onCheckedChange={(checked) =>
+                                  handlePresencaChange(aluno.id, checked === true)
+                                }
+                              />
+                              <span className="text-xs text-muted-foreground w-16">
+                                {presencasLocais.get(aluno.id) ?? true ? "Presente" : "Falta"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Botão Salvar */}
+                    <Button
+                      onClick={handleSalvarFrequencias}
+                      disabled={salvarFrequenciasMutation.isPending}
+                      className="w-full"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {salvarFrequenciasMutation.isPending
+                        ? "Salvando..."
+                        : "Salvar Frequências"}
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </CardContent>
