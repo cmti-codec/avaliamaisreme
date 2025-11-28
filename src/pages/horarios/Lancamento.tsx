@@ -77,7 +77,7 @@ const Lancamento = () => {
         componenteNome,
         turmaComMatriz.etapa_modalidade,
         turmaComMatriz.grupo_ano
-      ) || (componenteInfo as any).carga_horaria_semanal || 0;
+      ) || (componenteInfo as any).carga || 0;
       
       quotas[componenteNome] = calcularQuota(horarios, componenteNome, cargaTotal);
     });
