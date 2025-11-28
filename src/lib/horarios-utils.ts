@@ -98,6 +98,13 @@ export function validarFormacao(
   const componenteNorm = componente.toUpperCase().trim();
   const segmentoNormalizado = normalizarEtapaModalidade(etapa_modalidade);
   
+  // Normalizar grupoAno para Title Case (banco retorna MAIÚSCULAS)
+  const grupoAnoNorm = grupoAno
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+  
   // ATIVIDADES DIVERSAS - apenas Assistentes de Educação Infantil
   if (componenteNorm === "ATIVIDADES DIVERSAS") {
     return isAssistenteEducacaoInfantil(professorFormacoes);
@@ -105,7 +112,7 @@ export function validarFormacao(
 
   // Educação Infantil - Grupos 1, 1I, 1II, 2, 3
   if (segmentoNormalizado === "Educação Infantil" &&
-      ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAno)) {
+      ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAnoNorm)) {
     if (componenteNorm === "ATIVIDADES") {
       return professorFormacoes.some((f) => {
         const fNorm = f.toUpperCase();
@@ -132,7 +139,7 @@ export function validarFormacao(
 
   // Educação Infantil - Grupos 4, 4 EMEI, 4 Escola, 5, 5 EMEI, 5 Escola
   if (segmentoNormalizado === "Educação Infantil" &&
-      ["Grupo 4", "Grupo 4 EMEI", "Grupo 4 Escola", "Grupo 5", "Grupo 5 EMEI", "Grupo 5 Escola"].includes(grupoAno)) {
+      ["Grupo 4", "Grupo 4 EMEI", "Grupo 4 Escola", "Grupo 5", "Grupo 5 EMEI", "Grupo 5 Escola"].includes(grupoAnoNorm)) {
     if (componenteNorm === "ATIVIDADES") {
       return professorFormacoes.some((f) => {
         const fNorm = f.toUpperCase();
@@ -388,7 +395,7 @@ export function isProfessorTravado(
   
   return (
     segmentoNormalizado === "Educação Infantil" &&
-    ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAno) &&
+    ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAno.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')) &&
     componente === "ATIVIDADES"
   );
 }
@@ -405,15 +412,16 @@ export function isComponenteValidoParaTurma(
   const segmentoNormalizado = normalizarEtapaModalidade(etapa_modalidade);
 
   // Educação Infantil - Grupos 1, 1I, 1II, 2, 3
+  const grupoAnoNormLocal = grupoAno.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   if (segmentoNormalizado === "Educação Infantil" &&
-      ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAno)) {
+      ["Grupo 1", "Grupo 1 I", "Grupo 1 II", "Grupo 2", "Grupo 3"].includes(grupoAnoNormLocal)) {
     const componentesValidos = ["ATIVIDADES", "ATIVIDADES DIVERSAS", "EDUCAÇÃO FÍSICA"];
     return componentesValidos.includes(componenteNorm);
   }
 
   // Educação Infantil - Grupos 4 e 5
   if (segmentoNormalizado === "Educação Infantil" &&
-      ["Grupo 4", "Grupo 4 EMEI", "Grupo 4 Escola", "Grupo 5", "Grupo 5 EMEI", "Grupo 5 Escola"].includes(grupoAno)) {
+      ["Grupo 4", "Grupo 4 EMEI", "Grupo 4 Escola", "Grupo 5", "Grupo 5 EMEI", "Grupo 5 Escola"].includes(grupoAnoNormLocal)) {
     const componentesValidos = ["ATIVIDADES", "ATIVIDADES DIVERSAS", "EDUCAÇÃO FÍSICA", "ARTE"];
     return componentesValidos.includes(componenteNorm);
   }
