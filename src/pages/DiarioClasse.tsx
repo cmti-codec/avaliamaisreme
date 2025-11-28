@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, BookOpen, Users, AlertCircle, Lock } from "lucide-react";
+import { Calendar, BookOpen, Users, AlertCircle, Lock, Save } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDiariosComHorarios, useAlunosDaTurma, type DiarioComHorarios } from "@/hooks/useDiariosClasse";
+import { useFrequenciasDaAula, useSalvarFrequencias, type FrequenciaInput } from "@/hooks/useFrequencias";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { InfoTurmasIntegrais } from "@/components/DiarioClasse/InfoTurmasIntegrais";
 import { useSchool } from "@/contexts/SchoolContext";
 import { useAnosLetivos } from "@/hooks/useAnosLetivos";
@@ -34,6 +37,8 @@ const DiarioClasse = () => {
   const [ehDiaLetivo, setEhDiaLetivo] = useState<boolean>(true);
   const [edicaoBloqueada, setEdicaoBloqueada] = useState<{ bloqueado: boolean; conselho?: any }>({ bloqueado: false });
   const [validandoData, setValidandoData] = useState(false);
+  const [tempoSelecionado, setTempoSelecionado] = useState<number | null>(null);
+  const [frequenciasLocais, setFrequenciasLocais] = useState<Record<string, boolean>>({});
 
   const { escolaAtual } = useSchool();
   const { data: anosLetivos } = useAnosLetivos();
@@ -43,6 +48,12 @@ const DiarioClasse = () => {
   const { data: alunos, isLoading: loadingAlunos } = useAlunosDaTurma(
     diarioSelecionado?.turma_id || null
   );
+  const { data: frequenciasExistentes, isLoading: loadingFrequencias } = useFrequenciasDaAula(
+    diarioSelecionado?.id || null,
+    dataSelecionada ? format(dataSelecionada, "yyyy-MM-dd") : null,
+    tempoSelecionado
+  );
+  const { mutate: salvarFrequencias, isPending: salvandoFrequencias } = useSalvarFrequencias();
 
   // Carregar bimestres quando o ano letivo estiver disponível
   useEffect(() => {
@@ -94,6 +105,43 @@ const DiarioClasse = () => {
   const handleDiarioChange = (diarioId: string) => {
     const diario = diarios?.find((d) => d.id === diarioId);
     setDiarioSelecionado(diario || null);
+    setTempoSelecionado(null);
+    setFrequenciasLocais({});
+  };
+
+  // Carregar frequências existentes no estado local
+  useEffect(() => {
+    if (frequenciasExistentes && alunos) {
+      const frequenciasMap: Record<string, boolean> = {};
+      frequenciasExistentes.forEach((freq) => {
+        frequenciasMap[freq.aluno_id] = freq.presente;
+      });
+      setFrequenciasLocais(frequenciasMap);
+    }
+  }, [frequenciasExistentes, alunos]);
+
+  const handleCheckboxChange = (alunoId: string, checked: boolean) => {
+    setFrequenciasLocais((prev) => ({
+      ...prev,
+      [alunoId]: checked,
+    }));
+  };
+
+  const handleSalvarFrequencias = () => {
+    if (!diarioSelecionado || !tempoSelecionado || !alunos) {
+      toast.error("Selecione um diário, data e tempo antes de salvar");
+      return;
+    }
+
+    const frequenciasParaSalvar: FrequenciaInput[] = alunos.map((aluno) => ({
+      diario_id: diarioSelecionado.id,
+      aluno_id: aluno.id,
+      data_aula: format(dataSelecionada, "yyyy-MM-dd"),
+      tempo: tempoSelecionado,
+      presente: frequenciasLocais[aluno.id] ?? true, // Default: presente
+    }));
+
+    salvarFrequencias(frequenciasParaSalvar);
   };
 
   // Filtrar horários disponíveis para a data selecionada
@@ -316,7 +364,7 @@ const DiarioClasse = () => {
               Registro de Frequência
             </CardTitle>
             <CardDescription>
-              Lance a presença dos alunos para esta aula
+              Selecione o tempo da aula e marque a presença dos alunos
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -327,22 +375,88 @@ const DiarioClasse = () => {
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : (
-              <div className="space-y-4">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Funcionalidade em desenvolvimento</AlertTitle>
-                  <AlertDescription>
-                    O formulário de lançamento de frequências está sendo construído.
-                    Em breve você poderá registrar presença/falta de cada aluno por tempo de aula.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="text-sm text-muted-foreground">
-                  <strong>Total de alunos:</strong> {alunos?.length || 0}
-                  <br />
-                  <strong>Tempos disponíveis:</strong>{" "}
-                  {horariosDisponiveis.map((h) => `${h.tempo}º`).join(", ")}
+              <div className="space-y-6">
+                {/* Seleção de Tempo */}
+                <div className="space-y-2">
+                  <Label>Tempo da Aula</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {horariosDisponiveis.map((horario) => (
+                      <Button
+                        key={horario.tempo}
+                        variant={tempoSelecionado === horario.tempo ? "default" : "outline"}
+                        onClick={() => {
+                          setTempoSelecionado(horario.tempo);
+                          setFrequenciasLocais({});
+                        }}
+                        size="sm"
+                      >
+                        {horario.tempo}º Tempo
+                      </Button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Lista de Alunos */}
+                {tempoSelecionado && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-medium">
+                        Lista de Chamada - {tempoSelecionado}º Tempo
+                      </h3>
+                      <Badge variant="outline">
+                        {alunos?.length || 0} aluno(s)
+                      </Badge>
+                    </div>
+
+                    {loadingFrequencias ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg divide-y">
+                        {alunos?.map((aluno, index) => (
+                          <div
+                            key={aluno.id}
+                            className="flex items-center justify-between p-3 hover:bg-muted/50"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-muted-foreground w-8">
+                                {index + 1}
+                              </span>
+                              <span className="font-medium">{aluno.nomalu}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                id={`presente-${aluno.id}`}
+                                checked={frequenciasLocais[aluno.id] ?? true}
+                                onCheckedChange={(checked) =>
+                                  handleCheckboxChange(aluno.id, checked as boolean)
+                                }
+                              />
+                              <Label
+                                htmlFor={`presente-${aluno.id}`}
+                                className="text-sm cursor-pointer"
+                              >
+                                Presente
+                              </Label>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end pt-4">
+                      <Button
+                        onClick={handleSalvarFrequencias}
+                        disabled={salvandoFrequencias || !alunos || alunos.length === 0}
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {salvandoFrequencias ? "Salvando..." : "Salvar Frequências"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
