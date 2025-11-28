@@ -32,6 +32,7 @@ import {
 } from "@/lib/calendario-utils";
 import { toast } from "sonner";
 import { exportarDiarioParaImpressao } from "@/lib/exportar-diario-pdf";
+import { exportarDiarioOficialPDF } from "@/lib/exportar-diario-oficial-pdf";
 import { supabase } from "@/integrations/supabase/client";
 
 const DiarioClasse = () => {
@@ -325,6 +326,109 @@ const DiarioClasse = () => {
     }
   };
 
+  const handleExportarPDFOficial = async () => {
+    if (!diarioSelecionado || !bimestreSelecionado || !alunos) {
+      toast.error("Selecione um diário e um bimestre antes de exportar");
+      return;
+    }
+
+    const bimestre = bimestres.find(b => b.id === bimestreSelecionado);
+    if (!bimestre) return;
+
+    try {
+      // Buscar dados do professor
+      const { data: professor } = await supabase
+        .from("professores")
+        .select("nome, matricula")
+        .eq("id", diarioSelecionado.professor_id)
+        .single();
+
+      // Buscar todas as frequências do bimestre
+      const { data: frequenciasData } = await supabase
+        .from("frequencias")
+        .select("*")
+        .eq("diario_id", diarioSelecionado.id)
+        .gte("data_aula", bimestre.data_inicio)
+        .lte("data_aula", bimestre.data_fim)
+        .order("data_aula")
+        .order("tempo");
+
+      // Buscar todas as avaliações do bimestre
+      const { data: avaliacoesData } = await supabase
+        .from("avaliacoes")
+        .select("*")
+        .eq("diario_id", diarioSelecionado.id)
+        .gte("data_avaliacao", bimestre.data_inicio)
+        .lte("data_avaliacao", bimestre.data_fim)
+        .order("data_avaliacao");
+
+      // Processar dados de frequências por aluno
+      const alunosFrequencia = alunos.map(aluno => {
+        const frequenciasAluno = frequenciasData?.filter(f => f.aluno_id === aluno.id) || [];
+        const totalPresencas = frequenciasAluno.filter(f => f.presente).length;
+        const totalFaltas = frequenciasAluno.filter(f => !f.presente).length;
+        const total = frequenciasAluno.length;
+        const percentualPresenca = total > 0 ? (totalPresencas / total) * 100 : 0;
+
+        return {
+          id: aluno.id,
+          nomalu: aluno.nomalu,
+          numalu: aluno.numalu,
+          frequencias: frequenciasAluno.map(f => ({
+            data_aula: f.data_aula,
+            tempo: f.tempo,
+            presente: f.presente,
+          })),
+          total_presencas: totalPresencas,
+          total_faltas: totalFaltas,
+          percentual_presenca: percentualPresenca,
+        };
+      });
+
+      // Processar dados de avaliações por aluno
+      const alunosAvaliacoes = alunos.map(aluno => {
+        const avaliacoesAluno = avaliacoesData?.filter(a => a.aluno_id === aluno.id) || [];
+        const notasValidas = avaliacoesAluno.filter(a => a.nota !== null).map(a => a.nota!);
+        const media = notasValidas.length > 0 
+          ? notasValidas.reduce((sum, nota) => sum + nota, 0) / notasValidas.length 
+          : null;
+
+        return {
+          id: aluno.id,
+          nomalu: aluno.nomalu,
+          avaliacoes: avaliacoesAluno.map(a => ({
+            titulo: a.titulo,
+            tipo_avaliacao: a.tipo_avaliacao,
+            data_avaliacao: a.data_avaliacao,
+            nota: a.nota,
+            nota_maxima: a.nota_maxima || 10,
+          })),
+          media,
+        };
+      });
+
+      // Exportar para PDF Oficial
+      exportarDiarioOficialPDF(
+        {
+          turma: diarioSelecionado.turma!,
+          componente_curricular: diarioSelecionado.componente_curricular,
+          turno_diario: diarioSelecionado.turno_diario,
+          professor: { 
+            nome: professor?.nome || "N/A",
+            matricula: professor?.matricula || undefined,
+          },
+        },
+        alunosFrequencia,
+        alunosAvaliacoes,
+        bimestre,
+        escolaAtual?.nome || "Escola"
+      );
+    } catch (error) {
+      console.error("Erro ao exportar PDF oficial:", error);
+      toast.error("Erro ao gerar PDF oficial do diário");
+    }
+  };
+
   // Carregar notas existentes no estado local
   useEffect(() => {
     if (avaliacaoSelecionada) {
@@ -422,14 +526,26 @@ const DiarioClasse = () => {
               </CardDescription>
             </div>
             {diarioSelecionado && bimestreSelecionado && (
-              <Button
-                onClick={handleExportarPDF}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                Exportar PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleExportarPDF}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  PDF Moderno
+                </Button>
+                <Button
+                  onClick={handleExportarPDFOficial}
+                  variant="default"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  PDF Oficial
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>
