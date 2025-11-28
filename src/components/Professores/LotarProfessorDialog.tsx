@@ -332,6 +332,15 @@ export function LotarProfessorDialog({
                               Inativo
                             </Badge>
                           )}
+                          {Array.isArray(prof.formacoes) && prof.formacoes.map((formacao: string, index: number) => (
+                            <Badge 
+                              key={index} 
+                              variant="outline" 
+                              className="text-xs bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800"
+                            >
+                              {formacao}
+                            </Badge>
+                          ))}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Matrícula: {prof.matricula || 'N/A'} | CH: {prof.carga_horaria_contratual || 40}h
