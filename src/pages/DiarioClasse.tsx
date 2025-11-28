@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, BookOpen, Users, AlertCircle, Lock, Save } from "lucide-react";
+import { Calendar, BookOpen, Users, AlertCircle, Lock, Save, ClipboardList, Trash2, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { useDiariosComHorarios, useAlunosDaTurma, type DiarioComHorarios } from "@/hooks/useDiariosClasse";
 import { useFrequenciasDaAula, useSalvarFrequencias, type FrequenciaInput } from "@/hooks/useFrequencias";
+import { useAvaliacoesAgrupadasPorTitulo, useSalvarAvaliacoes, useDeletarAvaliacoesPorTitulo, type AvaliacaoInput } from "@/hooks/useAvaliacoes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -39,6 +42,17 @@ const DiarioClasse = () => {
   const [validandoData, setValidandoData] = useState(false);
   const [tempoSelecionado, setTempoSelecionado] = useState<number | null>(null);
   const [frequenciasLocais, setFrequenciasLocais] = useState<Record<string, boolean>>({});
+  const [tabAtiva, setTabAtiva] = useState<string>("frequencias");
+  
+  // Estados para Avaliações
+  const [novaAvaliacao, setNovaAvaliacao] = useState({
+    titulo: "",
+    tipo: "PROVA",
+    data: format(new Date(), "yyyy-MM-dd"),
+    notaMaxima: 10,
+  });
+  const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState<any>(null);
+  const [notasLocais, setNotasLocais] = useState<Record<string, number | null>>({});
 
   const { escolaAtual } = useSchool();
   const { data: anosLetivos } = useAnosLetivos();
@@ -54,6 +68,9 @@ const DiarioClasse = () => {
     tempoSelecionado
   );
   const { mutate: salvarFrequencias, isPending: salvandoFrequencias } = useSalvarFrequencias();
+  const { data: avaliacoesAgrupadas, isLoading: loadingAvaliacoes } = useAvaliacoesAgrupadasPorTitulo(diarioSelecionado?.id || null);
+  const { mutate: salvarAvaliacoes, isPending: salvandoAvaliacoes } = useSalvarAvaliacoes();
+  const { mutate: deletarAvaliacoes } = useDeletarAvaliacoesPorTitulo();
 
   // Carregar bimestres quando o ano letivo estiver disponível
   useEffect(() => {
@@ -107,6 +124,8 @@ const DiarioClasse = () => {
     setDiarioSelecionado(diario || null);
     setTempoSelecionado(null);
     setFrequenciasLocais({});
+    setAvaliacaoSelecionada(null);
+    setNotasLocais({});
   };
 
   // Carregar frequências existentes no estado local
@@ -138,11 +157,83 @@ const DiarioClasse = () => {
       aluno_id: aluno.id,
       data_aula: format(dataSelecionada, "yyyy-MM-dd"),
       tempo: tempoSelecionado,
-      presente: frequenciasLocais[aluno.id] ?? true, // Default: presente
+      presente: frequenciasLocais[aluno.id] ?? true,
     }));
 
     salvarFrequencias(frequenciasParaSalvar);
   };
+
+  const handleCriarAvaliacao = () => {
+    if (!diarioSelecionado || !alunos) {
+      toast.error("Selecione um diário antes de criar avaliação");
+      return;
+    }
+    if (!novaAvaliacao.titulo.trim()) {
+      toast.error("Preencha o título da avaliação");
+      return;
+    }
+
+    const avaliacoesParaSalvar: AvaliacaoInput[] = alunos.map((aluno) => ({
+      diario_id: diarioSelecionado.id,
+      aluno_id: aluno.id,
+      tipo_avaliacao: novaAvaliacao.tipo,
+      titulo: novaAvaliacao.titulo,
+      data_avaliacao: novaAvaliacao.data,
+      nota: null,
+      nota_maxima: novaAvaliacao.notaMaxima,
+    }));
+
+    salvarAvaliacoes(avaliacoesParaSalvar, {
+      onSuccess: () => {
+        setNovaAvaliacao({
+          titulo: "",
+          tipo: "PROVA",
+          data: format(new Date(), "yyyy-MM-dd"),
+          notaMaxima: 10,
+        });
+      },
+    });
+  };
+
+  const handleSalvarNotas = () => {
+    if (!diarioSelecionado || !avaliacaoSelecionada || !alunos) {
+      toast.error("Selecione uma avaliação antes de salvar");
+      return;
+    }
+
+    const avaliacoesParaSalvar: AvaliacaoInput[] = avaliacaoSelecionada.avaliacoes.map((av: any) => ({
+      diario_id: diarioSelecionado.id,
+      aluno_id: av.aluno_id,
+      tipo_avaliacao: avaliacaoSelecionada.tipo_avaliacao,
+      titulo: avaliacaoSelecionada.titulo,
+      data_avaliacao: avaliacaoSelecionada.data_avaliacao,
+      nota: notasLocais[av.aluno_id] !== undefined ? notasLocais[av.aluno_id] : av.nota,
+      nota_maxima: avaliacaoSelecionada.nota_maxima,
+    }));
+
+    salvarAvaliacoes(avaliacoesParaSalvar);
+  };
+
+  const handleDeletarAvaliacao = (grupo: any) => {
+    if (confirm(`Deseja realmente deletar a avaliação "${grupo.titulo}"?`)) {
+      deletarAvaliacoes({
+        diario_id: diarioSelecionado!.id,
+        titulo: grupo.titulo,
+        data_avaliacao: grupo.data_avaliacao,
+      });
+    }
+  };
+
+  // Carregar notas existentes no estado local
+  useEffect(() => {
+    if (avaliacaoSelecionada) {
+      const notasMap: Record<string, number | null> = {};
+      avaliacaoSelecionada.avaliacoes.forEach((av: any) => {
+        notasMap[av.aluno_id] = av.nota;
+      });
+      setNotasLocais(notasMap);
+    }
+  }, [avaliacaoSelecionada]);
 
   // Filtrar horários disponíveis para a data selecionada
   const horariosDisponiveis = diarioSelecionado?.horarios.filter((h) => {
@@ -355,8 +446,31 @@ const DiarioClasse = () => {
         </Alert>
       )}
 
-      {/* Lista de Alunos / Lançamento de Frequência */}
-      {diarioSelecionado && horariosDisponiveis.length > 0 && !edicaoBloqueada.bloqueado && (
+      {/* Tabs: Frequências e Avaliações */}
+      {diarioSelecionado && !edicaoBloqueada.bloqueado && (
+        <Tabs value={tabAtiva} onValueChange={setTabAtiva}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="frequencias" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Frequências
+            </TabsTrigger>
+            <TabsTrigger value="avaliacoes" className="flex items-center gap-2">
+              <ClipboardList className="w-4 h-4" />
+              Avaliações
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Aba Frequências */}
+          <TabsContent value="frequencias">
+            {horariosDisponiveis.length === 0 ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Nenhum horário disponível</AlertTitle>
+                <AlertDescription>
+                  Não há horários cadastrados para esta turma/componente na data selecionada.
+                </AlertDescription>
+              </Alert>
+            ) : (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -461,6 +575,202 @@ const DiarioClasse = () => {
             )}
           </CardContent>
         </Card>
+            )}
+          </TabsContent>
+
+          {/* Aba Avaliações */}
+          <TabsContent value="avaliacoes">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5" />
+                  Lançamento de Avaliações
+                </CardTitle>
+                <CardDescription>
+                  Crie avaliações e lance as notas dos alunos
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Criar Nova Avaliação */}
+                <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Criar Nova Avaliação
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label>Título</Label>
+                      <Input
+                        placeholder="Ex: Prova 1"
+                        value={novaAvaliacao.titulo}
+                        onChange={(e) => setNovaAvaliacao({ ...novaAvaliacao, titulo: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tipo</Label>
+                      <Select
+                        value={novaAvaliacao.tipo}
+                        onValueChange={(v) => setNovaAvaliacao({ ...novaAvaliacao, tipo: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PROVA">Prova</SelectItem>
+                          <SelectItem value="TRABALHO">Trabalho</SelectItem>
+                          <SelectItem value="PARTICIPACAO">Participação</SelectItem>
+                          <SelectItem value="SEMINARIO">Seminário</SelectItem>
+                          <SelectItem value="ATIVIDADE">Atividade</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Data</Label>
+                      <Input
+                        type="date"
+                        value={novaAvaliacao.data}
+                        onChange={(e) => setNovaAvaliacao({ ...novaAvaliacao, data: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nota Máxima</Label>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        value={novaAvaliacao.notaMaxima}
+                        onChange={(e) => setNovaAvaliacao({ ...novaAvaliacao, notaMaxima: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleCriarAvaliacao} disabled={salvandoAvaliacoes}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar Avaliação
+                  </Button>
+                </div>
+
+                {/* Lista de Avaliações Criadas */}
+                {loadingAvaliacoes ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                ) : avaliacoesAgrupadas && avaliacoesAgrupadas.length > 0 ? (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold">Avaliações Cadastradas</h3>
+                    <div className="space-y-2">
+                      {avaliacoesAgrupadas.map((grupo: any, index: number) => (
+                        <div
+                          key={index}
+                          className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer"
+                          onClick={() => setAvaliacaoSelecionada(grupo)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{grupo.titulo}</h4>
+                                <Badge variant="outline">{grupo.tipo_avaliacao}</Badge>
+                                <Badge variant="secondary">
+                                  Nota máxima: {grupo.nota_maxima}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Data: {format(new Date(grupo.data_avaliacao), "dd/MM/yyyy")} •{" "}
+                                {grupo.avaliacoes.filter((av: any) => av.nota !== null).length}/
+                                {grupo.avaliacoes.length} notas lançadas
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletarAvaliacao(grupo);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Nenhuma avaliação cadastrada</AlertTitle>
+                    <AlertDescription>
+                      Crie uma avaliação acima para começar a lançar notas dos alunos.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Lançamento de Notas */}
+                {avaliacaoSelecionada && alunos && (
+                  <div className="space-y-4 border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold">{avaliacaoSelecionada.titulo}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Nota máxima: {avaliacaoSelecionada.nota_maxima} pontos
+                        </p>
+                      </div>
+                      <Button onClick={handleSalvarNotas} disabled={salvandoAvaliacoes}>
+                        <Save className="w-4 h-4 mr-2" />
+                        Salvar Notas
+                      </Button>
+                    </div>
+
+                    <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
+                      {alunos.map((aluno: any, index: number) => {
+                        const avaliacaoDoAluno = avaliacaoSelecionada.avaliacoes.find(
+                          (av: any) => av.aluno_id === aluno.id
+                        );
+                        return (
+                          <div
+                            key={aluno.id}
+                            className="flex items-center justify-between p-3 hover:bg-muted/50"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm text-muted-foreground w-8">
+                                {index + 1}
+                              </span>
+                              <span className="font-medium">{aluno.nomalu}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max={avaliacaoSelecionada.nota_maxima}
+                                placeholder="Nota"
+                                className="w-20"
+                                value={
+                                  notasLocais[aluno.id] !== undefined
+                                    ? notasLocais[aluno.id] ?? ""
+                                    : avaliacaoDoAluno?.nota ?? ""
+                                }
+                                onChange={(e) => {
+                                  const valor = e.target.value === "" ? null : parseFloat(e.target.value);
+                                  setNotasLocais((prev) => ({
+                                    ...prev,
+                                    [aluno.id]: valor,
+                                  }));
+                                }}
+                              />
+                              <span className="text-sm text-muted-foreground">
+                                / {avaliacaoSelecionada.nota_maxima}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       )}
 
       {diarioSelecionado && horariosDisponiveis.length === 0 && (
