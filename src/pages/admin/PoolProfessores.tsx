@@ -18,13 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, RefreshCw, Eye, AlertTriangle, UserPlus, Edit } from "lucide-react";
+import { Search, Plus, RefreshCw, Eye, AlertTriangle, UserPlus, Edit, GraduationCap } from "lucide-react";
 import { usePessoasPool } from "@/hooks/usePessoasPool";
 import { NovaLotacaoDialog } from "@/components/Admin/Pool/NovaLotacaoDialog";
 import { TransferirProfessorDialog } from "@/components/Admin/Pool/TransferirProfessorDialog";
 import { NovoProfessorDialog } from "@/components/Admin/Pool/NovoProfessorDialog";
 import { ProfessorDetalhesDialog } from "@/components/Admin/Pool/ProfessorDetalhesDialog";
 import { EditarProfessorDialog } from "@/components/Admin/Pool/EditarProfessorDialog";
+import { EditarFormacoesDialog } from "@/components/Admin/Pool/EditarFormacoesDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -38,6 +39,7 @@ export default function PoolProfessores() {
   const [showNovoProfessorDialog, setShowNovoProfessorDialog] = useState(false);
   const [showDetalhesDialog, setShowDetalhesDialog] = useState(false);
   const [showEditarDialog, setShowEditarDialog] = useState(false);
+  const [showFormacoesDialog, setShowFormacoesDialog] = useState(false);
   const [pessoaSelecionada, setPessoaSelecionada] = useState<any>(null);
 
   const { pessoas, isLoading } = usePessoasPool({
@@ -65,6 +67,11 @@ export default function PoolProfessores() {
   const handleEditar = (pessoa: any) => {
     setPessoaSelecionada(pessoa);
     setShowEditarDialog(true);
+  };
+
+  const handleFormacoes = (pessoa: any) => {
+    setPessoaSelecionada(pessoa);
+    setShowFormacoesDialog(true);
   };
 
   const formatCPF = (cpf: string) => {
@@ -241,6 +248,14 @@ export default function PoolProfessores() {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleFormacoes(pessoa)}
+                              title="Editar formações"
+                            >
+                              <GraduationCap className="w-4 h-4" />
+                            </Button>
                             {temLotacao && cargaTotal < 50 && (
                               <Button
                                 size="sm"
@@ -311,6 +326,12 @@ export default function PoolProfessores() {
       <EditarProfessorDialog
         open={showEditarDialog}
         onOpenChange={setShowEditarDialog}
+        pessoa={pessoaSelecionada}
+      />
+
+      <EditarFormacoesDialog
+        open={showFormacoesDialog}
+        onOpenChange={setShowFormacoesDialog}
         pessoa={pessoaSelecionada}
       />
     </div>
