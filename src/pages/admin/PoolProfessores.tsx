@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, RefreshCw, Eye, AlertTriangle, UserPlus, Edit, GraduationCap } from "lucide-react";
+import { Search, Plus, RefreshCw, Eye, AlertTriangle, UserPlus, Edit, GraduationCap, Users } from "lucide-react";
 import { usePessoasPool } from "@/hooks/usePessoasPool";
 import { NovaLotacaoDialog } from "@/components/Admin/Pool/NovaLotacaoDialog";
 import { TransferirProfessorDialog } from "@/components/Admin/Pool/TransferirProfessorDialog";
@@ -26,6 +26,7 @@ import { NovoProfessorDialog } from "@/components/Admin/Pool/NovoProfessorDialog
 import { ProfessorDetalhesDialog } from "@/components/Admin/Pool/ProfessorDetalhesDialog";
 import { EditarProfessorDialog } from "@/components/Admin/Pool/EditarProfessorDialog";
 import { EditarFormacoesDialog } from "@/components/Admin/Pool/EditarFormacoesDialog";
+import { AtribuirCargaLoteDialog } from "@/components/Admin/Pool/AtribuirCargaLoteDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -40,6 +41,7 @@ export default function PoolProfessores() {
   const [showDetalhesDialog, setShowDetalhesDialog] = useState(false);
   const [showEditarDialog, setShowEditarDialog] = useState(false);
   const [showFormacoesDialog, setShowFormacoesDialog] = useState(false);
+  const [showCargaLoteDialog, setShowCargaLoteDialog] = useState(false);
   const [pessoaSelecionada, setPessoaSelecionada] = useState<any>(null);
 
   const { pessoas, isLoading } = usePessoasPool({
@@ -96,10 +98,16 @@ export default function PoolProfessores() {
             Gerencie professores da REME e suas lotações nas escolas da rede
           </p>
         </div>
-        <Button onClick={() => setShowNovoProfessorDialog(true)}>
-          <UserPlus className="w-4 h-4 mr-2" />
-          Cadastrar Professor
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowCargaLoteDialog(true)}>
+            <Users className="w-4 h-4 mr-2" />
+            Atribuir Carga em Lote
+          </Button>
+          <Button onClick={() => setShowNovoProfessorDialog(true)}>
+            <UserPlus className="w-4 h-4 mr-2" />
+            Cadastrar Professor
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -333,6 +341,12 @@ export default function PoolProfessores() {
         open={showFormacoesDialog}
         onOpenChange={setShowFormacoesDialog}
         pessoa={pessoaSelecionada}
+      />
+
+      <AtribuirCargaLoteDialog
+        open={showCargaLoteDialog}
+        onOpenChange={setShowCargaLoteDialog}
+        pessoas={pessoas}
       />
     </div>
   );
