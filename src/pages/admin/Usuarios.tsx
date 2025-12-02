@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock, UserCheck, Trash2, BriefcaseBusiness } from 'lucide-react';
+import { Plus, Search, Edit, RotateCw, Lock, Eye, Unlock, UserCheck, Trash2, BriefcaseBusiness, Eraser } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,6 +81,7 @@ export default function Usuarios() {
   const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
   const [lotarUsuario, setLotarUsuario] = useState<Usuario | null>(null);
   const [lotarDialogOpen, setLotarDialogOpen] = useState(false);
+  const [isCleaningTestUsers, setIsCleaningTestUsers] = useState(false);
 
   const queryClient = useQueryClient();
   const { user: currentUser, impersonate } = useAuth();
@@ -431,6 +432,35 @@ export default function Usuarios() {
     }
   };
 
+  // Contagem de usuários de teste
+  const testUsersCount = usuarios.filter(u => u.email.includes('@tempmail.lovable.dev')).length;
+
+  const handleCleanupTestUsers = async () => {
+    if (testUsersCount === 0) {
+      toast.info('Não há usuários de teste para limpar');
+      return;
+    }
+
+    setIsCleaningTestUsers(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('cleanup-test-users');
+      
+      if (error) throw error;
+      
+      if (data.success) {
+        toast.success(data.message);
+        queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      } else {
+        throw new Error(data.error || 'Erro desconhecido');
+      }
+    } catch (error: any) {
+      console.error('Erro ao limpar usuários de teste:', error);
+      toast.error(error.message || 'Erro ao limpar usuários de teste');
+    } finally {
+      setIsCleaningTestUsers(false);
+    }
+  };
+
   const filteredUsuarios = usuarios.filter((usuario) => {
     const matchesSearch =
       usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -458,10 +488,23 @@ export default function Usuarios() {
               Gerenciar usuários e permissões do sistema
             </p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Usuário
-          </Button>
+          <div className="flex gap-2">
+            {testUsersCount > 0 && (
+              <Button 
+                variant="outline" 
+                onClick={handleCleanupTestUsers}
+                disabled={isCleaningTestUsers}
+                className="text-orange-600 border-orange-300 hover:bg-orange-50"
+              >
+                <Eraser className="w-4 h-4 mr-2" />
+                {isCleaningTestUsers ? 'Limpando...' : `Limpar Teste (${testUsersCount})`}
+              </Button>
+            )}
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Usuário
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
