@@ -89,9 +89,9 @@ export function validarFormacao(
   etapa_modalidade: string,
   grupoAno: string
 ): boolean {
-  // Se não há formações cadastradas, não validar (permitir)
+  // Se não há formações cadastradas, NÃO permitir (professor não qualificado)
   if (!professorFormacoes || professorFormacoes.length === 0) {
-    return true;
+    return false;
   }
 
   // Normalizar para comparações
