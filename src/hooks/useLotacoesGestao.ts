@@ -30,13 +30,19 @@ export const useLotacoesGestao = (pessoaId?: string) => {
 
   // Função auxiliar para calcular carga total na rede
   const calcularCargaTotalRede = async (pessoaId: string, lotacaoExcluir?: string): Promise<number> => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("lotacoes")
       .select("carga_horaria")
       .eq("pessoa_id", pessoaId)
       .eq("perfil", "PROFESSOR")
-      .eq("ativo", true)
-      .neq("id", lotacaoExcluir || "");
+      .eq("ativo", true);
+
+    // Só adiciona filtro neq se tiver ID válido para excluir
+    if (lotacaoExcluir) {
+      query = query.neq("id", lotacaoExcluir);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
