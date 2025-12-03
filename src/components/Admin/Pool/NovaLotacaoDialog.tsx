@@ -84,7 +84,7 @@ export function NovaLotacaoDialog({ open, onOpenChange, pessoa, perfil }: NovaLo
               </SelectTrigger>
               <SelectContent>
                 {escolas.map((escola) => (
-                  <SelectItem key={escola.id} value={escola.saesc?.toString() || ''}>
+                  <SelectItem key={escola.id} value={escola.id}>
                     {escola.nome}
                   </SelectItem>
                 ))}
