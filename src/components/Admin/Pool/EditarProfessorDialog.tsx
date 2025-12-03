@@ -174,6 +174,9 @@ export function EditarProfessorDialog({
                   mode="single"
                   selected={dataNascimento}
                   onSelect={setDataNascimento}
+                  captionLayout="dropdown-buttons"
+                  fromYear={1940}
+                  toYear={new Date().getFullYear()}
                   disabled={(date) =>
                     date > new Date() || date < new Date("1900-01-01")
                   }
