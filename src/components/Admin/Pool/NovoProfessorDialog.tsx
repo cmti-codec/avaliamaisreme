@@ -216,11 +216,14 @@ export function NovoProfessorDialog({ open, onOpenChange, perfilPadrao = 'PROFES
                         {dataNascimento ? format(dataNascimento, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={dataNascimento}
                         onSelect={setDataNascimento}
+                        captionLayout="dropdown-buttons"
+                        fromYear={1940}
+                        toYear={new Date().getFullYear()}
                         initialFocus
                         locale={ptBR}
                       />
