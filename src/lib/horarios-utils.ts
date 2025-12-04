@@ -289,9 +289,9 @@ export function validarFormacao(
     });
   }
 
-  // Para outros componentes não mapeados, permitir qualquer professor
-  // (Melhor ter um professor não perfeitamente qualificado do que nenhum professor)
-  return true;
+  // Para componentes não mapeados, não permitir por segurança
+  // Professores sem formação compatível não devem aparecer como opção
+  return false;
 }
 
 // Detectar conflitos de professor
