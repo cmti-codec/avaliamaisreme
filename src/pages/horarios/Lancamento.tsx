@@ -30,7 +30,6 @@ import PainelCargas from "@/components/Horarios/PainelCargas";
 import { GradeHorariaLoading } from "@/components/Horarios/GradeHorariaLoading";
 import HorarioProfessor from "@/components/Horarios/HorarioProfessor";
 import { useTurmaComMatriz, type TurmaComMatriz } from "@/hooks/useTurmasComMatriz";
-import { useCargasHorarias, getCargaHoraria } from "@/hooks/useCargasHorarias";
 import {
   detectarConflitos,
   calcularQuota,
@@ -62,28 +61,19 @@ const Lancamento = () => {
     turmaSelecionada?.id || null
   );
 
-  // Buscar cargas horárias configuradas
-  const { data: cargasHorarias } = useCargasHorarias();
-
-  // Calcular quotas dos componentes
+  // Calcular quotas dos componentes usando carga da matriz atribuída
   const quotasComponentes = useMemo(() => {
-    if (!turmaComMatriz?.componentes || !cargasHorarias) return {};
+    if (!turmaComMatriz?.componentes) return {};
     
     const quotas: Record<string, { atual: number; total: number; percentual: number }> = {};
     
     Object.entries(turmaComMatriz.componentes).forEach(([componenteNome, componenteInfo]) => {
-      const cargaTotal = getCargaHoraria(
-        cargasHorarias,
-        componenteNome,
-        turmaComMatriz.etapa_modalidade,
-        turmaComMatriz.grupo_ano
-      ) || (componenteInfo as any).carga || 0;
-      
+      const cargaTotal = (componenteInfo as { carga: number; ordem: number }).carga || 0;
       quotas[componenteNome] = calcularQuota(horarios, componenteNome, cargaTotal);
     });
     
     return quotas;
-  }, [horarios, turmaComMatriz, cargasHorarias]);
+  }, [horarios, turmaComMatriz]);
 
   useEffect(() => {
     carregarDados();
