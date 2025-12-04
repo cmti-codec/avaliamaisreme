@@ -266,15 +266,7 @@ const Lancamento = () => {
     setLoading(true);
 
     try {
-      // Deletar horários existentes
-      const { error: deleteError } = await supabase
-        .from("horarios")
-        .delete()
-        .eq("turma_id", turmaSelecionada.id);
-
-      if (deleteError) throw deleteError;
-
-      // Inserir novos horários
+      // Preparar novos horários
       const horariosArray = Object.values(horarios)
         .filter((h) => h.professor_id)
         .map((h) => ({
@@ -285,12 +277,36 @@ const Lancamento = () => {
           professor_id: h.professor_id,
         }));
 
-      if (horariosArray.length > 0) {
-        const { error: insertError } = await supabase
-          .from("horarios")
-          .insert(horariosArray);
+      // Buscar horários existentes para identificar os que devem ser removidos
+      const { data: existentes } = await supabase
+        .from("horarios")
+        .select("id, dia_semana, tempo")
+        .eq("turma_id", turmaSelecionada.id);
 
-        if (insertError) throw insertError;
+      const novosKeys = new Set(horariosArray.map(h => `${h.dia_semana}_${h.tempo}`));
+      const idsParaRemover = (existentes || [])
+        .filter(e => !novosKeys.has(`${e.dia_semana}_${e.tempo}`))
+        .map(e => e.id);
+
+      // Remover slots que não existem mais (por ID específico)
+      if (idsParaRemover.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("horarios")
+          .delete()
+          .in("id", idsParaRemover);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Upsert dos novos horários (atualiza se existir, insere se não)
+      if (horariosArray.length > 0) {
+        const { error: upsertError } = await supabase
+          .from("horarios")
+          .upsert(horariosArray, { 
+            onConflict: 'turma_id,dia_semana,tempo'
+          });
+
+        if (upsertError) throw upsertError;
       }
 
       toast({
