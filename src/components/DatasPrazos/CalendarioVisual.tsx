@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export function CalendarioVisual({ eventos, mesAtual: mesAtualProp, onMesChange 
   const diasVazios = Array(primeiroDiaSemana).fill(null);
 
   const eventosNoDia = (dia: Date) => {
-    return eventos.filter(evento => isSameDay(new Date(evento.data), dia));
+    return eventos.filter(evento => isSameDay(parseISO(evento.data), dia));
   };
 
   return (
