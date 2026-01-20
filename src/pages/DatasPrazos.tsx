@@ -152,11 +152,11 @@ export default function DatasPrazos() {
   ];
 
   const anoAtivo = anosLetivos?.find(a => a.id === anoLetivoSelecionado);
-  const feriadosOrdenados = [...(feriados || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
-  const sabadosOrdenados = [...(sabadosLetivos || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
-  const conselhosOrdenados = [...(conselhos || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
-  const entregasOrdenadas = [...(entregas || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
-  const eventosOrdenados = [...(eventos || [])].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  const feriadosOrdenados = [...(feriados || [])].sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime());
+  const sabadosOrdenados = [...(sabadosLetivos || [])].sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime());
+  const conselhosOrdenados = [...(conselhos || [])].sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime());
+  const entregasOrdenadas = [...(entregas || [])].sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime());
+  const eventosOrdenados = [...(eventos || [])].sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime());
 
   return (
     <div className="p-8">
@@ -516,7 +516,7 @@ export default function DatasPrazos() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <p className="font-semibold text-sm text-[hsl(var(--event-feriado))]">
-                                {format(new Date(feriado.data), "dd/MM/yyyy")}
+                                {format(parseISO(feriado.data), "dd/MM/yyyy")}
                               </p>
                               <p className="text-sm">{feriado.descricao}</p>
                               <div className="flex gap-2 mt-1">
@@ -581,7 +581,7 @@ export default function DatasPrazos() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <p className="font-semibold text-sm text-[hsl(var(--event-sabado))]">
-                                {format(new Date(sabado.data), "dd/MM/yyyy")}
+                                {format(parseISO(sabado.data), "dd/MM/yyyy")}
                               </p>
                               <p className="text-sm">
                                 {sabado.tipo === "REPLICA_DIA_SEMANA" ? `Réplica ${sabado.dia_replica}` : sabado.descricao}
@@ -643,7 +643,7 @@ export default function DatasPrazos() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <p className="font-semibold text-sm text-[hsl(var(--event-conselho))]">
-                                {format(new Date(conselho.data), "dd/MM/yyyy")}
+                                {format(parseISO(conselho.data), "dd/MM/yyyy")}
                               </p>
                               <p className="text-sm">{conselho.descricao || "Conselho de Classe"}</p>
                               <Badge variant={conselho.bloqueia_edicao_avaliacoes ? "destructive" : "secondary"} className="text-xs mt-1">
@@ -703,7 +703,7 @@ export default function DatasPrazos() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <p className="font-semibold text-sm text-[hsl(var(--event-entrega))]">
-                                {format(new Date(entrega.data), "dd/MM/yyyy")}
+                                {format(parseISO(entrega.data), "dd/MM/yyyy")}
                               </p>
                               <p className="text-sm">{entrega.descricao || "Entrega de Diários"}</p>
                             </div>
@@ -760,7 +760,7 @@ export default function DatasPrazos() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <p className="font-semibold text-sm text-primary">
-                                {format(new Date(evento.data), "dd/MM/yyyy")}
+                                {format(parseISO(evento.data), "dd/MM/yyyy")}
                               </p>
                               <p className="text-sm">{evento.descricao}</p>
                               <Badge variant="outline" className="text-xs mt-1">{evento.tipo}</Badge>
@@ -836,7 +836,7 @@ export default function DatasPrazos() {
                       {feriadosOrdenados.slice(0, 5).map((feriado) => (
                         <div key={feriado.id} className="text-xs bg-[hsl(var(--event-feriado-bg))] p-2 rounded border border-[hsl(var(--event-feriado)_/_20%)]">
                           <p className="font-semibold text-[hsl(var(--event-feriado))]">
-                            {format(new Date(feriado.data), "dd/MM/yyyy")}
+                            {format(parseISO(feriado.data), "dd/MM/yyyy")}
                           </p>
                           <p className="text-muted-foreground truncate">{feriado.descricao}</p>
                         </div>
