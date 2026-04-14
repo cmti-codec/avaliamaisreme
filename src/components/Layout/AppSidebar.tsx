@@ -164,7 +164,14 @@ export function AppSidebar() {
           <SidebarGroupLabel>Gestão Pedagógica</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {pedagogicoItems.map(item => <SidebarMenuItem key={item.title}>
+              {pedagogicoItems
+                .filter(item => {
+                  if ((item as any).gestaoOnly) {
+                    return isGestaoEscolar || isAdmin;
+                  }
+                  return true;
+                })
+                .map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={({
                   isActive
