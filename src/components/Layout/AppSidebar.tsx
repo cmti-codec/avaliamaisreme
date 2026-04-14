@@ -37,6 +37,11 @@ const pedagogicoItems = [{
   url: "/horarios/consulta",
   icon: Search
 }, {
+  title: "Conselho de Classe",
+  url: "/conselho-de-classe",
+  icon: ClipboardList,
+  gestaoOnly: true
+}, {
   title: "Dashboard",
   url: "/dashboard-pedagogico",
   icon: BarChart3
