@@ -37,6 +37,11 @@ const pedagogicoItems = [{
   url: "/horarios/consulta",
   icon: Search
 }, {
+  title: "Conselho de Classe",
+  url: "/conselho-de-classe",
+  icon: ClipboardList,
+  gestaoOnly: true
+}, {
   title: "Dashboard",
   url: "/dashboard-pedagogico",
   icon: BarChart3
@@ -159,7 +164,14 @@ export function AppSidebar() {
           <SidebarGroupLabel>Gestão Pedagógica</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {pedagogicoItems.map(item => <SidebarMenuItem key={item.title}>
+              {pedagogicoItems
+                .filter(item => {
+                  if ((item as any).gestaoOnly) {
+                    return isGestaoEscolar || isAdmin;
+                  }
+                  return true;
+                })
+                .map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={({
                   isActive
