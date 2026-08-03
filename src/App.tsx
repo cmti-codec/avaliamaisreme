@@ -19,6 +19,7 @@ import Turmas from "./pages/Turmas";
 import Escolas from "./pages/Escolas";
 import Alunos from "./pages/Alunos";
 import Login from "./pages/Login";
+import OAuthConsent from "./pages/OAuthConsent";
 import Importacao from "./pages/admin/Importacao";
 import Matrizes from "./pages/admin/Matrizes";
 import EscolasMatrizes from "./pages/admin/EscolasMatrizes";
