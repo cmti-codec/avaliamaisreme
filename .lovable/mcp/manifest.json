@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://tephygczbkacwdxpjqvv.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "avaliamais",
+      "version": "0.1.0",
+      "title": "avaliamais"
+    },
+    "tools": [
+      {
+        "name": "list_escolas",
+        "title": "Listar escolas",
+        "description": "Lista as escolas da rede visíveis para o usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_turmas",
+        "title": "Listar turmas",
+        "description": "Lista as turmas de uma escola (por id da escola), opcionalmente filtrando por turno.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "escola_id": {
+              "type": "string"
+            },
+            "turno": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "escola_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_alunos",
+        "title": "Listar alunos da turma",
+        "description": "Lista os alunos matriculados em uma turma pelo id da turma.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "turma_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "turma_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_horario_turma",
+        "title": "Consultar horário da turma",
+        "description": "Retorna a grade de horários (dia, tempo, componente, professor) de uma turma.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "turma_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "turma_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_lotacoes_escola",
+        "title": "Listar lotações da escola",
+        "description": "Lista as lotações ativas (professores e gestores) de uma escola pelo código SAESC.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "escola_saesc": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "escola_saesc"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
