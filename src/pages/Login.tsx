@@ -19,13 +19,20 @@ export default function Login() {
     user
   } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const rawNext = searchParams.get('next');
+  const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : null;
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
+      if (next) {
+        navigate(next, { replace: true });
+        return;
+      }
       redirectBasedOnProfile(user.primaryRole);
     }
-  }, [user, navigate]);
+  }, [user, navigate, next]);
   const redirectBasedOnProfile = (perfil: string) => {
     switch (perfil) {
       case 'ADMIN':
